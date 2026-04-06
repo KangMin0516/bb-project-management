@@ -141,6 +141,7 @@ function IssueDetailPanel({
   onClose: () => void
 }) {
   const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
   const [editingDescription, setEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState('')
 
@@ -214,8 +215,24 @@ function IssueDetailPanel({
             </div>
           </div>
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
+          <div className="mt-3 flex gap-4 border-b border-gray-200 -mb-4">
+            {(['details', 'activity'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`pb-2 text-sm font-medium capitalize transition-colors ${
+                  activeTab === tab
+                    ? 'border-b-2 border-primary-600 text-primary-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab === 'activity' && detail ? `Activity (${detail.activities.length})` : tab}
+              </button>
+            ))}
+          </div>
         </div>
 
+        {activeTab === 'details' && (
         <div className="space-y-4 p-6">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -344,25 +361,35 @@ function IssueDetailPanel({
             </div>
           )}
 
-          {detail && detail.activities.length > 0 && (
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-2">Activity</span>
-              <div className="space-y-2">
-                {detail.activities.map((a) => (
-                  <div key={a.id} className="text-xs text-gray-500">
+        </div>
+        )}
+
+        {activeTab === 'activity' && (
+        <div className="p-6">
+          {detail && detail.activities.length > 0 ? (
+            <div className="space-y-3">
+              {detail.activities.map((a) => (
+                <div key={a.id} className="flex gap-3 text-xs">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-medium text-gray-600">
+                    {a.user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
                     <span className="font-medium text-gray-700">{a.user.name}</span>{' '}
                     changed <span className="font-medium">{a.field}</span>{' '}
-                    {a.oldValue && <><span className="line-through">{a.oldValue}</span> → </>}
+                    {a.oldValue && <><span className="line-through text-gray-400">{a.oldValue}</span> → </>}
                     <span className="font-medium text-gray-700">{a.newValue}</span>
-                    <span className="ml-2 text-gray-400">
+                    <div className="mt-0.5 text-gray-400">
                       {new Date(a.createdAt).toLocaleString()}
-                    </span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No activity yet</p>
           )}
         </div>
+        )}
       </div>
     </div>
   )
