@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── User ───────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  avatar       String?
+  isSuperuser  Boolean  @default(false) @map("is_superuser")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  memberships    ProjectMember[]
+  assignedIssues Issue[]    @relation("AssignedIssues")
+  createdIssues  Issue[]    @relation("CreatedIssues")
+  activities     Activity[]
+  apiKeys        ApiKey[]
+
+  @@map("users")
+}
+
+// ─── Project ────────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  key         String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members ProjectMember[]
+  issues  Issue[]
+  labels  Label[]
+
+  @@map("projects")
+}
+
+// ─── Project Member ─────────────────────────────────────────
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  role      ProjectRole @default(DEVELOPER)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  userId    String  @map("user_id")
+  projectId String  @map("project_id")
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("project_members")
+}
+
+enum ProjectRole {
+  ADMIN
+  PM
+  DEVELOPER
+}
+
+// ─── Issue ──────────────────────────────────────────────────
+
+model Issue {
+  id          String        @id @default(uuid())
+  number      Int
+  title       String        @db.VarChar(500)
+  description String?
+  status      IssueStatus   @default(BACKLOG)
+  priority    IssuePriority @default(MEDIUM)
+  type        IssueType     @default(TASK)
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  projectId  String  @map("project_id")
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assigneeId String? @map("assignee_id")
+  assignee   User?   @relation("AssignedIssues", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  creatorId String @map("creator_id")
+  creator   User   @relation("CreatedIssues", fields: [creatorId], references: [id])
+
+  parentId String? @map("parent_id")
+  parent   Issue?  @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
+  children Issue[] @relation("SubIssues")
+
+  labels     IssueLabel[]
+  activities Activity[]
+
+  @@unique([projectId, number])
+  @@index([projectId, status])
+  @@index([assigneeId])
+  @@index([parentId])
+  @@map("issues")
+}
+
+enum IssueStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  REVIEW_QA
+  DONE
+  CANCELED
+  RECHECK
+}
+
+enum IssuePriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum IssueType {
+  EPIC
+  TASK
+  BUG
+  SUB_TASK
+}
+
+// ─── Label ──────────────────────────────────────────────────
+
+model Label {
+  id        String  @id @default(uuid())
+  name      String  @db.VarChar(50)
+  color     String  @default("#6B7280") @db.VarChar(7)
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  issues IssueLabel[]
+
+  @@unique([projectId, name])
+  @@map("labels")
+}
+
+model IssueLabel {
+  issueId String @map("issue_id")
+  labelId String @map("label_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, labelId])
+  @@map("issue_labels")
+}
+
+// ─── Activity ───────────────────────────────────────────────
+
+model Activity {
+  id        String   @id @default(uuid())
+  field     String   @db.VarChar(50)
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  issueId String @map("issue_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([issueId])
+  @@map("activities")
+}
+
+// ─── API Key ────────────────────────────────────────────────
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  key       String    @unique @db.VarChar(64)
+  name      String    @db.VarChar(100)
+  lastUsed  DateTime? @map("last_used")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}

@@ -1,0 +1,19 @@
+{
+  "name": "bb-pm",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:api": "pnpm --filter @bb-pm/api dev",
+    "dev:web": "pnpm --filter @bb-pm/web dev",
+    "build": "pnpm -r build",
+    "build:api": "pnpm --filter @bb-pm/api build",
+    "build:web": "pnpm --filter @bb-pm/web build",
+    "lint": "pnpm -r lint",
+    "db:migrate": "pnpm --filter @bb-pm/api db:migrate",
+    "db:seed": "pnpm --filter @bb-pm/api db:seed",
+    "db:studio": "pnpm --filter @bb-pm/api db:studio"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
