@@ -9,6 +9,8 @@ import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
+import MarkdownViewer from '@/components/markdown/MarkdownViewer'
+import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -138,13 +140,23 @@ function IssueDetailPanel({
   issue: Issue
   onClose: () => void
 }) {
+  const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [draftDescription, setDraftDescription] = useState('')
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        if (editingDescription) {
+          setEditingDescription(false)
+        } else {
+          onClose()
+        }
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [onClose, editingDescription])
 
   const { data: detail } = useQuery({
     queryKey: ['issue', projectId, issue.id],
@@ -173,7 +185,7 @@ function IssueDetailPanel({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
       <div
-        className="h-full w-full max-w-lg overflow-y-auto bg-white shadow-xl"
+        className={`h-full w-full overflow-y-auto bg-white shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-gray-200 px-6 py-4">
@@ -181,7 +193,25 @@ function IssueDetailPanel({
             <span className="font-mono text-sm text-gray-400">
               {issue.number ? `#${issue.number}` : ''}
             </span>
-            <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">✕</button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const next = !expanded
+                  setExpanded(next)
+                  localStorage.setItem('issue-panel-expanded', String(next))
+                }}
+                aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
+                className="text-gray-400 hover:text-gray-600"
+                title={expanded ? 'Collapse' : 'Expand'}
+              >
+                {expanded ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 19 2 12 11 5" /><polyline points="22 19 13 12 22 5" /></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 5 22 12 13 19" /><polyline points="2 5 11 12 2 19" /></svg>
+                )}
+              </button>
+              <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
           </div>
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
         </div>
@@ -214,12 +244,52 @@ function IssueDetailPanel({
             </div>
           </div>
 
-          {d.description && (
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{d.description}</p>
-            </div>
-          )}
+          <div>
+            <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
+            {editingDescription ? (
+              <div>
+                <MarkdownEditor
+                  value={draftDescription}
+                  onChange={setDraftDescription}
+                  placeholder="Add description..."
+                  minRows={6}
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateMutation.mutate({ description: draftDescription })
+                      setEditingDescription(false)
+                    }}
+                    className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingDescription(false)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => {
+                  setDraftDescription(d.description || '')
+                  setEditingDescription(true)
+                }}
+                className="group cursor-pointer rounded-lg border border-transparent p-2 -m-2 hover:border-gray-200 hover:bg-gray-50"
+              >
+                {d.description ? (
+                  <MarkdownViewer content={d.description} />
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Add description...</p>
+                )}
+              </div>
+            )}
+          </div>
 
           <div>
             <span className="block text-xs font-medium text-gray-500 mb-1">Assignee</span>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { X } from 'lucide-react'
+import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -87,12 +88,11 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
             required
           />
 
-          <textarea
+          <MarkdownEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             placeholder="Description (optional)"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
-            rows={3}
+            minRows={3}
           />
 
           <div className="grid grid-cols-2 gap-3">
