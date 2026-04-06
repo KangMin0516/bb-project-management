@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -28,6 +28,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
   const [type, setType] = useState('TASK')
   const [assigneeId, setAssigneeId] = useState('')
   const [labelIds, setLabelIds] = useState<string[]>([])
+  const [parentId, setParentId] = useState('')
   const queryClient = useQueryClient()
 
   const { data: members } = useQuery({
@@ -39,6 +40,16 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
     queryKey: ['labels', projectId],
     queryFn: () => projectApi.listLabels(projectId),
   })
+
+  const { data: issuesData } = useQuery({
+    queryKey: ['issues', projectId, 'parent-options'],
+    queryFn: () => issueApi.list(projectId, { limit: '200' }),
+  })
+
+  const parentOptions = useMemo(() => {
+    if (!issuesData?.items) return []
+    return issuesData.items.filter((i) => i.type !== 'SUB_TASK')
+  }, [issuesData])
 
   const mutation = useMutation({
     mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
@@ -61,6 +72,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
       priority,
       type,
       assigneeId: assigneeId || undefined,
+      parentId: parentId || undefined,
       labelIds: labelIds.length ? labelIds : undefined,
     })
   }
@@ -100,7 +112,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
               <label className="mb-1 block text-xs font-medium text-gray-500">Type</label>
               <select
                 value={type}
-                onChange={(e) => setType(e.target.value)}
+                onChange={(e) => { setType(e.target.value); if (e.target.value === 'EPIC') setParentId('') }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
               >
                 <option value="TASK">Task</option>
@@ -138,6 +150,27 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
               ))}
             </select>
           </div>
+
+          {type !== 'EPIC' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Parent Issue{type === 'SUB_TASK' ? ' *' : ''}
+              </label>
+              <select
+                value={parentId}
+                onChange={(e) => setParentId(e.target.value)}
+                required={type === 'SUB_TASK'}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+              >
+                <option value="">None</option>
+                {parentOptions.map((issue) => (
+                  <option key={issue.id} value={issue.id}>
+                    #{issue.number} {issue.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">Labels</label>

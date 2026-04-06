@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateIssueDto } from './dto/create-issue.dto.js';
 import type { UpdateIssueDto } from './dto/update-issue.dto.js';
 import type { QueryIssueDto } from './dto/query-issue.dto.js';
 import type { IssueWhereInput } from '../../generated/prisma/models.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
+import { IssueType } from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
 
 const ORDER_GAP = 1000;
@@ -21,8 +22,62 @@ const issueInclude = {
 export class IssueService {
   constructor(private prisma: PrismaService) {}
 
+  private async validateHierarchy(
+    type: string | undefined,
+    parentId: string | null | undefined,
+    issueId?: string,
+  ) {
+    // EPIC cannot have a parent
+    if (type === IssueType.EPIC && parentId) {
+      throw new BadRequestException('EPIC cannot have a parent issue');
+    }
+
+    // SUB_TASK must have a parent (only enforced when we know the type definitively)
+    if (type === IssueType.SUB_TASK && !parentId) {
+      throw new BadRequestException('SUB_TASK must have a parent issue');
+    }
+
+    if (parentId) {
+      // Cannot be own parent
+      if (issueId && parentId === issueId) {
+        throw new BadRequestException('Issue cannot be its own parent');
+      }
+
+      const parent = await this.prisma.issue.findUnique({
+        where: { id: parentId },
+        select: { id: true, type: true, parentId: true },
+      });
+
+      if (!parent) {
+        throw new BadRequestException('Parent issue not found');
+      }
+
+      // A SUB_TASK's parent cannot be another SUB_TASK
+      if (parent.type === IssueType.SUB_TASK) {
+        throw new BadRequestException('A SUB_TASK cannot be the parent of another issue');
+      }
+
+      // Walk up the parent chain to detect cycles (only relevant during update)
+      if (issueId) {
+        let currentId = parent.parentId;
+        while (currentId) {
+          if (currentId === issueId) {
+            throw new BadRequestException('Circular parent reference detected');
+          }
+          const ancestor = await this.prisma.issue.findUnique({
+            where: { id: currentId },
+            select: { parentId: true },
+          });
+          currentId = ancestor?.parentId ?? null;
+        }
+      }
+    }
+  }
+
   async create(projectId: string, dto: CreateIssueDto, creatorId: string) {
     const { labelIds, ...data } = dto;
+
+    await this.validateHierarchy(data.type, data.parentId);
 
     return this.prisma.$transaction(async (tx) => {
       // Auto-increment number within project
@@ -175,6 +230,13 @@ export class IssueService {
     }
 
     const { labelIds, ...data } = dto;
+
+    // Validate hierarchy when type or parentId is being changed
+    if (data.type !== undefined || data.parentId !== undefined) {
+      const effectiveType = data.type ?? existing.type;
+      const effectiveParentId = data.parentId !== undefined ? data.parentId : existing.parentId;
+      await this.validateHierarchy(effectiveType, effectiveParentId, issueId);
+    }
 
     // Track changes for activity log
     const TRACKED_FIELDS = ['title', 'description', 'status', 'priority', 'type', 'assigneeId', 'parentId'] as const;

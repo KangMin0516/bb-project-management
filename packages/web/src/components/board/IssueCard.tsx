@@ -24,6 +24,12 @@ export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
           {projectKey}-{issue.number}
         </span>
       </div>
+      {issue.parent && (
+        <p className="mb-1 text-[10px] text-gray-400">↳ #{issue.parent.number}</p>
+      )}
+      {issue._count.children > 0 && (
+        <p className="mb-1 text-[10px] text-gray-400">📎 {issue._count.children} sub-task{issue._count.children > 1 ? 's' : ''}</p>
+      )}
       <p className="mb-2 text-sm font-medium leading-snug text-gray-900">{issue.title}</p>
       <div className="flex items-center justify-between">
         <div className="flex gap-1">
