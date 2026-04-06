@@ -5,6 +5,7 @@ import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
 import { Trash2, UserPlus } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 
 export default function SettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -48,8 +49,8 @@ export default function SettingsPage() {
     mutationFn: (data: { name: string; description?: string }) =>
       projectApi.update(projectId!, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update project')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update project'))
     },
   })
 
@@ -59,8 +60,8 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       navigate('/')
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to delete project')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete project'))
     },
   })
 
@@ -74,16 +75,16 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['members', projectId] })
       setAddUserId('')
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to add member')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to add member'))
     },
   })
 
   const removeMember = useMutation({
     mutationFn: (memberId: string) => projectApi.removeMember(projectId!, memberId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to remove member')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove member'))
     },
   })
 
@@ -91,8 +92,8 @@ export default function SettingsPage() {
     mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
       projectApi.updateMember(projectId!, memberId, { role }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update role')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role'))
     },
   })
 
@@ -106,16 +107,16 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['labels', projectId] })
       setNewLabel('')
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to create label')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create label'))
     },
   })
 
   const seedLabels = useMutation({
     mutationFn: () => projectApi.seedLabels(projectId!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['labels', projectId] }),
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to seed labels')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels'))
     },
   })
 

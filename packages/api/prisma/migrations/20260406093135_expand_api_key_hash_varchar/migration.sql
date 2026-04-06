@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "api_keys" ALTER COLUMN "key" SET DATA TYPE VARCHAR(255);

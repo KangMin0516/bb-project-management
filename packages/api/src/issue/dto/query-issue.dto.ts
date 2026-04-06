@@ -1,4 +1,4 @@
-import { IsOptional, IsEnum, IsUUID, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsEnum, IsUUID, IsString, IsInt, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IssueStatus, IssuePriority, IssueType } from '../../../generated/prisma/enums.js';
 import { Type } from 'class-transformer';
@@ -41,5 +41,6 @@ export class QueryIssueDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100)
   limit?: number = 50;
 }

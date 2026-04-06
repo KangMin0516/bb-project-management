@@ -4,6 +4,7 @@ import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { X } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 
 interface Props {
   projectId: string
@@ -45,8 +46,8 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
       onClose()
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to create issue')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create issue'))
     },
   })
 
@@ -71,7 +72,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Create Issue</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X className="h-5 w-5" />
           </button>
         </div>

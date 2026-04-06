@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { USER_SELECT } from '../common/constants.js';
 
 const userSelect = {
-  id: true,
-  email: true,
-  name: true,
-  avatar: true,
+  ...USER_SELECT,
   createdAt: true,
 } as const;
 

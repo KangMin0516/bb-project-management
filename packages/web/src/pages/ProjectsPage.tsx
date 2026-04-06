@@ -5,13 +5,21 @@ import { FolderKanban, Users, TicketCheck } from 'lucide-react'
 
 export default function ProjectsPage() {
   const navigate = useNavigate()
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, isError } = useQuery({
     queryKey: ['projects'],
     queryFn: projectApi.list,
   })
 
   if (isLoading) {
     return <div className="flex h-full items-center justify-center text-gray-400">Loading...</div>
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-red-600">Failed to load projects. Please try again later.</p>
+      </div>
+    )
   }
 
   return (

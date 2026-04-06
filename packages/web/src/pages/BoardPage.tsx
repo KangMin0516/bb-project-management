@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
-import { issueApi, type Issue, type IssueDetail } from '@/api/issues'
+import { issueApi, type Issue, type IssueDetail, type UpdateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -21,7 +22,7 @@ export default function BoardPage() {
     enabled: !!projectId,
   })
 
-  const { data: board } = useQuery({
+  const { data: board, isLoading: isBoardLoading } = useQuery({
     queryKey: ['board', projectId],
     queryFn: () => issueApi.board(projectId!),
     enabled: !!projectId,
@@ -33,8 +34,8 @@ export default function BoardPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to reorder issue')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder issue'))
     },
   })
 
@@ -86,6 +87,11 @@ export default function BoardPage() {
       </div>
 
       <div className="flex-1 overflow-x-auto p-4">
+        {isBoardLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+          </div>
+        ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4">
             {STATUSES.map((status) => (
@@ -100,6 +106,7 @@ export default function BoardPage() {
             ))}
           </div>
         </DragDropContext>
+        )}
       </div>
 
       {createModal && (
@@ -146,13 +153,13 @@ function IssueDetailPanel({
 
   const queryClient = useQueryClient()
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => issueApi.update(projectId, issue.id, data),
+    mutationFn: (data: UpdateIssuePayload) => issueApi.update(projectId, issue.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update issue')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
     },
   })
 
@@ -169,7 +176,7 @@ function IssueDetailPanel({
             <span className="font-mono text-sm text-gray-400">
               {issue.number ? `#${issue.number}` : ''}
             </span>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+            <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">✕</button>
           </div>
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
         </div>

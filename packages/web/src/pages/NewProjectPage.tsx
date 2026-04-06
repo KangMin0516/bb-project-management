@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '@/api/projects'
+import { getErrorMessage } from '@/lib/error'
 
 export default function NewProjectPage() {
   const [name, setName] = useState('')
@@ -19,8 +20,8 @@ export default function NewProjectPage() {
       projectApi.seedLabels(project.id).catch(() => {})
       navigate(`/projects/${project.id}/board`)
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to create project')
+    onError: (err: unknown) => {
+      setError(getErrorMessage(err, 'Failed to create project'))
     },
   })
 

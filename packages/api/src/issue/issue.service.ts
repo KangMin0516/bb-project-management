@@ -5,8 +5,7 @@ import type { UpdateIssueDto } from './dto/update-issue.dto.js';
 import type { QueryIssueDto } from './dto/query-issue.dto.js';
 import type { IssueWhereInput } from '../../generated/prisma/models.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
-
-export const USER_SELECT = { id: true, email: true, name: true, avatar: true } as const;
+import { USER_SELECT } from '../common/constants.js';
 
 const ORDER_GAP = 1000;
 
@@ -178,9 +177,11 @@ export class IssueService {
     const { labelIds, ...data } = dto;
 
     // Track changes for activity log
+    const TRACKED_FIELDS = ['title', 'description', 'status', 'priority', 'type', 'assigneeId', 'parentId'] as const;
     const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
 
-    for (const [key, value] of Object.entries(data)) {
+    for (const key of TRACKED_FIELDS) {
+      const value = data[key as keyof typeof data];
       const oldVal = existing[key as keyof typeof existing];
       const oldStr = oldVal != null ? String(oldVal) : null;
       const newStr = value != null ? String(value) : null;

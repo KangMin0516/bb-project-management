@@ -60,8 +60,8 @@ export class ExternalController {
     return this.externalService.listIssues(
       projectKey,
       status,
-      page ? parseInt(page, 10) : 1,
-      limit ? Math.min(parseInt(limit, 10), 100) : 50,
+      page ? parseInt(page, 10) || 1 : 1,
+      limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
     );
   }
 }

@@ -63,7 +63,6 @@ export class AuthService {
         email: true,
         name: true,
         avatar: true,
-        isSuperuser: true,
         createdAt: true,
       },
     });

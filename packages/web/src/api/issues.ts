@@ -16,7 +16,7 @@ export interface Issue {
   creatorId: string
   parentId: string | null
   assignee: { id: string; email: string; name: string; avatar: string | null } | null
-  creator: { id: string; email: string; name: string; avatar: string | null }
+  creator: { id: string; email: string; name: string; avatar: string | null } | null
   labels: { label: { id: string; name: string; color: string } }[]
   parent: { id: string; number: number; title: string } | null
   _count: { children: number }

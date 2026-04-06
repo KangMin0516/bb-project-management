@@ -175,7 +175,7 @@ model Activity {
 
 model ApiKey {
   id        String    @id @default(uuid())
-  key       String    @unique @db.VarChar(64)
+  key       String    @unique @db.VarChar(255)
   keyPrefix String    @db.VarChar(8) @map("key_prefix")
   name      String    @db.VarChar(100)
   lastUsed  DateTime? @map("last_used")

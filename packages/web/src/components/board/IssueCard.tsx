@@ -13,6 +13,9 @@ export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      role="button"
+      tabIndex={0}
       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md"
     >
       <div className="mb-1.5 flex items-center gap-1.5">

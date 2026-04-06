@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
+import { getErrorMessage } from '@/lib/error'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -18,8 +19,8 @@ export default function RegisterPage() {
     try {
       await register(email, name, password)
       navigate('/')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed'))
     } finally {
       setLoading(false)
     }

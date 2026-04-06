@@ -8,6 +8,7 @@ import { STATUS_COLORS, PRIORITY_COLORS, STATUSES } from '@/lib/constants'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { Plus, Search } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -41,8 +42,8 @@ export default function IssuesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
     },
-    onError: (err: any) => {
-      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to delete issue')
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue'))
     },
   })
 

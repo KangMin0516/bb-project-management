@@ -26,7 +26,7 @@ export default function DashboardPage() {
       <h1 className="mb-6 text-xl font-bold text-gray-900">{stats.project.name} Dashboard</h1>
 
       {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="text-sm text-gray-500">Total Issues</div>
           <div className="mt-1 text-3xl font-bold text-gray-900">{stats.totalIssues}</div>

@@ -9,6 +9,7 @@ export default function ToastContainer() {
       {toasts.map((t) => (
         <div
           key={t.id}
+          role="alert"
           className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
             t.type === 'error' ? 'bg-red-600' : 'bg-green-600'
           }`}
