@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { issueApi, type Issue, type IssueDetail, type UpdateIssuePayload } from '@/api/issues'
-import { projectApi } from '@/api/projects'
+import { projectApi, type ProjectMember } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
@@ -151,6 +151,11 @@ function IssueDetailPanel({
     queryFn: () => issueApi.get(projectId, issue.id),
   })
 
+  const { data: members } = useQuery({
+    queryKey: ['members', projectId],
+    queryFn: () => projectApi.listMembers(projectId),
+  })
+
   const queryClient = useQueryClient()
   const updateMutation = useMutation({
     mutationFn: (data: UpdateIssuePayload) => issueApi.update(projectId, issue.id, data),
@@ -218,9 +223,16 @@ function IssueDetailPanel({
 
           <div>
             <span className="block text-xs font-medium text-gray-500 mb-1">Assignee</span>
-            <span className="text-sm text-gray-700">
-              {d.assignee?.name || 'Unassigned'}
-            </span>
+            <select
+              value={d.assigneeId || ''}
+              onChange={(e) => updateMutation.mutate({ assigneeId: e.target.value || null })}
+              className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Unassigned</option>
+              {members?.map((m) => (
+                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+              ))}
+            </select>
           </div>
 
           <div>
