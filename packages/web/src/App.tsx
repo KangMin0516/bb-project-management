@@ -1,0 +1,65 @@
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/auth'
+import AppLayout from '@/components/layout/AppLayout'
+import LoginPage from '@/pages/LoginPage'
+import RegisterPage from '@/pages/RegisterPage'
+import ProjectsPage from '@/pages/ProjectsPage'
+import NewProjectPage from '@/pages/NewProjectPage'
+import BoardPage from '@/pages/BoardPage'
+import IssuesPage from '@/pages/IssuesPage'
+import DashboardPage from '@/pages/DashboardPage'
+import SettingsPage from '@/pages/SettingsPage'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: false },
+  },
+})
+
+function AuthGuard() {
+  const { token, isLoading, loadUser } = useAuthStore()
+
+  useEffect(() => {
+    if (token) loadUser()
+    else useAuthStore.setState({ isLoading: false })
+  }, [token, loadUser])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (!token) return <Navigate to="/login" replace />
+  return <Outlet />
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          <Route element={<AuthGuard />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<ProjectsPage />} />
+              <Route path="/projects/new" element={<NewProjectPage />} />
+              <Route path="/projects/:projectId" element={<DashboardPage />} />
+              <Route path="/projects/:projectId/board" element={<BoardPage />} />
+              <Route path="/projects/:projectId/issues" element={<IssuesPage />} />
+              <Route path="/projects/:projectId/settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
