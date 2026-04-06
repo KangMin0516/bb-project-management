@@ -25,6 +25,7 @@ export class UserService {
         : undefined,
       select: userSelect,
       orderBy: { name: 'asc' },
+      take: 100,
     });
   }
 

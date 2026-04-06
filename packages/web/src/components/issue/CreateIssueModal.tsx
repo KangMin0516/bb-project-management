@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { X } from 'lucide-react'
+import { useToastStore } from '@/stores/toast'
 
 interface Props {
   projectId: string
@@ -43,6 +44,9 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
       onClose()
+    },
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to create issue')
     },
   })
 

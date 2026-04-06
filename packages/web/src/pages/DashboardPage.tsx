@@ -107,7 +107,7 @@ export default function DashboardPage() {
             {stats.recentActivities.length === 0 && (
               <p className="text-sm text-gray-400">No recent activity</p>
             )}
-            {stats.recentActivities.slice(0, 8).map((a: any) => (
+            {stats.recentActivities.slice(0, 8).map((a) => (
               <div key={a.id} className="text-xs text-gray-500">
                 <span className="font-medium text-gray-700">{a.user?.name}</span>{' '}
                 changed <span className="font-medium">{a.field}</span>{' '}

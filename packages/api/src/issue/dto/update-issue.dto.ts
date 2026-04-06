@@ -5,6 +5,7 @@ import {
   IsUUID,
   IsInt,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
@@ -42,11 +43,13 @@ export class UpdateIssueDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((o) => o.assigneeId !== null)
   @IsUUID()
   assigneeId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((o) => o.parentId !== null)
   @IsUUID()
   parentId?: string | null;
 

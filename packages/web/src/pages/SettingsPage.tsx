@@ -55,7 +55,10 @@ export default function SettingsPage() {
 
   const deleteProject = useMutation({
     mutationFn: () => projectApi.delete(projectId!),
-    onSuccess: () => navigate('/'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      navigate('/')
+    },
     onError: (err: any) => {
       useToastStore.getState().addToast(err.response?.data?.message || 'Failed to delete project')
     },

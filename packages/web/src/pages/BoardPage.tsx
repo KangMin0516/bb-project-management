@@ -48,7 +48,12 @@ export default function BoardPage() {
     if (destination.droppableId === source.droppableId && destination.index === source.index) return
 
     const destStatus = destination.droppableId
-    const destIssues = board?.[destStatus] || []
+    const rawIssues = board?.[destStatus] || []
+
+    // If same column, remove the dragged item to get correct index calculation
+    const destIssues = destination.droppableId === source.droppableId
+      ? rawIssues.filter(issue => issue.id !== draggableId)
+      : rawIssues
 
     // Calculate new order
     let newOrder: number

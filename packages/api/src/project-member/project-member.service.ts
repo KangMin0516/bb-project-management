@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -51,6 +52,15 @@ export class ProjectMemberService {
       throw new NotFoundException('Member not found in this project');
     }
 
+    if (member.role === 'ADMIN' && dto.role !== 'ADMIN') {
+      const adminCount = await this.prisma.projectMember.count({
+        where: { projectId, role: 'ADMIN' },
+      });
+      if (adminCount <= 1) {
+        throw new BadRequestException('Cannot change role: project must have at least one ADMIN');
+      }
+    }
+
     return this.prisma.projectMember.update({
       where: { id: memberId },
       data: { role: dto.role },
@@ -67,6 +77,15 @@ export class ProjectMemberService {
 
     if (!member || member.projectId !== projectId) {
       throw new NotFoundException('Member not found in this project');
+    }
+
+    if (member.role === 'ADMIN') {
+      const adminCount = await this.prisma.projectMember.count({
+        where: { projectId, role: 'ADMIN' },
+      });
+      if (adminCount <= 1) {
+        throw new BadRequestException('Cannot remove the last ADMIN from the project');
+      }
     }
 
     await this.prisma.projectMember.delete({ where: { id: memberId } });

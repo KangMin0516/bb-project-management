@@ -182,11 +182,13 @@ export class IssueService {
 
     for (const [key, value] of Object.entries(data)) {
       const oldVal = existing[key as keyof typeof existing];
-      if (value !== undefined && String(value) !== String(oldVal)) {
+      const oldStr = oldVal != null ? String(oldVal) : null;
+      const newStr = value != null ? String(value) : null;
+      if (value !== undefined && newStr !== oldStr) {
         activities.push({
           field: key,
-          oldValue: oldVal != null ? String(oldVal) : null,
-          newValue: value != null ? String(value) : null,
+          oldValue: oldStr,
+          newValue: newStr,
         });
       }
     }
@@ -241,18 +243,53 @@ export class IssueService {
       });
     }
 
-    return this.prisma.issue.update({
-      where: { id: issueId },
-      data: {
-        status: targetStatus as IssueStatus,
-        order: targetOrder,
-        ...(activities.length > 0 && {
-          activities: {
-            create: activities.map((a) => ({ ...a, userId })),
-          },
-        }),
-      },
-      include: issueInclude,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.issue.update({
+        where: { id: issueId },
+        data: {
+          status: targetStatus as IssueStatus,
+          order: targetOrder,
+          ...(activities.length > 0 && {
+            activities: {
+              create: activities.map((a) => ({ ...a, userId })),
+            },
+          }),
+        },
+        include: issueInclude,
+      });
+
+      // Renormalize if gap between adjacent orders is too small
+      const neighbors = await tx.issue.findMany({
+        where: {
+          projectId,
+          status: targetStatus as IssueStatus,
+          id: { not: issueId },
+          order: { gte: targetOrder - 1, lte: targetOrder + 1 },
+        },
+        select: { order: true },
+      });
+
+      const needsRenormalize = neighbors.some(
+        (n) => Math.abs(n.order - targetOrder) < 0.001,
+      );
+
+      if (needsRenormalize) {
+        const allInColumn = await tx.issue.findMany({
+          where: { projectId, status: targetStatus as IssueStatus },
+          orderBy: { order: 'asc' },
+          select: { id: true },
+        });
+        await Promise.all(
+          allInColumn.map((issue, idx) =>
+            tx.issue.update({
+              where: { id: issue.id },
+              data: { order: (idx + 1) * ORDER_GAP },
+            }),
+          ),
+        );
+      }
+
+      return updated;
     });
   }
 

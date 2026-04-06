@@ -128,22 +128,42 @@ export class ExternalService {
     return issue;
   }
 
-  async listIssues(projectKey: string, status?: string) {
+  async listIssues(
+    projectKey: string,
+    status?: string,
+    page = 1,
+    limit = 50,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
     });
     if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
 
-    return this.prisma.issue.findMany({
-      where: {
-        projectId: project.id,
-        ...(status && { status: status as IssueStatus }),
-      },
-      include: {
-        assignee: { select: { id: true, email: true, name: true } },
-        labels: { include: { label: true } },
-      },
-      orderBy: [{ status: 'asc' }, { order: 'asc' }],
-    });
+    const where = {
+      projectId: project.id,
+      ...(status && { status: status as IssueStatus }),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.issue.findMany({
+        where,
+        include: {
+          assignee: { select: { id: true, email: true, name: true } },
+          labels: { include: { label: true } },
+        },
+        orderBy: [{ status: 'asc' }, { order: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.issue.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

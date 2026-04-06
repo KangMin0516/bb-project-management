@@ -16,7 +16,7 @@ export default function NewProjectPage() {
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       // Seed default labels
-      projectApi.seedLabels(project.id)
+      projectApi.seedLabels(project.id).catch(() => {})
       navigate(`/projects/${project.id}/board`)
     },
     onError: (err: any) => {

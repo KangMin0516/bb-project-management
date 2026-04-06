@@ -11,7 +11,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function AppLayout() {
   const { user, logout } = useAuthStore()
@@ -26,6 +26,13 @@ export default function AppLayout() {
   })
 
   const currentProject = projects?.find((p) => p.id === projectId)
+
+  useEffect(() => {
+    if (!showProjects) return
+    const handleClick = () => setShowProjects(false)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [showProjects])
 
   const handleLogout = () => {
     logout()
@@ -55,7 +62,7 @@ export default function AppLayout() {
         {/* Project Selector */}
         <div className="border-b border-gray-200 p-3">
           <button
-            onClick={() => setShowProjects(!showProjects)}
+            onClick={(e) => { e.stopPropagation(); setShowProjects(!showProjects) }}
             className="flex w-full items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
             <span className="truncate">
