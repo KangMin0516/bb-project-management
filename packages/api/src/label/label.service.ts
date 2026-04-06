@@ -72,17 +72,21 @@ export class LabelService {
       { name: 'Design', color: '#EC4899' },
     ];
 
-    const created = [];
-    for (const label of defaults) {
-      const existing = await this.prisma.label.findUnique({
-        where: { projectId_name: { projectId, name: label.name } },
+    const result = await this.prisma.label.createMany({
+      data: defaults.map((label) => ({ ...label, projectId })),
+      skipDuplicates: true,
+    });
+
+    // Return the created labels
+    if (result.count > 0) {
+      return this.prisma.label.findMany({
+        where: {
+          projectId,
+          name: { in: defaults.map((d) => d.name) },
+        },
       });
-      if (!existing) {
-        created.push(
-          await this.prisma.label.create({ data: { ...label, projectId } }),
-        );
-      }
     }
-    return created;
+
+    return [];
   }
 }

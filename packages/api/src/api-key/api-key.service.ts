@@ -11,10 +11,12 @@ export class ApiKeyService {
   async create(userId: string, dto: CreateApiKeyDto) {
     const rawKey = `bbpm_${randomBytes(28).toString('hex')}`;
     const hashedKey = await bcrypt.hash(rawKey, 10);
+    const keyPrefix = rawKey.substring(0, 8);
 
     const apiKey = await this.prisma.apiKey.create({
       data: {
         key: hashedKey,
+        keyPrefix,
         name: dto.name,
         userId,
       },
@@ -49,7 +51,11 @@ export class ApiKeyService {
   }
 
   async validateKey(rawKey: string) {
+    // Filter by keyPrefix (first 8 chars, stored unencrypted) to avoid
+    // a full table scan with bcrypt.compare on every row.
+    const keyPrefix = rawKey.substring(0, 8);
     const apiKeys = await this.prisma.apiKey.findMany({
+      where: { keyPrefix },
       include: { user: { select: { id: true, email: true, isSuperuser: true } } },
     });
 

@@ -12,6 +12,7 @@ import IssuesPage from '@/pages/IssuesPage'
 import DashboardPage from '@/pages/DashboardPage'
 import SettingsPage from '@/pages/SettingsPage'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import ToastContainer from '@/components/ToastContainer'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </ErrorBoundary>
+      <ToastContainer />
     </QueryClientProvider>
   )
 }

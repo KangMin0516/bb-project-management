@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
 import { Trash2, UserPlus } from 'lucide-react'
+import { useToastStore } from '@/stores/toast'
 
 export default function SettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -47,11 +48,17 @@ export default function SettingsPage() {
     mutationFn: (data: { name: string; description?: string }) =>
       projectApi.update(projectId!, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update project')
+    },
   })
 
   const deleteProject = useMutation({
     mutationFn: () => projectApi.delete(projectId!),
     onSuccess: () => navigate('/'),
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to delete project')
+    },
   })
 
   // Members
@@ -64,17 +71,26 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['members', projectId] })
       setAddUserId('')
     },
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to add member')
+    },
   })
 
   const removeMember = useMutation({
     mutationFn: (memberId: string) => projectApi.removeMember(projectId!, memberId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to remove member')
+    },
   })
 
   const updateRole = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
       projectApi.updateMember(projectId!, memberId, { role }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update role')
+    },
   })
 
   // Labels
@@ -87,11 +103,17 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['labels', projectId] })
       setNewLabel('')
     },
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to create label')
+    },
   })
 
   const seedLabels = useMutation({
     mutationFn: () => projectApi.seedLabels(projectId!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['labels', projectId] }),
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to seed labels')
+    },
   })
 
   if (!projectId) return null

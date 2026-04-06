@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -26,6 +27,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         typeof res === 'string'
           ? res
           : (res as Record<string, unknown>).message as string | string[];
+    } else if (
+      exception instanceof PrismaClientKnownRequestError &&
+      exception.code === 'P2025'
+    ) {
+      status = HttpStatus.NOT_FOUND;
+      message = 'Record not found';
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
     }

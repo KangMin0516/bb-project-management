@@ -1,3 +1,4 @@
+// TODO: Add rate limiting (@nestjs/throttler) to prevent brute force attacks
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';

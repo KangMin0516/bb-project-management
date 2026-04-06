@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 import type { Issue } from '@/api/issues'
 import IssueCard from './IssueCard'
@@ -9,10 +10,10 @@ interface Props {
   issues: Issue[]
   projectKey: string
   onIssueClick: (issue: Issue) => void
-  onAddClick: () => void
+  onAddClick: (status: string) => void
 }
 
-export default function BoardColumn({ status, issues, projectKey, onIssueClick, onAddClick }: Props) {
+export default memo(function BoardColumn({ status, issues, projectKey, onIssueClick, onAddClick }: Props) {
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
       <div className="flex items-center gap-2 px-3 py-2.5">
@@ -58,11 +59,11 @@ export default function BoardColumn({ status, issues, projectKey, onIssueClick, 
       </Droppable>
 
       <button
-        onClick={onAddClick}
+        onClick={() => onAddClick(status)}
         className="m-2 rounded-lg border border-dashed border-gray-300 py-1.5 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600"
       >
         + Add issue
       </button>
     </div>
   )
-}
+})

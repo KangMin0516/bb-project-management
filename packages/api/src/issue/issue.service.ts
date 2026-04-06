@@ -100,21 +100,35 @@ export class IssueService {
   }
 
   async findByStatus(projectId: string) {
-    // Kanban board: group issues by status with order
-    const issues = await this.prisma.issue.findMany({
-      where: { projectId },
-      include: issueInclude,
-      orderBy: { order: 'asc' },
-    });
+    // Kanban board: group issues by status with a per-column limit to prevent
+    // performance issues on projects with many completed/canceled issues.
+    const MAX_PER_COLUMN = 50;
 
-    // Group by status
-    const grouped: Record<string, typeof issues> = {};
-    for (const issue of issues) {
-      if (!grouped[issue.status]) {
-        grouped[issue.status] = [];
-      }
-      grouped[issue.status].push(issue);
-    }
+    const statuses: IssueStatus[] = [
+      'BACKLOG' as IssueStatus,
+      'TODO' as IssueStatus,
+      'IN_PROGRESS' as IssueStatus,
+      'REVIEW_QA' as IssueStatus,
+      'DONE' as IssueStatus,
+      'CANCELED' as IssueStatus,
+      'RECHECK' as IssueStatus,
+    ];
+
+    const grouped: Record<string, Awaited<ReturnType<typeof this.prisma.issue.findMany>>> = {};
+
+    await Promise.all(
+      statuses.map(async (status) => {
+        const issues = await this.prisma.issue.findMany({
+          where: { projectId, status },
+          include: issueInclude,
+          orderBy: { order: 'asc' },
+          take: MAX_PER_COLUMN,
+        });
+        if (issues.length > 0) {
+          grouped[status] = issues;
+        }
+      }),
+    );
 
     return grouped;
   }

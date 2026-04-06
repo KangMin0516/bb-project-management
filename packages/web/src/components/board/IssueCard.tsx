@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
 import { PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
@@ -8,7 +9,7 @@ interface Props {
   onClick: () => void
 }
 
-export default function IssueCard({ issue, projectKey, onClick }: Props) {
+export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
   return (
     <div
       onClick={onClick}
@@ -52,4 +53,4 @@ export default function IssueCard({ issue, projectKey, onClick }: Props) {
       </div>
     </div>
   )
-}
+})

@@ -176,6 +176,7 @@ model Activity {
 model ApiKey {
   id        String    @id @default(uuid())
   key       String    @unique @db.VarChar(64)
+  keyPrefix String    @db.VarChar(8) @map("key_prefix")
   name      String    @db.VarChar(100)
   lastUsed  DateTime? @map("last_used")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -183,5 +184,6 @@ model ApiKey {
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([keyPrefix])
   @@map("api_keys")
 }

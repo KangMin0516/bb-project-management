@@ -6,7 +6,6 @@ const userSelect = {
   email: true,
   name: true,
   avatar: true,
-  isSuperuser: true,
   createdAt: true,
 } as const;
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
@@ -7,6 +7,7 @@ import { projectApi } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
+import { useToastStore } from '@/stores/toast'
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -32,7 +33,14 @@ export default function BoardPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
     },
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to reorder issue')
+    },
   })
+
+  const handleAddClick = useCallback((status: string) => {
+    setCreateModal(status)
+  }, [])
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -82,7 +90,7 @@ export default function BoardPage() {
                 issues={board?.[status] || []}
                 projectKey={project?.key || ''}
                 onIssueClick={setSelectedIssue}
-                onAddClick={() => setCreateModal(status)}
+                onAddClick={handleAddClick}
               />
             ))}
           </div>
@@ -137,6 +145,9 @@ function IssueDetailPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
+    },
+    onError: (err: any) => {
+      useToastStore.getState().addToast(err.response?.data?.message || 'Failed to update issue')
     },
   })
 
