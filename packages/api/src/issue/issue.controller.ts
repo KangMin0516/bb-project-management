@@ -14,6 +14,7 @@ import { IssueService } from './issue.service.js';
 import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
+import { ReorderIssueDto } from './dto/reorder-issue.dto.js';
 import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 
@@ -68,7 +69,7 @@ export class IssueController {
   reorder(
     @Param('projectId') projectId: string,
     @Param('issueId') issueId: string,
-    @Body() body: { status: string; order: number },
+    @Body() body: ReorderIssueDto,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.issueService.reorder(

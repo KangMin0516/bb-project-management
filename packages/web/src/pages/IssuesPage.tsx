@@ -1,31 +1,17 @@
-import { useState } from 'react'
+import { useState, useDeferredValue } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, type Issue } from '@/api/issues'
+import { issueApi } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { cn } from '@/lib/utils'
+import { STATUS_COLORS, PRIORITY_COLORS, STATUSES } from '@/lib/constants'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import { Plus, Search } from 'lucide-react'
-
-const statusColors: Record<string, string> = {
-  BACKLOG: 'bg-gray-400',
-  TODO: 'bg-blue-400',
-  IN_PROGRESS: 'bg-yellow-400',
-  REVIEW_QA: 'bg-purple-400',
-  DONE: 'bg-green-400',
-  CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
-}
-
-const priorityColors: Record<string, string> = {
-  HIGH: 'bg-red-100 text-red-700',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  LOW: 'bg-green-100 text-green-700',
-}
 
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [page, setPage] = useState(1)
@@ -33,7 +19,7 @@ export default function IssuesPage() {
   const queryClient = useQueryClient()
 
   const params: Record<string, string> = { page: String(page), limit: '30' }
-  if (search) params.search = search
+  if (deferredSearch) params.search = deferredSearch
   if (statusFilter) params.status = statusFilter
   if (priorityFilter) params.priority = priorityFilter
 
@@ -89,7 +75,7 @@ export default function IssuesPage() {
           className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
         >
           <option value="">All Status</option>
-          {['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED', 'RECHECK'].map((s) => (
+          {STATUSES.map((s) => (
             <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
           ))}
         </select>
@@ -135,12 +121,12 @@ export default function IssuesPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1.5">
-                      <div className={cn('h-2 w-2 rounded-full', statusColors[issue.status])} />
+                      <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
                       <span className="text-xs text-gray-600">{issue.status.replace(/_/g, ' ')}</span>
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', priorityColors[issue.priority])}>
+                    <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
                       {issue.priority}
                     </span>
                   </td>

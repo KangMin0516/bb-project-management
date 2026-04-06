@@ -4,12 +4,15 @@ import type { CreateIssueDto } from './dto/create-issue.dto.js';
 import type { UpdateIssueDto } from './dto/update-issue.dto.js';
 import type { QueryIssueDto } from './dto/query-issue.dto.js';
 import type { IssueWhereInput } from '../../generated/prisma/models.js';
+import type { IssueStatus } from '../../generated/prisma/enums.js';
+
+export const USER_SELECT = { id: true, email: true, name: true, avatar: true } as const;
 
 const ORDER_GAP = 1000;
 
 const issueInclude = {
-  assignee: { select: { id: true, email: true, name: true, avatar: true } },
-  creator: { select: { id: true, email: true, name: true, avatar: true } },
+  assignee: { select: USER_SELECT },
+  creator: { select: USER_SELECT },
   labels: { include: { label: true } },
   parent: { select: { id: true, number: true, title: true } },
   _count: { select: { children: true } },
@@ -22,39 +25,41 @@ export class IssueService {
   async create(projectId: string, dto: CreateIssueDto, creatorId: string) {
     const { labelIds, ...data } = dto;
 
-    // Auto-increment number within project
-    const lastIssue = await this.prisma.issue.findFirst({
-      where: { projectId },
-      orderBy: { number: 'desc' },
-      select: { number: true },
-    });
-    const number = (lastIssue?.number ?? 0) + 1;
+    return this.prisma.$transaction(async (tx) => {
+      // Auto-increment number within project
+      const lastIssue = await tx.issue.findFirst({
+        where: { projectId },
+        orderBy: { number: 'desc' },
+        select: { number: true },
+      });
+      const number = (lastIssue?.number ?? 0) + 1;
 
-    // Calculate order (append to end of status column)
-    const lastInColumn = await this.prisma.issue.findFirst({
-      where: { projectId, status: data.status ?? 'BACKLOG' },
-      orderBy: { order: 'desc' },
-      select: { order: true },
-    });
-    const order = (lastInColumn?.order ?? 0) + ORDER_GAP;
+      // Calculate order (append to end of status column)
+      const lastInColumn = await tx.issue.findFirst({
+        where: { projectId, status: data.status ?? 'BACKLOG' },
+        orderBy: { order: 'desc' },
+        select: { order: true },
+      });
+      const order = (lastInColumn?.order ?? 0) + ORDER_GAP;
 
-    const issue = await this.prisma.issue.create({
-      data: {
-        ...data,
-        number,
-        order,
-        projectId,
-        creatorId,
-        ...(labelIds?.length && {
-          labels: {
-            create: labelIds.map((labelId) => ({ labelId })),
-          },
-        }),
-      },
-      include: issueInclude,
-    });
+      const issue = await tx.issue.create({
+        data: {
+          ...data,
+          number,
+          order,
+          projectId,
+          creatorId,
+          ...(labelIds?.length && {
+            labels: {
+              create: labelIds.map((labelId) => ({ labelId })),
+            },
+          }),
+        },
+        include: issueInclude,
+      });
 
-    return issue;
+      return issue;
+    });
   }
 
   async findAll(projectId: string, query: QueryIssueDto) {
@@ -121,13 +126,13 @@ export class IssueService {
         ...issueInclude,
         children: {
           include: {
-            assignee: { select: { id: true, email: true, name: true, avatar: true } },
+            assignee: { select: USER_SELECT },
           },
           orderBy: { order: 'asc' },
         },
         activities: {
           include: {
-            user: { select: { id: true, email: true, name: true, avatar: true } },
+            user: { select: USER_SELECT },
           },
           orderBy: { createdAt: 'desc' },
           take: 20,
@@ -225,7 +230,7 @@ export class IssueService {
     return this.prisma.issue.update({
       where: { id: issueId },
       data: {
-        status: targetStatus as any,
+        status: targetStatus as IssueStatus,
         order: targetOrder,
         ...(activities.length > 0 && {
           activities: {

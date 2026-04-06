@@ -36,7 +36,20 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Project context required');
     }
 
-    // Superuser bypasses role checks
+    // Reuse data from ProjectMemberGuard if it already ran
+    if (request.isSuperuser) {
+      return true;
+    }
+
+    if (request.projectMember) {
+      const member = request.projectMember;
+      if (!requiredRoles.includes(member.role)) {
+        throw new ForbiddenException('Insufficient role');
+      }
+      return true;
+    }
+
+    // Fallback: query DB if ProjectMemberGuard didn't run before this guard
     const dbUser = await this.prisma.user.findUnique({
       where: { id: user.sub },
       select: { isSuperuser: true },

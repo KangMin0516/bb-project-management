@@ -2,22 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '@/api/dashboard'
 import { cn } from '@/lib/utils'
-
-const statusColors: Record<string, string> = {
-  BACKLOG: 'bg-gray-400',
-  TODO: 'bg-blue-400',
-  IN_PROGRESS: 'bg-yellow-400',
-  REVIEW_QA: 'bg-purple-400',
-  DONE: 'bg-green-400',
-  CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
-}
-
-const priorityColors: Record<string, string> = {
-  HIGH: 'bg-red-100 text-red-700',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  LOW: 'bg-green-100 text-green-700',
-}
+import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -70,7 +55,7 @@ export default function DashboardPage() {
           <div className="space-y-2">
             {stats.byStatus.map((s) => (
               <div key={s.status} className="flex items-center gap-3">
-                <div className={cn('h-2.5 w-2.5 rounded-full', statusColors[s.status])} />
+                <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[s.status])} />
                 <span className="flex-1 text-sm text-gray-600">{s.status.replace(/_/g, ' ')}</span>
                 <span className="text-sm font-medium text-gray-900">{s.count}</span>
               </div>
@@ -87,7 +72,7 @@ export default function DashboardPage() {
                 <span
                   className={cn(
                     'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                    priorityColors[p.priority] || 'bg-gray-100 text-gray-600',
+                    PRIORITY_COLORS[p.priority] || 'bg-gray-100 text-gray-600',
                   )}
                 >
                   {p.priority}

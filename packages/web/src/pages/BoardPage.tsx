@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
@@ -6,9 +6,7 @@ import { issueApi, type Issue, type IssueDetail } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
-
-const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED', 'RECHECK']
-const ORDER_GAP = 1000
+import { STATUSES, ORDER_GAP } from '@/lib/constants'
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -120,6 +118,14 @@ function IssueDetailPanel({
   issue: Issue
   onClose: () => void
 }) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const { data: detail } = useQuery({
     queryKey: ['issue', projectId, issue.id],
     queryFn: () => issueApi.get(projectId, issue.id),
@@ -137,7 +143,7 @@ function IssueDetailPanel({
   const d: Issue | IssueDetail = detail || issue
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
       <div
         className="h-full w-full max-w-lg overflow-y-auto bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -161,7 +167,7 @@ function IssueDetailPanel({
                 onChange={(e) => updateMutation.mutate({ status: e.target.value })}
                 className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
               >
-                {['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED', 'RECHECK'].map(
+                {STATUSES.map(
                   (s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>,
                 )}
               </select>

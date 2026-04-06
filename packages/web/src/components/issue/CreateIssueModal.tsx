@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -11,6 +11,14 @@ interface Props {
 }
 
 export default function CreateIssueModal({ projectId, defaultStatus, onClose }: Props) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('MEDIUM')
@@ -52,7 +60,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}

@@ -4,14 +4,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { IssueService } from '../issue/issue.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
-
-const ORDER_GAP = 1000;
+import type { IssueStatus } from '../../generated/prisma/enums.js';
 
 @Injectable()
 export class ExternalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private issueService: IssueService,
+  ) {}
 
   async createIssue(dto: ExternalCreateIssueDto, creatorId: string) {
     const project = await this.prisma.project.findUnique({
@@ -32,7 +35,7 @@ export class ExternalService {
     }
 
     // Resolve labels by name
-    let labelIds: string[] = [];
+    let labelIds: string[] | undefined;
     if (dto.labels?.length) {
       const labels = await this.prisma.label.findMany({
         where: {
@@ -43,48 +46,20 @@ export class ExternalService {
       labelIds = labels.map((l) => l.id);
     }
 
-    // Auto-increment number
-    const lastIssue = await this.prisma.issue.findFirst({
-      where: { projectId: project.id },
-      orderBy: { number: 'desc' },
-      select: { number: true },
-    });
-    const number = (lastIssue?.number ?? 0) + 1;
-
-    const status = dto.status ?? 'BACKLOG';
-    const lastInColumn = await this.prisma.issue.findFirst({
-      where: { projectId: project.id, status: status as any },
-      orderBy: { order: 'desc' },
-      select: { order: true },
-    });
-    const order = (lastInColumn?.order ?? 0) + ORDER_GAP;
-
-    const issue = await this.prisma.issue.create({
-      data: {
+    return this.issueService.create(
+      project.id,
+      {
         title: dto.title,
         description: dto.description,
-        status: status as any,
-        priority: dto.priority ?? 'MEDIUM',
-        type: dto.type ?? 'TASK',
-        number,
-        order,
-        projectId: project.id,
-        creatorId,
+        status: dto.status,
+        priority: dto.priority,
+        type: dto.type,
         assigneeId,
         parentId: dto.parentId,
-        ...(labelIds.length && {
-          labels: { create: labelIds.map((id) => ({ labelId: id })) },
-        }),
+        labelIds,
       },
-      include: {
-        assignee: { select: { id: true, email: true, name: true } },
-        creator: { select: { id: true, email: true, name: true } },
-        labels: { include: { label: true } },
-        project: { select: { id: true, key: true, name: true } },
-      },
-    });
-
-    return issue;
+      creatorId,
+    );
   }
 
   async updateIssue(
@@ -103,7 +78,7 @@ export class ExternalService {
     });
     if (!issue) throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
 
-    // Resolve assignee
+    // Resolve assignee by email
     let assigneeId: string | null | undefined;
     if (dto.assigneeEmail !== undefined) {
       if (dto.assigneeEmail === null || dto.assigneeEmail === '') {
@@ -117,47 +92,18 @@ export class ExternalService {
       }
     }
 
-    // Track activities
-    const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
-    const changes: Record<string, any> = {};
-
-    if (dto.title !== undefined && dto.title !== issue.title) {
-      activities.push({ field: 'title', oldValue: issue.title, newValue: dto.title });
-      changes.title = dto.title;
-    }
-    if (dto.description !== undefined && dto.description !== issue.description) {
-      activities.push({ field: 'description', oldValue: issue.description, newValue: dto.description });
-      changes.description = dto.description;
-    }
-    if (dto.status !== undefined && dto.status !== issue.status) {
-      activities.push({ field: 'status', oldValue: issue.status, newValue: dto.status });
-      changes.status = dto.status;
-    }
-    if (dto.priority !== undefined && dto.priority !== issue.priority) {
-      activities.push({ field: 'priority', oldValue: issue.priority, newValue: dto.priority });
-      changes.priority = dto.priority;
-    }
-    if (assigneeId !== undefined && assigneeId !== issue.assigneeId) {
-      activities.push({ field: 'assigneeId', oldValue: issue.assigneeId, newValue: assigneeId });
-      changes.assigneeId = assigneeId;
-    }
-
-    return this.prisma.issue.update({
-      where: { id: issue.id },
-      data: {
-        ...changes,
-        ...(activities.length > 0 && {
-          activities: {
-            create: activities.map((a) => ({ ...a, userId })),
-          },
-        }),
+    return this.issueService.update(
+      project.id,
+      issue.id,
+      {
+        title: dto.title,
+        description: dto.description,
+        status: dto.status,
+        priority: dto.priority,
+        assigneeId,
       },
-      include: {
-        assignee: { select: { id: true, email: true, name: true } },
-        labels: { include: { label: true } },
-        project: { select: { id: true, key: true, name: true } },
-      },
-    });
+      userId,
+    );
   }
 
   async getIssue(projectKey: string, issueNumber: number) {
@@ -191,7 +137,7 @@ export class ExternalService {
     return this.prisma.issue.findMany({
       where: {
         projectId: project.id,
-        ...(status && { status: status as any }),
+        ...(status && { status: status as IssueStatus }),
       },
       include: {
         assignee: { select: { id: true, email: true, name: true } },

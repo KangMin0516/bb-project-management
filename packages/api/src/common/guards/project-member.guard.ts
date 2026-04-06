@@ -31,6 +31,7 @@ export class ProjectMemberGuard implements CanActivate {
     });
 
     if (dbUser?.isSuperuser) {
+      request.isSuperuser = true;
       return true;
     }
 

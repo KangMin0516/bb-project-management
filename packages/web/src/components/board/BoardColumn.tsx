@@ -2,26 +2,7 @@ import { Droppable, Draggable } from '@hello-pangea/dnd'
 import type { Issue } from '@/api/issues'
 import IssueCard from './IssueCard'
 import { cn } from '@/lib/utils'
-
-const statusColors: Record<string, string> = {
-  BACKLOG: 'bg-gray-400',
-  TODO: 'bg-blue-400',
-  IN_PROGRESS: 'bg-yellow-400',
-  REVIEW_QA: 'bg-purple-400',
-  DONE: 'bg-green-400',
-  CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
-}
-
-const statusLabels: Record<string, string> = {
-  BACKLOG: 'Backlog',
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  REVIEW_QA: 'Review/QA',
-  DONE: 'Done',
-  CANCELED: 'Canceled',
-  RECHECK: 'Recheck',
-}
+import { STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
 
 interface Props {
   status: string
@@ -35,8 +16,8 @@ export default function BoardColumn({ status, issues, projectKey, onIssueClick, 
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
       <div className="flex items-center gap-2 px-3 py-2.5">
-        <div className={cn('h-2.5 w-2.5 rounded-full', statusColors[status])} />
-        <span className="text-sm font-semibold text-gray-700">{statusLabels[status] || status}</span>
+        <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[status])} />
+        <span className="text-sm font-semibold text-gray-700">{STATUS_LABELS[status] || status}</span>
         <span className="ml-auto rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
           {issues.length}
         </span>

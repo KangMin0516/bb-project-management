@@ -1,4 +1,4 @@
-import { Outlet, Link, useParams, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { useQuery } from '@tanstack/react-query'
 import { projectApi, type Project } from '@/api/projects'
@@ -18,6 +18,7 @@ export default function AppLayout() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const [showProjects, setShowProjects] = useState(false)
+  const location = useLocation()
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],

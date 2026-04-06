@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectApi, type ProjectMember, type Label } from '@/api/projects'
+import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
-import { cn } from '@/lib/utils'
 import { Trash2, UserPlus } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -37,11 +36,12 @@ export default function SettingsPage() {
   // Project update
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const projectLoaded = project && !name
-  if (projectLoaded) {
-    setName(project.name)
-    setDescription(project.description || '')
-  }
+  useEffect(() => {
+    if (project) {
+      setName(project.name)
+      setDescription(project.description || '')
+    }
+  }, [project])
 
   const updateProject = useMutation({
     mutationFn: (data: { name: string; description?: string }) =>

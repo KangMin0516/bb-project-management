@@ -1,18 +1,6 @@
 import type { Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
-
-const priorityColors: Record<string, string> = {
-  HIGH: 'bg-red-100 text-red-700',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  LOW: 'bg-green-100 text-green-700',
-}
-
-const typeIcons: Record<string, string> = {
-  EPIC: '⚡',
-  TASK: '✅',
-  BUG: '🐛',
-  SUB_TASK: '📎',
-}
+import { PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
 
 interface Props {
   issue: Issue
@@ -27,7 +15,7 @@ export default function IssueCard({ issue, projectKey, onClick }: Props) {
       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md"
     >
       <div className="mb-1.5 flex items-center gap-1.5">
-        <span className="text-xs">{typeIcons[issue.type] || '📋'}</span>
+        <span className="text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
         <span className="font-mono text-xs text-gray-400">
           {projectKey}-{issue.number}
         </span>
@@ -38,7 +26,7 @@ export default function IssueCard({ issue, projectKey, onClick }: Props) {
           <span
             className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium',
-              priorityColors[issue.priority] || 'bg-gray-100 text-gray-600',
+              PRIORITY_COLORS[issue.priority] || 'bg-gray-100 text-gray-600',
             )}
           >
             {issue.priority}
