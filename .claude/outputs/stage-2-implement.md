@@ -1,55 +1,33 @@
-## 구현 보고서: 이슈 템플릿 + 대시보드 My Work 강화
+## Stage 2: 구현 보고서 — 오버듀 이슈 강조 표시
 
-### Phase 1: 이슈 템플릿
+### 구현 완료 항목
 
-#### 신규 파일
-- `packages/api/prisma/migrations/20260407104939_add_issue_template/migration.sql` — 마이그레이션
-- `packages/api/src/template/template.service.ts` — CRUD 서비스
-- `packages/api/src/template/template.controller.ts` — REST 컨트롤러 (GET/POST/PATCH/DELETE /templates)
-- `packages/api/src/template/template.module.ts` — NestJS 모듈
-- `packages/api/src/template/dto/create-template.dto.ts` — 생성 DTO (name, type, description)
-- `packages/api/src/template/dto/update-template.dto.ts` — 수정 DTO
-- `packages/web/src/api/templates.ts` — API 클라이언트 + 타입
-- `packages/web/src/components/template/TemplateManager.tsx` — 템플릿 CRUD 관리 UI
+| # | 항목 | 파일 | 상태 |
+|---|------|------|------|
+| 1 | `isOverdue()` 헬퍼 | `packages/web/src/lib/time.ts` | 완료 |
+| 2 | 오버듀 카드 border 강조 | `packages/web/src/components/board/IssueCard.tsx` | 완료 |
+| 3 | 오버듀 행 배경 강조 | `packages/web/src/pages/IssuesPage.tsx` | 완료 |
 
-#### 수정 파일
-- `packages/api/prisma/schema.prisma` — IssueTemplate 모델 + User relation 추가
-- `packages/api/src/app.module.ts` — TemplateModule 등록
-- `packages/web/src/pages/ProjectsPage.tsx` — Projects | Templates 탭 추가
-- `packages/web/src/components/issue/CreateIssueModal.tsx` — 타입 변경 시 템플릿 description 자동 채움
+### 변경 상세
 
-### Phase 2: 대시보드 My Work 강화
+#### 1. `lib/time.ts` — `isOverdue()` 추가
+- `dueDate`를 받아 오늘 기준 과거인지 boolean 반환
+- `null | undefined` 처리 포함
+- 기존 `getDueBadge()`와 동일한 날짜 비교 로직 (시간 무시)
 
-#### 수정 파일
-- `packages/api/src/dashboard/dashboard.service.ts` — myIssues: take:10 제한 해제, dueDate nulls last 정렬
-- `packages/web/src/pages/DashboardPage.tsx` — My Issues 섹션 확장:
-  - 오버듀 이슈 빨간 배경 + 빨간 텍스트 강조
-  - 정렬 토글 (Due Date / Priority)
-  - 전체 이슈 표시 (10개 제한 해제)
-  - My Issues 카운트 카드 추가 (오버듀 수 포함)
+#### 2. `IssueCard.tsx` — 오버듀 카드 시각적 강조
+- `status !== 'DONE' && status !== 'CANCELED'` 조건으로 완료/취소 이슈 제외
+- 오버듀 카드: `border-red-300` + `border-l-4 border-l-red-500` (좌측 빨간 바)
+- 정상 카드: 기존 `border-gray-200` 유지
+
+#### 3. `IssuesPage.tsx` — 오버듀 행 강조
+- 오버듀 행: `bg-red-50/50` 배경 + 타이틀 `text-red-700`
+- 동일하게 DONE/CANCELED 제외
 
 ### 자체 점검
-- [x] TypeScript 컴파일: API, Web 모두 에러 없음
-- [x] Vite 빌드 성공
-- [x] import 경로 정확 (.js 확장자)
-- [x] 기존 코드 패턴과 일관성 유지
-- [x] 기획서의 모든 항목 구현 완료
-- [x] 불필요한 변경 없음
 
-### 변경 파일 (14개)
-| 파일 | 상태 |
-|------|------|
-| `packages/api/prisma/schema.prisma` | 수정 |
-| `packages/api/prisma/migrations/20260407104939_add_issue_template/` | 신규 |
-| `packages/api/src/template/template.service.ts` | 신규 |
-| `packages/api/src/template/template.controller.ts` | 신규 |
-| `packages/api/src/template/template.module.ts` | 신규 |
-| `packages/api/src/template/dto/create-template.dto.ts` | 신규 |
-| `packages/api/src/template/dto/update-template.dto.ts` | 신규 |
-| `packages/api/src/app.module.ts` | 수정 |
-| `packages/api/src/dashboard/dashboard.service.ts` | 수정 |
-| `packages/web/src/api/templates.ts` | 신규 |
-| `packages/web/src/components/template/TemplateManager.tsx` | 신규 |
-| `packages/web/src/pages/ProjectsPage.tsx` | 수정 |
-| `packages/web/src/components/issue/CreateIssueModal.tsx` | 수정 |
-| `packages/web/src/pages/DashboardPage.tsx` | 수정 |
+- [x] TypeScript 타입 체크 통과 (`tsc --noEmit`)
+- [x] 기존 dueBadge 기능 유지
+- [x] DONE/CANCELED 상태 이슈는 오버듀 스타일 미적용
+- [x] API 변경 없음
+- [x] 수정 파일 3개 (기획서 범위 일치)

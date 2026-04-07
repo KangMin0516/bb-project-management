@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react'
 import type { Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
 import { PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
-import { getDueBadge } from '@/lib/time'
+import { getDueBadge, isIssueOverdue } from '@/lib/time'
 
 interface Props {
   issue: Issue
@@ -12,6 +12,7 @@ interface Props {
 
 export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
   const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
+  const overdue = isIssueOverdue(issue)
 
   return (
     <div
@@ -19,7 +20,10 @@ export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       role="button"
       tabIndex={0}
-      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md"
+      className={cn(
+        'cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition hover:shadow-md',
+        overdue ? 'border-red-300 border-l-4 border-l-red-500' : 'border-gray-200',
+      )}
     >
       <div className="mb-1.5 flex items-center gap-1.5">
         <span className="text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
