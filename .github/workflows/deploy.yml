@@ -76,9 +76,9 @@ jobs:
             docker stop bbpm-db bbpm-app bbpm-web 2>/dev/null || true
             docker rm bbpm-db bbpm-app bbpm-web 2>/dev/null || true
 
-            # Build images
+            # Build images (no-cache to ensure fresh build)
             echo "Building images..."
-            $COMPOSE build
+            $COMPOSE build --no-cache
 
             # Start database first
             echo "Starting database..."
