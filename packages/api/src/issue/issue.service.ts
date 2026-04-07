@@ -228,6 +228,9 @@ export class IssueService {
           orderBy: { createdAt: 'desc' },
           take: 20,
         },
+        attachments: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 

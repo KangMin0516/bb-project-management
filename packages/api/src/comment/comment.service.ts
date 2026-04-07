@@ -39,6 +39,7 @@ export class CommentService {
       },
       include: {
         user: { select: USER_SELECT },
+        attachments: { orderBy: { createdAt: 'desc' } },
       },
     });
   }
@@ -54,6 +55,7 @@ export class CommentService {
         where: { issueId },
         include: {
           user: { select: USER_SELECT },
+          attachments: { orderBy: { createdAt: 'desc' } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (safePage - 1) * safeLimit,
@@ -92,6 +94,7 @@ export class CommentService {
       data: { content: dto.content },
       include: {
         user: { select: USER_SELECT },
+        attachments: { orderBy: { createdAt: 'desc' } },
       },
     });
   }

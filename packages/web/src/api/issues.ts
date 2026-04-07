@@ -29,6 +29,7 @@ export interface IssueDetail extends Issue {
     assignee: { id: string; email: string; name: string; avatar: string | null } | null
   }[]
   activities: Activity[]
+  attachments: Attachment[]
 }
 
 export interface Activity {
@@ -41,12 +42,22 @@ export interface Activity {
   issue?: { id: string; number: number; title: string }
 }
 
+export interface Attachment {
+  id: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  url: string
+  createdAt: string
+}
+
 export interface Comment {
   id: string
   content: string
   createdAt: string
   updatedAt: string
   user: { id: string; email: string; name: string; avatar: string | null }
+  attachments?: Attachment[]
 }
 
 export interface PaginatedIssues {
@@ -113,4 +124,19 @@ export const issueApi = {
     api.patch<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`, data).then((r) => r.data.data),
   deleteComment: (projectId: string, issueId: string, commentId: string) =>
     api.delete(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`),
+}
+
+export const uploadApi = {
+  upload: (file: File, opts?: { issueId?: string; commentId?: string }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const params = new URLSearchParams()
+    if (opts?.issueId) params.set('issueId', opts.issueId)
+    if (opts?.commentId) params.set('commentId', opts.commentId)
+    return api.post<{ data: Attachment }>(`/upload?${params}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data.data)
+  },
+  delete: (id: string) =>
+    api.delete(`/upload/${id}`),
 }

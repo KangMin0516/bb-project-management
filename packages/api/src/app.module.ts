@@ -13,6 +13,7 @@ import { CommentModule } from './comment/comment.module.js';
 import { ApiKeyModule } from './api-key/api-key.module.js';
 import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
+import { UploadModule } from './upload/upload.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -34,6 +35,7 @@ import { AppController } from './app.controller.js';
     ApiKeyModule,
     ExternalModule,
     DashboardModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

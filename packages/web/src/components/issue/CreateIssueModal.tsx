@@ -48,8 +48,13 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
 
   const parentOptions = useMemo(() => {
     if (!issuesData?.items) return []
-    return issuesData.items.filter((i) => i.type !== 'SUB_TASK')
-  }, [issuesData])
+    if (type === 'SUB_TASK') {
+      // Sub-task can pick any non-SUB_TASK as parent
+      return issuesData.items.filter((i) => i.type !== 'SUB_TASK')
+    }
+    // TASK/BUG can only pick EPIC as parent
+    return issuesData.items.filter((i) => i.type === 'EPIC')
+  }, [issuesData, type])
 
   const mutation = useMutation({
     mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
@@ -112,7 +117,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
               <label className="mb-1 block text-xs font-medium text-gray-500">Type</label>
               <select
                 value={type}
-                onChange={(e) => { setType(e.target.value); if (e.target.value === 'EPIC') setParentId('') }}
+                onChange={(e) => { setType(e.target.value); setParentId('') }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
               >
                 <option value="TASK">Task</option>

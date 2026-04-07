@@ -1,57 +1,68 @@
 ## Stage 4: 테스트 통합 결과
 
 ### 전체 요약
-- **전체 결과**: 조건부 통과 (E2E 미수행)
-- **정적 분석/빌드/단위 테스트**: 통과
-- **API 테스트**: 통과 (25건 PASS)
+- **전체 결과**: 통과 (E2E 미수행 — Chrome extension 미연결)
+- **정적 분석/빌드/단위 테스트**: 통과 (lint 4건 수정 완료)
+- **API 테스트**: 통과 (15/15)
 - **E2E 테스트**: 미수행 (Chrome extension 미연결)
 
 ---
 
 ### Part A: 정적 분석 / 빌드 / 단위 테스트
 
-| 항목 | 결과 | 비고 |
-|------|------|------|
-| API TypeScript | Pass | test/ 제외 에러 없음 |
-| Web TypeScript | Pass | 에러 없음 |
-| API Lint (변경 파일) | Pass* | superuser.guard.ts unsafe any 2건 — 기존 guard 패턴과 동일 |
-| Web Lint (변경 파일) | Pass | 변경으로 인한 신규 에러 없음 |
-| API 빌드 (nest build) | Pass | |
-| Web 빌드 (vite build) | Pass | |
-| 단위 테스트 | N/A | spec 파일 미존재 (기존 상태) |
+#### 빌드
+| 서비스 | 결과 | 비고 |
+|--------|------|------|
+| API (`nest build`) | **Pass** | 성공 |
+| Web (`tsc -b && vite build`) | **Pass** | 성공 |
+
+#### 타입 체크
+- API: Pass (기존 test 파일 에러 2건만 — pre-existing)
+- Web: Pass
+
+#### Lint
+- **신규 이슈 4건** → 모두 수정 완료
+  - Prettier 포맷팅 3건: `prettier --write`
+  - `err.message` unsafe access 1건: `err: unknown` + `instanceof Error` 체크
+- 기존 이슈: API 33건, Web 12건 (이번 변경과 무관)
+
+#### 단위 테스트
+- 프로젝트에 단위 테스트 파일 없음 (기존부터)
 
 ---
 
 ### Part B: API / E2E 테스트
 
-**API 테스트 (25건 PASS)**:
-- 로그인: accessToken + refreshToken 정상 발급
-- Refresh token rotation: 새 토큰 발급, 이전 토큰 무효화
-- Refresh token 형식: `userId:uuid` 검증 정상
-- PENDING 상태 로그인: 403 차단 정상
-- REJECTED 상태 로그인: 403 차단 정상
-- 회원가입: PENDING 상태 생성, 토큰 미발급
-- GET /users/pending: SuperuserGuard 보호 정상
-- PATCH /users/:id/approve: 승인 후 ACTIVE 전환 정상
-- PATCH /users/:id/reject: 거절 후 REJECTED 전환 정상
-- GET /users: ACTIVE 유저만 반환 확인
-- 유효하지 않은 refresh token: 401 반환
+#### API 테스트 결과 (15/15 PASS)
 
-**E2E 테스트**: Chrome extension 미연결으로 미수행
+| ID | 시나리오 | 결과 | 응답 |
+|----|----------|------|------|
+| TC-001 | POST /upload without file | PASS | 400 |
+| TC-002 | POST /upload without auth | PASS | 401 |
+| TC-003 | POST /upload (S3 unconfigured) | PASS | 400 |
+| TC-004 | DELETE /upload/:id invalid ID | PASS | 404 |
+| TC-004b | DELETE /upload/:id not found | PASS | 404 |
+| TC-005 | DELETE /upload/:id without auth | PASS | 401 |
+| TC-006 | GET issue detail includes attachments | PASS | 200 |
+| TC-007 | DELETE issue | PASS | 200 |
+| TC-008 | GET deleted issue → 404 | PASS | 404 |
+| TC-009 | DELETE non-existent issue | PASS | 404 |
+| TC-010 | EPIC cannot have parent | PASS | 400 |
+| TC-011 | SUB_TASK must have parent | PASS | 400 |
+| TC-012 | SUB_TASK with valid parent | PASS | 201 |
+| TC-013 | SUB_TASK parent cannot be SUB_TASK | PASS | 400 |
+| TC-014 | Comment includes attachments | PASS | 200 |
+
+#### 사전 발견 및 수정
+- Prisma Migration `20260407060000_add_attachment` 미적용 → `prisma migrate deploy`로 적용 완료
+
+#### E2E 테스트 (미수행)
+Chrome extension 미연결으로 8개 시나리오 미수행
 
 ---
 
-### 추가 수정
-
-| 파일 | 변경 내용 |
-|------|-----------|
-| `.env` | JWT_EXPIRES_IN 8h → 1h |
-| `.env.example` | JWT_EXPIRES_IN 8h → 1h |
-| `.github/workflows/deploy.yml` | JWT_EXPIRES_IN 8h → 1h |
-| `docker-compose.prod.yml` | JWT_EXPIRES_IN 기본값 8h → 1h |
-
----
-
-### 결론
-API 테스트 전체 통과. E2E는 Chrome extension 연결 후 별도 수행 필요.
-`/5-deploy` 진행 가능.
+### Lint 수정 내역
+| 파일 | 이슈 | 수정 |
+|------|------|------|
+| `upload.controller.ts` | Prettier 포맷팅 | `prettier --write` |
+| `upload.service.ts` | Prettier 포맷팅 + `err.message` unsafe | `prettier --write` + `err: unknown` 타입 |

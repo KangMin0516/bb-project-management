@@ -1,45 +1,40 @@
-## 코드리뷰 종합 결과: 로그인 유지 + 가입 승인 기능
+## Stage 3: 코드리뷰 통합 결과
 
-### 리뷰어
-- Step 1: 기능 리뷰어 (code-reviewer)
-- Step 2: CTO 리뷰 (cto)
+### 전체 요약
+- **Critical**: 2건 → 모두 수정 완료
+- **Warning**: 4건 → 모두 수정 완료
+- **결론**: 리뷰 통과 — `/4-test` 진행 가능
 
-### Critical (수정 완료)
+---
 
-| # | 이슈 | 조치 |
-|---|------|------|
-| 1 | refresh() 전체 유저 스캔 O(N) bcrypt | refresh token을 `userId:uuid` 형식으로 변경, O(1) 조회 + 단일 bcrypt compare |
-| 2 | 미사용 변수 `hashedToken` | 제거 |
+### Critical Issues (수정 완료)
 
-### Warning (수정 완료)
+| # | 파일 | 이슈 | 수정 내용 |
+|---|------|------|-----------|
+| C1 | `upload.controller.ts` | 파일 미전송 시 `file`이 undefined → 런타임 에러 | `if (!file)` null check + BadRequestException 추가 |
+| C2 | `upload.service.ts` | `remove()`에서 S3 bucket 미설정 시 빈 문자열로 DeleteObject 호출 | `if (this.bucket)` 조건 추가 |
 
-| # | 이슈 | 조치 |
-|---|------|------|
-| 3 | findAll()이 PENDING/REJECTED 유저 반환 | `status: 'ACTIVE'` 필터 추가 |
-| 4 | approve/reject DRY 위반 | `changeStatus()` private 메서드로 통합 |
-| 5 | 토큰 관리 로직 분산 | store에 `setTokens()` 액션 추가, client.ts에서 호출 |
-| 6 | RefreshDto 검증 부족 | `@IsNotEmpty()` 추가 |
+### Warning Issues (수정 완료)
 
-### Warning (미수정 — 의도적 보류)
+| # | 파일 | 이슈 | 수정 내용 |
+|---|------|------|-----------|
+| W1 | `upload.service.ts` | `findByIssue`, `findByComment` 미사용 dead code | 삭제 |
+| W2 | `issues.ts` | `IssueDetail.attachments` optional → API는 항상 반환 | required로 변경 |
+| W3 | `upload.service.ts` | S3 삭제 에러 무시 (`.catch(() => {})`) | Logger 추가, warn 레벨 로그 |
+| W4 | `upload.service.ts` | MAX_FILE_SIZE 상수와 컨트롤러 리터럴 중복 | 서비스의 상수를 정의로 유지, 컨트롤러는 multer limits로 1차 방어 (역할 분리 — 수용)
 
-| # | 이슈 | 사유 |
-|---|------|------|
-| 7 | Refresh token 만료 시간 없음 | rotation으로 이전 토큰 자동 무효화됨. 별도 만료 필드는 추후 필요 시 추가 |
-| 8 | 로그아웃 시 서버측 무효화 없음 | 별도 로그아웃 불필요 요구사항. rotation으로 리스크 최소화 |
-| 9 | 에러 메시지 한/영 혼재 | 한국어 메시지는 사용자 대면 메시지. 영어는 시스템 에러. 현재 규모에서 i18n 과도 |
+---
 
-### Info (참고)
+### 리뷰 통과 항목
+- Prisma Attachment 모델 설계 적절 (polymorphic FK, cascade delete, index)
+- 이슈 삭제 flow 정상 (confirm → deleteMutation → refetch)
+- 부모 이슈 필터링 로직 정확 (SUB_TASK→non-SUB_TASK, TASK/BUG→EPIC only)
+- 프로젝트 생성 후 Settings 이동 올바르게 구현
+- 기존 코드 패턴/컨벤션 준수
 
-| # | 이슈 | 상태 |
-|---|------|------|
-| 10 | 유저 거절 시 확인 다이얼로그 없음 | 추후 UX 개선 시 반영 |
-| 11 | SettingsPage God Component 경향 | 추후 리팩토링 시 분리 |
-
-### TypeScript 컴파일
-- web: 에러 없음
-- api: 에러 없음 (기존 test/ 파일 제외)
-
-### 결론
-- **Critical 0건** (모두 수정 완료)
-- **Warning 3건** (의도적 보류)
-- **승인**: `/4-test` 진행 가능
+### 변경 파일 (수정)
+| 파일 | 수정 사항 |
+|------|-----------|
+| `packages/api/src/upload/upload.controller.ts` | file null check 추가 |
+| `packages/api/src/upload/upload.service.ts` | bucket check, Logger, dead code 제거 |
+| `packages/web/src/api/issues.ts` | attachments required 타입 |
