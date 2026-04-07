@@ -6,6 +6,7 @@ import { issueApi, type Issue, type IssueDetail, type Activity, type Comment, ty
 import { projectApi, type ProjectMember } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
+import { AssigneeAvatars, LabelChips, EpicChips, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -122,21 +123,11 @@ export default function BoardPage() {
   }, [board, selectedAssignees, selectedLabels, selectedEpicId])
 
   const toggleAssignee = useCallback((id: string) => {
-    setSelectedAssignees((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    setSelectedAssignees((prev) => toggleSet(prev, id))
   }, [])
 
   const toggleLabel = useCallback((id: string) => {
-    setSelectedLabels((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    setSelectedLabels((prev) => toggleSet(prev, id))
   }, [])
 
   if (!projectId) return null
@@ -151,92 +142,13 @@ export default function BoardPage() {
           <p className="text-sm text-gray-500">{project?.name}</p>
         </div>
         <div className="flex items-center gap-3">
-          {assignedMembers.length > 0 && (
-            <div className="flex items-center gap-1">
-              {assignedMembers.map((member) => {
-                const isSelected = selectedAssignees.has(member.id)
-                return (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => toggleAssignee(member.id)}
-                    title={member.name}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-primary-600 ring-offset-1 bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {member.name.charAt(0).toUpperCase()}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          {assignedMembers.length > 0 && boardLabels.length > 0 && (
-            <div className="h-5 w-px bg-gray-200" />
-          )}
-          {boardLabels.length > 0 && (
-            <div className="flex items-center gap-1">
-              {boardLabels.map((label) => {
-                const isSelected = selectedLabels.has(label.id)
-                return (
-                  <button
-                    key={label.id}
-                    type="button"
-                    onClick={() => toggleLabel(label.id)}
-                    title={label.name}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-offset-1'
-                        : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={{
-                      backgroundColor: label.color + '20',
-                      color: label.color,
-                      ...(isSelected ? { ringColor: label.color } : {}),
-                    }}
-                  >
-                    {label.name}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          {boardLabels.length > 0 && boardEpics.length > 0 && (
-            <div className="h-5 w-px bg-gray-200" />
-          )}
-          {boardEpics.length > 0 && (
-            <div className="flex items-center gap-1">
-              {boardEpics.map((epic) => {
-                const isSelected = selectedEpicId === epic.id
-                return (
-                  <button
-                    key={epic.id}
-                    type="button"
-                    onClick={() => setSelectedEpicId(isSelected ? null : epic.id)}
-                    title={epic.title}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-500 ring-offset-1'
-                        : 'bg-purple-50 text-purple-600 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    ⚡ {epic.title}
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          <AssigneeAvatars members={assignedMembers} selected={selectedAssignees} onToggle={toggleAssignee} />
+          {assignedMembers.length > 0 && boardLabels.length > 0 && <FilterDivider />}
+          <LabelChips labels={boardLabels} selected={selectedLabels} onToggle={toggleLabel} />
+          {boardLabels.length > 0 && boardEpics.length > 0 && <FilterDivider />}
+          <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
           {(selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedEpicId) && (
-            <button
-              type="button"
-              onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedEpicId(null) }}
-              className="rounded px-2 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              title="Clear all filters"
-            >
-              Clear
-            </button>
+            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedEpicId(null) }} />
           )}
         </div>
       </div>
@@ -498,6 +410,27 @@ function IssueDetailPanel({
           <div>
             <span className="block text-xs font-medium text-gray-500 mb-1">Creator</span>
             <span className="text-sm text-gray-700">{d.creator?.name}</span>
+          </div>
+
+          <div>
+            <span className="block text-xs font-medium text-gray-500 mb-1">Due Date</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={d.dueDate ? d.dueDate.slice(0, 10) : ''}
+                onChange={(e) => updateMutation.mutate({ dueDate: e.target.value || null })}
+                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+              />
+              {d.dueDate && (
+                <button
+                  onClick={() => updateMutation.mutate({ dueDate: null })}
+                  className="text-gray-400 hover:text-gray-600 text-sm px-1"
+                  title="Clear due date"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           <div>
