@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
-import { Trash2, UserPlus, Check, X } from 'lucide-react'
+import { componentApi, type Component } from '@/api/components'
+import { Trash2, UserPlus, Check, X, Pencil } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
@@ -97,6 +98,76 @@ export default function SettingsPage() {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role'))
     },
   })
+
+  // Components
+  const { data: components } = useQuery({
+    queryKey: ['components', projectId],
+    queryFn: () => componentApi.list(projectId!),
+    enabled: !!projectId,
+  })
+
+  const [newComponentName, setNewComponentName] = useState('')
+  const [newComponentDesc, setNewComponentDesc] = useState('')
+  const [newComponentLead, setNewComponentLead] = useState('')
+  const [newComponentDefaultAssignee, setNewComponentDefaultAssignee] = useState('')
+  const [editingComponent, setEditingComponent] = useState<Component | null>(null)
+  const [editComponentName, setEditComponentName] = useState('')
+  const [editComponentDesc, setEditComponentDesc] = useState('')
+  const [editComponentLead, setEditComponentLead] = useState('')
+  const [editComponentDefaultAssignee, setEditComponentDefaultAssignee] = useState('')
+
+  const createComponent = useMutation({
+    mutationFn: () =>
+      componentApi.create(projectId!, {
+        name: newComponentName,
+        description: newComponentDesc || undefined,
+        leadId: newComponentLead || undefined,
+        defaultAssigneeId: newComponentDefaultAssignee || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['components', projectId] })
+      setNewComponentName('')
+      setNewComponentDesc('')
+      setNewComponentLead('')
+      setNewComponentDefaultAssignee('')
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create component'))
+    },
+  })
+
+  const updateComponent = useMutation({
+    mutationFn: () =>
+      componentApi.update(projectId!, editingComponent!.id, {
+        name: editComponentName,
+        description: editComponentDesc || undefined,
+        leadId: editComponentLead || null,
+        defaultAssigneeId: editComponentDefaultAssignee || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['components', projectId] })
+      setEditingComponent(null)
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update component'))
+    },
+  })
+
+  const deleteComponent = useMutation({
+    mutationFn: (componentId: string) => componentApi.delete(projectId!, componentId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['components', projectId] }),
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete component'))
+    },
+  })
+
+  const startEditComponent = (comp: Component) => {
+    setEditingComponent(comp)
+    setEditComponentName(comp.name)
+    setEditComponentDesc(comp.description || '')
+    setEditComponentLead(comp.leadId || '')
+    setEditComponentDefaultAssignee(comp.defaultAssigneeId || '')
+  }
 
   // Labels
   const [newLabel, setNewLabel] = useState('')
@@ -298,6 +369,146 @@ export default function SettingsPage() {
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Seed Defaults
+          </button>
+        </div>
+      </section>
+
+      {/* Components */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700">Components</h2>
+        {components && components.length > 0 ? (
+          <div className="mb-3 space-y-2">
+            {components.map((comp) =>
+              editingComponent?.id === comp.id ? (
+                <div key={comp.id} className="space-y-2 rounded-lg border border-primary-200 bg-primary-50/30 p-3">
+                  <input
+                    value={editComponentName}
+                    onChange={(e) => setEditComponentName(e.target.value)}
+                    placeholder="Component name"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+                  />
+                  <input
+                    value={editComponentDesc}
+                    onChange={(e) => setEditComponentDesc(e.target.value)}
+                    placeholder="Description (optional)"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={editComponentLead}
+                      onChange={(e) => setEditComponentLead(e.target.value)}
+                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+                    >
+                      <option value="">No lead</option>
+                      {members?.map((m) => (
+                        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={editComponentDefaultAssignee}
+                      onChange={(e) => setEditComponentDefaultAssignee(e.target.value)}
+                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+                    >
+                      <option value="">No default assignee</option>
+                      {members?.map((m) => (
+                        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => editComponentName && updateComponent.mutate()}
+                      disabled={!editComponentName}
+                      className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingComponent(null)}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div key={comp.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">{comp.name}</div>
+                    {comp.description && (
+                      <div className="text-xs text-gray-500">{comp.description}</div>
+                    )}
+                    <div className="mt-0.5 flex gap-3 text-xs text-gray-400">
+                      {comp.lead && <span>Lead: {comp.lead.name}</span>}
+                      {comp.defaultAssignee && <span>Default: {comp.defaultAssignee.name}</span>}
+                      <span>{comp._count.issues} issue{comp._count.issues !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => startEditComponent(comp)}
+                    className="text-gray-400 hover:text-primary-500"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete component "${comp.name}"?`)) {
+                        deleteComponent.mutate(comp.id)
+                      }
+                    }}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ),
+            )}
+          </div>
+        ) : (
+          <p className="mb-3 text-sm text-gray-400">No components yet</p>
+        )}
+        <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+          <div className="text-xs font-medium text-gray-500">Add Component</div>
+          <input
+            value={newComponentName}
+            onChange={(e) => setNewComponentName(e.target.value)}
+            placeholder="Component name"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+          />
+          <input
+            value={newComponentDesc}
+            onChange={(e) => setNewComponentDesc(e.target.value)}
+            placeholder="Description (optional)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={newComponentLead}
+              onChange={(e) => setNewComponentLead(e.target.value)}
+              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+            >
+              <option value="">No lead</option>
+              {members?.map((m) => (
+                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+              ))}
+            </select>
+            <select
+              value={newComponentDefaultAssignee}
+              onChange={(e) => setNewComponentDefaultAssignee(e.target.value)}
+              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+            >
+              <option value="">No default assignee</option>
+              {members?.map((m) => (
+                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => newComponentName && createComponent.mutate()}
+            disabled={!newComponentName}
+            className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          >
+            Add
           </button>
         </div>
       </section>

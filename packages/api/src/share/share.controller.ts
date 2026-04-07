@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res, NotFoundException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Public } from '../common/decorators/index.js';
 import { ShareService } from './share.service.js';
@@ -14,6 +14,7 @@ export class ShareController {
   @Get(':issueKey')
   async share(
     @Param('issueKey') issueKey: string,
+    @Query('from') from: string | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -28,7 +29,8 @@ export class ShareController {
       return;
     }
 
-    res.redirect(302, `/projects/${issue.projectId}/issues?open=${issue.id}`);
+    const page = from === 'board' ? 'board' : 'issues';
+    res.redirect(302, `/projects/${issue.projectId}/${page}?open=${issue.id}`);
   }
 
   private parseIssueKey(issueKey: string): { projectKey: string; issueNumber: number } {

@@ -19,8 +19,30 @@ export interface Issue {
   assignee: { id: string; email: string; name: string; avatar: string | null } | null
   creator: { id: string; email: string; name: string; avatar: string | null } | null
   labels: { label: { id: string; name: string; color: string } }[]
+  components: { component: { id: string; name: string } }[]
   parent: { id: string; number: number; title: string } | null
   _count: { children: number }
+}
+
+export type IssueLinkType = 'BLOCKS' | 'IS_BLOCKED_BY' | 'RELATES_TO' | 'DUPLICATES' | 'IS_DUPLICATED_BY'
+
+export interface LinkedIssueInfo {
+  id: string
+  number: number
+  title: string
+  status: string
+  priority: string
+  type: string
+  project: { key: string }
+}
+
+export interface IssueLink {
+  id: string
+  type: IssueLinkType
+  createdAt: string
+  targetIssue?: LinkedIssueInfo
+  sourceIssue?: LinkedIssueInfo
+  creator: { id: string; name: string } | null
 }
 
 export interface IssueDetail extends Issue {
@@ -30,6 +52,8 @@ export interface IssueDetail extends Issue {
   }[]
   activities: Activity[]
   attachments: Attachment[]
+  sourceLinks?: IssueLink[]
+  targetLinks?: IssueLink[]
 }
 
 export interface Activity {
@@ -78,6 +102,7 @@ export interface CreateIssuePayload {
   parentId?: string
   dueDate?: string
   labelIds?: string[]
+  componentIds?: string[]
 }
 
 export interface UpdateIssuePayload {
@@ -91,6 +116,7 @@ export interface UpdateIssuePayload {
   dueDate?: string | null
   order?: number
   labelIds?: string[]
+  componentIds?: string[]
 }
 
 export const issueApi = {
@@ -128,6 +154,14 @@ export const issueApi = {
     api.patch<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`, data).then((r) => r.data.data),
   deleteComment: (projectId: string, issueId: string, commentId: string) =>
     api.delete(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`),
+
+  // Issue Links
+  getLinks: (projectId: string, issueId: string) =>
+    api.get<{ data: { sourceLinks: IssueLink[]; targetLinks: IssueLink[] } }>(`/projects/${projectId}/issues/${issueId}/links`).then((r) => r.data.data),
+  createLink: (projectId: string, issueId: string, data: { targetIssueId: string; type: IssueLinkType }) =>
+    api.post<{ data: IssueLink }>(`/projects/${projectId}/issues/${issueId}/links`, data).then((r) => r.data.data),
+  deleteLink: (projectId: string, issueId: string, linkId: string) =>
+    api.delete(`/projects/${projectId}/issues/${issueId}/links/${linkId}`),
 }
 
 export const uploadApi = {

@@ -2,14 +2,18 @@ import { useState } from 'react'
 import { MoreHorizontal, Link2, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 
-interface Props {
+export type ShareContext = 'board' | 'issues'
+
+export interface IssueActionMenuProps {
   projectKey: string
   issueNumber: number
+  context?: ShareContext
   onDelete?: () => void
 }
 
-export function copyIssueLink(projectKey: string, issueNumber: number) {
-  const url = `${window.location.origin}/share/${projectKey}-${issueNumber}`
+export function copyIssueLink(projectKey: string, issueNumber: number, context?: ShareContext) {
+  const base = `${window.location.origin}/share/${projectKey}-${issueNumber}`
+  const url = context ? `${base}?from=${context}` : base
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(url).then(
       () => useToastStore.getState().addToast('Link copied!', 'success'),
@@ -36,7 +40,7 @@ function fallbackCopy(text: string) {
   document.body.removeChild(textarea)
 }
 
-export default function IssueActionMenu({ projectKey, issueNumber, onDelete }: Props) {
+export default function IssueActionMenu({ projectKey, issueNumber, context, onDelete }: IssueActionMenuProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -57,7 +61,7 @@ export default function IssueActionMenu({ projectKey, issueNumber, onDelete }: P
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                copyIssueLink(projectKey, issueNumber)
+                copyIssueLink(projectKey, issueNumber, context)
                 setOpen(false)
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50"

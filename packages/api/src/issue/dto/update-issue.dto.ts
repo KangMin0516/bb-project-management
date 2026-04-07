@@ -69,4 +69,9 @@ export class UpdateIssueDto {
   @IsOptional()
   @IsUUID('4', { each: true })
   labelIds?: string[];
+
+  @ApiPropertyOptional({ description: 'Component IDs to attach', type: [String] })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  componentIds?: string[];
 }

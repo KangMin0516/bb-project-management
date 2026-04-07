@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
 import { templateApi } from '@/api/templates'
 import { projectApi } from '@/api/projects'
+import { componentApi } from '@/api/components'
 import { X } from 'lucide-react'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import { useToastStore } from '@/stores/toast'
@@ -29,6 +30,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
   const [type, setType] = useState('TASK')
   const [assigneeId, setAssigneeId] = useState('')
   const [labelIds, setLabelIds] = useState<string[]>([])
+  const [componentIds, setComponentIds] = useState<string[]>([])
   const [parentId, setParentId] = useState('')
   const queryClient = useQueryClient()
 
@@ -40,6 +42,11 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
   const { data: labels } = useQuery({
     queryKey: ['labels', projectId],
     queryFn: () => projectApi.listLabels(projectId),
+  })
+
+  const { data: components } = useQuery({
+    queryKey: ['components', projectId],
+    queryFn: () => componentApi.list(projectId),
   })
 
   const { data: issuesData } = useQuery({
@@ -97,6 +104,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
       assigneeId: assigneeId || undefined,
       parentId: parentId || undefined,
       labelIds: labelIds.length ? labelIds : undefined,
+      componentIds: componentIds.length ? componentIds : undefined,
     })
   }
 
@@ -219,6 +227,32 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
               ))}
             </div>
           </div>
+
+          {components && components.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Components</label>
+              <div className="flex flex-wrap gap-1.5">
+                {components.map((comp) => (
+                  <button
+                    key={comp.id}
+                    type="button"
+                    onClick={() =>
+                      setComponentIds((ids) =>
+                        ids.includes(comp.id) ? ids.filter((id) => id !== comp.id) : [...ids, comp.id],
+                      )
+                    }
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      componentIds.includes(comp.id)
+                        ? 'bg-blue-100 text-blue-700 border border-blue-400'
+                        : 'bg-gray-100 text-gray-500 border border-transparent'
+                    }`}
+                  >
+                    {comp.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <button

@@ -21,6 +21,7 @@ const issueInclude = {
   assignee: { select: USER_SELECT },
   creator: { select: USER_SELECT },
   labels: { include: { label: true } },
+  components: { include: { component: true } },
   parent: { select: { id: true, number: true, title: true } },
   _count: { select: { children: true } },
 } as const;
@@ -128,9 +129,22 @@ export class IssueService {
   }
 
   async create(projectId: string, dto: CreateIssueDto, creatorId: string) {
-    const { labelIds, ...data } = dto;
+    const { labelIds, componentIds, ...data } = dto;
 
     await this.validateHierarchy(data.type, data.parentId);
+
+    // Auto-assign from component default assignee if no assignee specified
+    let effectiveAssigneeId = data.assigneeId;
+    if (!effectiveAssigneeId && componentIds?.length) {
+      const components = await this.prisma.component.findMany({
+        where: { id: { in: componentIds }, projectId },
+        select: { defaultAssigneeId: true },
+      });
+      const defaultAssignee = components.find((c) => c.defaultAssigneeId);
+      if (defaultAssignee) {
+        effectiveAssigneeId = defaultAssignee.defaultAssigneeId!;
+      }
+    }
 
     return this.prisma.$transaction(async (tx) => {
       // Auto-increment number within project
@@ -152,6 +166,7 @@ export class IssueService {
       const issue = await tx.issue.create({
         data: {
           ...data,
+          assigneeId: effectiveAssigneeId,
           number,
           order,
           projectId,
@@ -159,6 +174,11 @@ export class IssueService {
           ...(labelIds?.length && {
             labels: {
               create: labelIds.map((labelId) => ({ labelId })),
+            },
+          }),
+          ...(componentIds?.length && {
+            components: {
+              create: componentIds.map((componentId) => ({ componentId })),
             },
           }),
         },
@@ -278,6 +298,18 @@ export class IssueService {
         attachments: {
           orderBy: { createdAt: 'desc' },
         },
+        sourceLinks: {
+          include: {
+            targetIssue: { select: { id: true, number: true, title: true, status: true, priority: true, type: true, project: { select: { key: true } } } },
+            creator: { select: { id: true, name: true } },
+          },
+        },
+        targetLinks: {
+          include: {
+            sourceIssue: { select: { id: true, number: true, title: true, status: true, priority: true, type: true, project: { select: { key: true } } } },
+            creator: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 
@@ -302,7 +334,7 @@ export class IssueService {
       throw new NotFoundException('Issue not found');
     }
 
-    const { labelIds, ...data } = dto;
+    const { labelIds, componentIds, ...data } = dto;
 
     // Validate hierarchy when type or parentId is being changed
     if (data.type !== undefined || data.parentId !== undefined) {
@@ -326,6 +358,12 @@ export class IssueService {
           labels: {
             deleteMany: {},
             create: labelIds.map((labelId) => ({ labelId })),
+          },
+        }),
+        ...(componentIds !== undefined && {
+          components: {
+            deleteMany: {},
+            create: componentIds.map((componentId) => ({ componentId })),
           },
         }),
         ...(activities.length > 0 && {

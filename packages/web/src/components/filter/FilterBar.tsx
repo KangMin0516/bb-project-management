@@ -6,6 +6,7 @@ import { STATUSES } from '@/lib/constants'
 export interface FilterState {
   assignees: Set<string>
   labels: Set<string>
+  components: Set<string>
   epicId: string | null
   status: string
   priority: string
@@ -16,6 +17,7 @@ export interface FilterState {
 export const INITIAL_FILTER: FilterState = {
   assignees: new Set(),
   labels: new Set(),
+  components: new Set(),
   epicId: null,
   status: '',
   priority: '',
@@ -24,7 +26,7 @@ export const INITIAL_FILTER: FilterState = {
 }
 
 export function hasActiveFilters(f: FilterState): boolean {
-  return f.assignees.size > 0 || f.labels.size > 0 || !!f.epicId || !!f.status || !!f.priority || !!f.type || !!f.search
+  return f.assignees.size > 0 || f.labels.size > 0 || f.components.size > 0 || !!f.epicId || !!f.status || !!f.priority || !!f.type || !!f.search
 }
 
 // Assignee avatar toggle (shared between Board & List)
@@ -95,6 +97,41 @@ export function LabelChips({
             }}
           >
             {label.name}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Component chip toggle
+export function ComponentChips({
+  components,
+  selected,
+  onToggle,
+}: {
+  components: { id: string; name: string }[]
+  selected: Set<string>
+  onToggle: (id: string) => void
+}) {
+  if (components.length === 0) return null
+  return (
+    <div className="flex items-center gap-1">
+      {components.map((comp) => {
+        const isSelected = selected.has(comp.id)
+        return (
+          <button
+            key={comp.id}
+            type="button"
+            onClick={() => onToggle(comp.id)}
+            title={comp.name}
+            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+              isSelected
+                ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500 ring-offset-1'
+                : 'bg-blue-50 text-blue-600 opacity-70 hover:opacity-100'
+            }`}
+          >
+            {comp.name}
           </button>
         )
       })}

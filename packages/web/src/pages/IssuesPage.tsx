@@ -7,16 +7,18 @@ import { cn } from '@/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
 import { getDueBadge, isIssueOverdue } from '@/lib/time'
 import {
-  AssigneeAvatars, LabelChips, FilterDivider, ClearFiltersButton,
+  AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFiltersButton,
   DropdownFilters, SearchInput, hasActiveFilters, toggleSet,
   type FilterState, INITIAL_FILTER,
 } from '@/components/filter/FilterBar'
+import { componentApi } from '@/api/components'
 import ViewToggle, { type ViewOption } from '@/components/view/ViewToggle'
 import IssueTreeView from '@/components/issue/IssueTreeView'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
+import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import BulkActionBar from '@/components/issue/BulkActionBar'
-import IssueActionMenu, { copyIssueLink } from '@/components/issue/IssueActionMenu'
-import { Plus, ChevronUp, ChevronDown, List, GitBranch, Link2 } from 'lucide-react'
+import IssueActionMenu from '@/components/issue/IssueActionMenu'
+import { Plus, ChevronUp, ChevronDown, List, GitBranch } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -61,6 +63,10 @@ export default function IssuesPage() {
     setFilters((prev) => ({ ...prev, labels: toggleSet(prev.labels, id) }))
   }, [])
 
+  const toggleComponent = useCallback((id: string) => {
+    setFilters((prev) => ({ ...prev, components: toggleSet(prev.components, id) }))
+  }, [])
+
   // Build query params — bulk load all issues (no pagination)
   const params: Record<string, string> = { limit: '200' }
   if (deferredSearch) params.search = deferredSearch
@@ -87,6 +93,12 @@ export default function IssuesPage() {
   const { data: projectLabels } = useQuery({
     queryKey: ['labels', projectId],
     queryFn: () => projectApi.listLabels(projectId!),
+    enabled: !!projectId,
+  })
+
+  const { data: projectComponents } = useQuery({
+    queryKey: ['components', projectId],
+    queryFn: () => componentApi.list(projectId!),
     enabled: !!projectId,
   })
 
@@ -144,14 +156,22 @@ export default function IssuesPage() {
 
   const memberList = members?.map((m) => m.user) || []
 
-  // Client-side label filter (server doesn't support label filtering)
+  // Client-side label & component filter (server doesn't support these)
   const displayItems = useMemo(() => {
     if (!data?.items) return []
-    if (filters.labels.size === 0) return data.items
-    return data.items.filter((issue) =>
-      issue.labels.some((il) => filters.labels.has(il.label.id))
-    )
-  }, [data?.items, filters.labels])
+    let items = data.items
+    if (filters.labels.size > 0) {
+      items = items.filter((issue) =>
+        issue.labels.some((il) => filters.labels.has(il.label.id))
+      )
+    }
+    if (filters.components.size > 0) {
+      items = items.filter((issue) =>
+        issue.components?.some((ic) => filters.components.has(ic.component.id))
+      )
+    }
+    return items
+  }, [data?.items, filters.labels, filters.components])
 
   const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
@@ -212,6 +232,8 @@ export default function IssuesPage() {
         <AssigneeAvatars members={memberList} selected={filters.assignees} onToggle={toggleAssignee} />
         {(projectLabels?.length ?? 0) > 0 && <FilterDivider />}
         <LabelChips labels={projectLabels || []} selected={filters.labels} onToggle={toggleLabel} />
+        {(projectComponents?.length ?? 0) > 0 && <FilterDivider />}
+        <ComponentChips components={projectComponents || []} selected={filters.components} onToggle={toggleComponent} />
         {hasActiveFilters(filters) && (
           <ClearFiltersButton onClick={() => setFilters(INITIAL_FILTER)} />
         )}
@@ -321,6 +343,7 @@ export default function IssuesPage() {
                       <IssueActionMenu
                         projectKey={project?.key || ''}
                         issueNumber={issue.number}
+                        context="issues"
                         onDelete={() => {
                           if (confirm('Delete this issue?')) deleteMutation.mutate(issue.id)
                         }}
@@ -352,126 +375,17 @@ export default function IssuesPage() {
         <CreateIssueModal projectId={projectId} onClose={() => setShowCreate(false)} />
       )}
 
-      {/* Issue Detail Slide-over */}
+      {/* Issue Detail Panel */}
       {selectedIssue && (
-        <IssueSlideOver
+        <IssueDetailPanel
           projectId={projectId}
           projectKey={project?.key || ''}
           issue={selectedIssue}
+          context="issues"
           onClose={() => setSelectedIssue(null)}
+          onNavigate={setSelectedIssue}
         />
       )}
-    </div>
-  )
-}
-
-// Lightweight detail slide-over for the issues table
-function IssueSlideOver({
-  projectId,
-  projectKey,
-  issue,
-  onClose,
-}: {
-  projectId: string
-  projectKey: string
-  issue: Issue
-  onClose: () => void
-}) {
-  const { data: detail } = useQuery({
-    queryKey: ['issue', projectId, issue.id],
-    queryFn: () => issueApi.get(projectId, issue.id),
-  })
-
-  const d = detail || issue
-  const badge = getDueBadge(d.dueDate)
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
-      <div
-        className="h-full w-full max-w-md overflow-y-auto bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-sm text-gray-400">#{d.number}</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => copyIssueLink(projectKey, d.number)}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                title="Copy link"
-              >
-                <Link2 className="h-4 w-4" />
-              </button>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-          </div>
-          <h2 className="mt-1 text-lg font-bold text-gray-900">{d.title}</h2>
-        </div>
-        <div className="space-y-3 p-6 text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="block text-xs font-medium text-gray-500">Status</span>
-              <div className="mt-0.5 flex items-center gap-1.5">
-                <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[d.status])} />
-                <span>{d.status.replace(/_/g, ' ')}</span>
-              </div>
-            </div>
-            <div>
-              <span className="block text-xs font-medium text-gray-500">Priority</span>
-              <span className={cn('mt-0.5 inline-block rounded px-1.5 py-0.5 text-xs font-medium', PRIORITY_COLORS[d.priority])}>
-                {d.priority}
-              </span>
-            </div>
-            <div>
-              <span className="block text-xs font-medium text-gray-500">Type</span>
-              <span className="mt-0.5">{TYPE_ICONS[d.type] || '📋'} {d.type.replace(/_/g, ' ')}</span>
-            </div>
-            <div>
-              <span className="block text-xs font-medium text-gray-500">Assignee</span>
-              <span className="mt-0.5">{d.assignee?.name || 'Unassigned'}</span>
-            </div>
-            {d.dueDate && (
-              <div>
-                <span className="block text-xs font-medium text-gray-500">Due Date</span>
-                <div className="mt-0.5 flex items-center gap-1.5">
-                  <span>{new Date(d.dueDate).toLocaleDateString()}</span>
-                  {badge && (
-                    <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', badge.className)}>
-                      {badge.text}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-            <div>
-              <span className="block text-xs font-medium text-gray-500">Creator</span>
-              <span className="mt-0.5">{d.creator?.name}</span>
-            </div>
-          </div>
-          {d.description && (
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
-              <p className="whitespace-pre-wrap text-gray-700">{d.description}</p>
-            </div>
-          )}
-          {d.labels.length > 0 && (
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">Labels</span>
-              <div className="flex flex-wrap gap-1">
-                {d.labels.map((l) => (
-                  <span
-                    key={l.label.id}
-                    className="rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{ backgroundColor: l.label.color + '20', color: l.label.color }}
-                  >
-                    {l.label.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
