@@ -17,6 +17,7 @@ import { UploadModule } from './upload/upload.module.js';
 import { TemplateModule } from './template/template.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationModule } from './notification/notification.module.js';
+import { ShareModule } from './share/share.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -42,6 +43,7 @@ import { AppController } from './app.controller.js';
     TemplateModule,
     SearchModule,
     NotificationModule,
+    ShareModule,
   ],
   controllers: [AppController],
   providers: [

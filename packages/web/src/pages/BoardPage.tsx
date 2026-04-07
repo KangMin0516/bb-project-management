@@ -12,7 +12,8 @@ import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
 import { timeAgo } from '@/lib/time'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Link2 } from 'lucide-react'
+import { copyIssueLink } from '@/components/issue/IssueActionMenu'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import CommentInput from '@/components/comment/CommentInput'
@@ -188,6 +189,7 @@ export default function BoardPage() {
       {selectedIssue && (
         <IssueDetailPanel
           projectId={projectId}
+          projectKey={project?.key || ''}
           issue={selectedIssue}
           onClose={() => setSelectedIssue(null)}
           onNavigate={setSelectedIssue}
@@ -200,11 +202,13 @@ export default function BoardPage() {
 // Inline issue detail slide-over panel
 function IssueDetailPanel({
   projectId,
+  projectKey,
   issue,
   onClose,
   onNavigate,
 }: {
   projectId: string
+  projectKey: string
   issue: Issue
   onClose: () => void
   onNavigate: (issue: Issue) => void
@@ -301,6 +305,14 @@ function IssueDetailPanel({
               {issue.number ? `#${issue.number}` : ''}
             </span>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => copyIssueLink(projectKey, d.number)}
+                aria-label="Copy link"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Copy link"
+              >
+                <Link2 className="h-4 w-4" />
+              </button>
               <button
                 onClick={() => {
                   const next = !expanded
