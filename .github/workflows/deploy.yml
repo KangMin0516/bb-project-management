@@ -116,6 +116,10 @@ jobs:
               exit 1
             fi
 
+            # Connect web container to Traefik's overlay network
+            echo "Connecting bbpm-web to proxy-net..."
+            docker network connect proxy-net bbpm-web 2>/dev/null || true
+
             # Wait for backend health check
             echo "Running backend health check..."
             MAX_RETRIES=12
