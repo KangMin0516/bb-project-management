@@ -15,6 +15,8 @@ import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { UploadModule } from './upload/upload.module.js';
 import { TemplateModule } from './template/template.module.js';
+import { SearchModule } from './search/search.module.js';
+import { NotificationModule } from './notification/notification.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -38,6 +40,8 @@ import { AppController } from './app.controller.js';
     DashboardModule,
     UploadModule,
     TemplateModule,
+    SearchModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

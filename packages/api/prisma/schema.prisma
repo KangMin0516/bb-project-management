@@ -35,6 +35,7 @@ model User {
   attachments    Attachment[]
   apiKeys        ApiKey[]
   templates      IssueTemplate[]
+  notifications  Notification[]
 
   @@map("users")
 }
@@ -106,10 +107,11 @@ model Issue {
   parent   Issue?  @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
   children Issue[] @relation("SubIssues")
 
-  labels      IssueLabel[]
-  activities  Activity[]
-  comments    Comment[]
-  attachments Attachment[]
+  labels        IssueLabel[]
+  activities    Activity[]
+  comments      Comment[]
+  attachments   Attachment[]
+  notifications Notification[]
 
   @@unique([projectId, number])
   @@index([projectId, status])
@@ -243,6 +245,29 @@ model IssueTemplate {
   creator   User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@map("issue_templates")
+}
+
+// ─── Notification ──────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   @db.VarChar(20) // ASSIGNED, COMMENTED, MENTIONED
+  message   String   @db.VarChar(500)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId    String @map("user_id")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issueId   String? @map("issue_id")
+  issue     Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  projectId String? @map("project_id")
+
+  actorId   String? @map("actor_id")
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
 }
 
 // ─── API Key ────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import type { IssueWhereInput } from '../../generated/prisma/models.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
 import { IssueType } from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
+import { NotificationService } from '../notification/notification.service.js';
 
 const ORDER_GAP = 1000;
 
@@ -24,7 +25,10 @@ const issueInclude = {
 
 @Injectable()
 export class IssueService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   private async validateHierarchy(
     type: string | undefined,
@@ -317,6 +321,26 @@ export class IssueService {
       },
       include: issueInclude,
     });
+
+    // Notify new assignee
+    if (
+      data.assigneeId !== undefined &&
+      data.assigneeId !== existing.assigneeId &&
+      data.assigneeId
+    ) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { key: true },
+      });
+      this.notificationService.create({
+        type: 'ASSIGNED',
+        message: `${project?.key ?? ''}-${existing.number} "${existing.title}" has been assigned to you`,
+        userId: data.assigneeId,
+        issueId,
+        projectId,
+        actorId: userId,
+      }).catch(() => {});
+    }
 
     return issue;
   }

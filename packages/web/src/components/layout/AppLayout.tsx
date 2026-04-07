@@ -9,9 +9,12 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
+import CommandPalette from '@/components/search/CommandPalette'
+import NotificationBell from '@/components/notification/NotificationBell'
 
 export default function AppLayout() {
   const { user, logout } = useAuthStore()
@@ -124,6 +127,17 @@ export default function AppLayout() {
 
         {/* User */}
         <div className="border-t border-gray-200 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <NotificationBell />
+            <button
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-200"
+            >
+              <Search className="h-3 w-3" />
+              Search
+              <kbd className="ml-1 rounded bg-gray-200 px-1 text-[10px] font-medium">⌘K</kbd>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700">
               {user?.name?.charAt(0).toUpperCase()}
@@ -143,6 +157,8 @@ export default function AppLayout() {
       <main className="flex-1 overflow-auto bg-gray-50">
         <Outlet />
       </main>
+
+      <CommandPalette />
     </div>
   )
 }
