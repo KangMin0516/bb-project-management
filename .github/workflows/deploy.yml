@@ -120,7 +120,7 @@ jobs:
             echo "Running backend health check..."
             MAX_RETRIES=12
             RETRY_COUNT=0
-            until curl -sf http://localhost:${APP_PORT:-3000}/api > /dev/null; do
+            until curl -sf http://localhost:${APP_PORT:-3000}/api/docs > /dev/null; do
               RETRY_COUNT=$((RETRY_COUNT + 1))
               if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
                 echo "Health check failed after $MAX_RETRIES attempts"
