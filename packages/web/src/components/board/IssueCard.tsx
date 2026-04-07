@@ -1,7 +1,8 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
 import { PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
+import { getDueBadge } from '@/lib/time'
 
 interface Props {
   issue: Issue
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
+  const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
+
   return (
     <div
       onClick={onClick}
@@ -23,7 +26,18 @@ export default memo(function IssueCard({ issue, projectKey, onClick }: Props) {
         <span className="font-mono text-xs text-gray-400">
           {projectKey}-{issue.number}
         </span>
+        {dueBadge && (
+          <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium', dueBadge.className)}>
+            {dueBadge.text}
+          </span>
+        )}
       </div>
+      {issue.parent && (
+        <p className="mb-1 text-[10px] text-gray-400">↳ #{issue.parent.number}</p>
+      )}
+      {issue._count.children > 0 && (
+        <p className="mb-1 text-[10px] text-gray-400">📎 {issue._count.children} sub-task{issue._count.children > 1 ? 's' : ''}</p>
+      )}
       <p className="mb-2 text-sm font-medium leading-snug text-gray-900">{issue.title}</p>
       <div className="flex items-center justify-between">
         <div className="flex gap-1">

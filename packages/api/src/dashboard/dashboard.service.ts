@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { USER_SELECT } from '../common/constants.js';
+import { IssueStatus } from '../../generated/prisma/enums.js';
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getProjectStats(projectId: string) {
+  async getProjectStats(projectId: string, userId?: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -67,6 +69,25 @@ export class DashboardService {
 
     const assigneeMap = new Map(assignees.map((a) => [a.id, a]));
 
+    const myIssues = userId
+      ? await this.prisma.issue.findMany({
+          where: {
+            projectId,
+            assigneeId: userId,
+            status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          },
+          include: {
+            assignee: { select: USER_SELECT },
+            creator: { select: USER_SELECT },
+            labels: { include: { label: true } },
+            parent: { select: { id: true, number: true, title: true } },
+            _count: { select: { children: true } },
+          },
+          orderBy: [{ dueDate: 'asc' }, { priority: 'asc' }],
+          take: 10,
+        })
+      : [];
+
     return {
       project: { id: project.id, name: project.name, key: project.key },
       totalIssues,
@@ -79,6 +100,7 @@ export class DashboardService {
         count: a._count,
       })),
       recentActivities,
+      myIssues,
     };
   }
 }

@@ -9,6 +9,7 @@ import { ProjectMemberModule } from './project-member/project-member.module.js';
 import { IssueModule } from './issue/issue.module.js';
 import { LabelModule } from './label/label.module.js';
 import { ActivityModule } from './activity/activity.module.js';
+import { CommentModule } from './comment/comment.module.js';
 import { ApiKeyModule } from './api-key/api-key.module.js';
 import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
@@ -29,6 +30,7 @@ import { AppController } from './app.controller.js';
     IssueModule,
     LabelModule,
     ActivityModule,
+    CommentModule,
     ApiKeyModule,
     ExternalModule,
     DashboardModule,

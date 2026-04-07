@@ -60,16 +60,16 @@
 
 ## CI/CD
 
-- **enabled**: false
-- **tool**: (미설정) <!-- GitHub Actions / GitLab CI / Jenkins / etc. -->
-- **repo_url**: (미설정) <!-- https://github.com/org/repo -->
+- **enabled**: true
+- **tool**: GitHub Actions
+- **repo_url**: https://github.com/seo-burning/bb-project-management
 - **default_branch**: main
 - **branch_strategy**: feature branch → PR → merge
 - **branch_prefix**: feat/, fix/, refactor/, chore/
 - **pr_base_branch**: main
-- **deploy_trigger**: merge to main <!-- PR 머지 시 자동 배포 -->
-- **pipeline_url**: (미설정) <!-- CI/CD 대시보드 URL -->
-- **status_check_cmd**: (미설정) <!-- gh run list --limit 5 등 -->
+- **deploy_trigger**: merge to main
+- **pipeline_url**: https://github.com/seo-burning/bb-project-management/actions
+- **status_check_cmd**: gh run list --limit 5
 
 > **NOTE**: `enabled: false`인 경우 `/5-deploy` 실행 시 CI/CD 미설정 경고가 표시되고 **배포가 중단됩니다.**
 > CI/CD를 구성한 후 `enabled: true`로 변경하고 나머지 항목을 채워주세요.

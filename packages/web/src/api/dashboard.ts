@@ -1,5 +1,5 @@
 import api from './client'
-import { type Activity } from './issues'
+import { type Activity, type Issue } from './issues'
 
 export interface DashboardStats {
   project: { id: string; name: string; key: string }
@@ -10,6 +10,7 @@ export interface DashboardStats {
   byType: { type: string; count: number }[]
   byAssignee: { assignee: { id: string; name: string; avatar: string | null } | null; count: number }[]
   recentActivities: Activity[]
+  myIssues: Issue[]
 }
 
 export const dashboardApi = {

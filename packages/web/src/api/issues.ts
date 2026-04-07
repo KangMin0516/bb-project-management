@@ -9,6 +9,7 @@ export interface Issue {
   priority: string
   type: string
   order: number
+  dueDate: string | null
   createdAt: string
   updatedAt: string
   projectId: string
@@ -40,6 +41,14 @@ export interface Activity {
   issue?: { id: string; number: number; title: string }
 }
 
+export interface Comment {
+  id: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  user: { id: string; email: string; name: string; avatar: string | null }
+}
+
 export interface PaginatedIssues {
   items: Issue[]
   total: number
@@ -56,6 +65,7 @@ export interface CreateIssuePayload {
   type?: string
   assigneeId?: string
   parentId?: string
+  dueDate?: string
   labelIds?: string[]
 }
 
@@ -67,6 +77,7 @@ export interface UpdateIssuePayload {
   type?: string
   assigneeId?: string | null
   parentId?: string | null
+  dueDate?: string | null
   order?: number
   labelIds?: string[]
 }
@@ -92,4 +103,14 @@ export const issueApi = {
     api.get<{ data: { items: Activity[]; total: number } }>(`/projects/${projectId}/issues/${issueId}/activities`).then((r) => r.data.data),
   projectActivities: (projectId: string) =>
     api.get<{ data: { items: Activity[]; total: number } }>(`/projects/${projectId}/activities`).then((r) => r.data.data),
+
+  // Comments
+  comments: (projectId: string, issueId: string) =>
+    api.get<{ data: { items: Comment[]; total: number } }>(`/projects/${projectId}/issues/${issueId}/comments`).then((r) => r.data.data),
+  createComment: (projectId: string, issueId: string, data: { content: string }) =>
+    api.post<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments`, data).then((r) => r.data.data),
+  updateComment: (projectId: string, issueId: string, commentId: string, data: { content: string }) =>
+    api.patch<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`, data).then((r) => r.data.data),
+  deleteComment: (projectId: string, issueId: string, commentId: string) =>
+    api.delete(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`),
 }

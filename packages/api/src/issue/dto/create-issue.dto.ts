@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsEnum,
   IsUUID,
+  IsDateString,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -47,6 +48,11 @@ export class CreateIssueDto {
   @IsOptional()
   @IsUUID()
   parentId?: string;
+
+  @ApiPropertyOptional({ description: 'Due date (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
 
   @ApiPropertyOptional({ description: 'Label IDs to attach', type: [String] })
   @IsOptional()

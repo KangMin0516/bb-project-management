@@ -23,6 +23,7 @@ model User {
   assignedIssues Issue[]    @relation("AssignedIssues")
   createdIssues  Issue[]    @relation("CreatedIssues")
   activities     Activity[]
+  comments       Comment[]
   apiKeys        ApiKey[]
 
   @@map("users")
@@ -78,6 +79,7 @@ model Issue {
   priority    IssuePriority @default(MEDIUM)
   type        IssueType     @default(TASK)
   order       Int           @default(0)
+  dueDate     DateTime?     @map("due_date")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
@@ -96,6 +98,7 @@ model Issue {
 
   labels     IssueLabel[]
   activities Activity[]
+  comments   Comment[]
 
   @@unique([projectId, number])
   @@index([projectId, status])
@@ -169,6 +172,24 @@ model Activity {
 
   @@index([issueId])
   @@map("activities")
+}
+
+// ─── Comment ────────────────────────────────────────────────
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  issueId String @map("issue_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([issueId])
+  @@map("comments")
 }
 
 // ─── API Key ────────────────────────────────────────────────
