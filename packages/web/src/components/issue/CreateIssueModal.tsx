@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/api/issues'
+import { templateApi } from '@/api/templates'
 import { projectApi } from '@/api/projects'
 import { X } from 'lucide-react'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
@@ -45,6 +46,23 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
     queryKey: ['issues', projectId, 'parent-options'],
     queryFn: () => issueApi.list(projectId, { limit: '200' }),
   })
+
+  const { data: templates } = useQuery({
+    queryKey: ['templates'],
+    queryFn: templateApi.list,
+  })
+
+  // Auto-fill description from template when type changes
+  const [descriptionTouched, setDescriptionTouched] = useState(false)
+  useEffect(() => {
+    if (descriptionTouched) return
+    const match = templates?.find((t) => t.type === type)
+    if (match?.description) {
+      setDescription(match.description)
+    } else {
+      setDescription('')
+    }
+  }, [type, templates, descriptionTouched])
 
   const parentOptions = useMemo(() => {
     if (!issuesData?.items) return []
@@ -107,7 +125,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
 
           <MarkdownEditor
             value={description}
-            onChange={setDescription}
+            onChange={(v) => { setDescription(v); setDescriptionTouched(true) }}
             placeholder="Description (optional)"
             minRows={3}
           />
@@ -117,7 +135,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
               <label className="mb-1 block text-xs font-medium text-gray-500">Type</label>
               <select
                 value={type}
-                onChange={(e) => { setType(e.target.value); setParentId('') }}
+                onChange={(e) => { setType(e.target.value); setParentId(''); setDescriptionTouched(false) }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
               >
                 <option value="TASK">Task</option>

@@ -34,6 +34,7 @@ model User {
   comments       Comment[]
   attachments    Attachment[]
   apiKeys        ApiKey[]
+  templates      IssueTemplate[]
 
   @@map("users")
 }
@@ -226,6 +227,22 @@ model Attachment {
   @@index([issueId])
   @@index([commentId])
   @@map("attachments")
+}
+
+// ─── Issue Template ─────────────────────────────────────────
+
+model IssueTemplate {
+  id          String    @id @default(uuid())
+  name        String    @db.VarChar(100)
+  type        IssueType @default(TASK)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  creatorId String @map("creator_id")
+  creator   User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("issue_templates")
 }
 
 // ─── API Key ────────────────────────────────────────────────
