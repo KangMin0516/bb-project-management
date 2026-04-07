@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateIssueDto } from './dto/create-issue.dto.js';
 import type { UpdateIssueDto } from './dto/update-issue.dto.js';
@@ -54,7 +58,9 @@ export class IssueService {
 
       // A SUB_TASK's parent cannot be another SUB_TASK
       if (parent.type === IssueType.SUB_TASK) {
-        throw new BadRequestException('A SUB_TASK cannot be the parent of another issue');
+        throw new BadRequestException(
+          'A SUB_TASK cannot be the parent of another issue',
+        );
       }
 
       // Walk up the parent chain to detect cycles (only relevant during update)
@@ -117,7 +123,17 @@ export class IssueService {
   }
 
   async findAll(projectId: string, query: QueryIssueDto) {
-    const { status, priority, type, assigneeId, search, sortBy, sortOrder, page = 1, limit = 50 } = query;
+    const {
+      status,
+      priority,
+      type,
+      assigneeId,
+      search,
+      sortBy,
+      sortOrder,
+      page = 1,
+      limit = 50,
+    } = query;
 
     const where: IssueWhereInput = {
       projectId,
@@ -172,7 +188,10 @@ export class IssueService {
       'RECHECK' as IssueStatus,
     ];
 
-    const grouped: Record<string, Awaited<ReturnType<typeof this.prisma.issue.findMany>>> = {};
+    const grouped: Record<
+      string,
+      Awaited<ReturnType<typeof this.prisma.issue.findMany>>
+    > = {};
 
     await Promise.all(
       statuses.map(async (status) => {
@@ -238,13 +257,27 @@ export class IssueService {
     // Validate hierarchy when type or parentId is being changed
     if (data.type !== undefined || data.parentId !== undefined) {
       const effectiveType = data.type ?? existing.type;
-      const effectiveParentId = data.parentId !== undefined ? data.parentId : existing.parentId;
+      const effectiveParentId =
+        data.parentId !== undefined ? data.parentId : existing.parentId;
       await this.validateHierarchy(effectiveType, effectiveParentId, issueId);
     }
 
     // Track changes for activity log
-    const TRACKED_FIELDS = ['title', 'description', 'status', 'priority', 'type', 'assigneeId', 'parentId', 'dueDate'] as const;
-    const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    const TRACKED_FIELDS = [
+      'title',
+      'description',
+      'status',
+      'priority',
+      'type',
+      'assigneeId',
+      'parentId',
+      'dueDate',
+    ] as const;
+    const activities: {
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }[] = [];
 
     for (const key of TRACKED_FIELDS) {
       const value = data[key as keyof typeof data];
@@ -300,7 +333,11 @@ export class IssueService {
       throw new NotFoundException('Issue not found');
     }
 
-    const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    const activities: {
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }[] = [];
 
     if (existing.status !== targetStatus) {
       activities.push({

@@ -29,8 +29,7 @@ export class RolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user as JwtPayload;
-    const projectId =
-      request.params.projectId || request.body?.projectId;
+    const projectId = request.params.projectId || request.body?.projectId;
 
     if (!projectId) {
       throw new ForbiddenException('Project context required');

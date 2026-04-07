@@ -23,7 +23,12 @@ export class ApiKeyService {
     });
 
     // Return raw key only on creation (never exposed again)
-    return { id: apiKey.id, name: apiKey.name, key: rawKey, createdAt: apiKey.createdAt };
+    return {
+      id: apiKey.id,
+      name: apiKey.name,
+      key: rawKey,
+      createdAt: apiKey.createdAt,
+    };
   }
 
   async findAll(userId: string) {
@@ -56,7 +61,9 @@ export class ApiKeyService {
     const keyPrefix = rawKey.substring(0, 8);
     const apiKeys = await this.prisma.apiKey.findMany({
       where: { keyPrefix },
-      include: { user: { select: { id: true, email: true, isSuperuser: true } } },
+      include: {
+        user: { select: { id: true, email: true, isSuperuser: true } },
+      },
     });
 
     for (const apiKey of apiKeys) {

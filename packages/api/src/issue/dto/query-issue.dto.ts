@@ -1,6 +1,19 @@
-import { IsOptional, IsEnum, IsUUID, IsString, IsInt, IsIn, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  IsString,
+  IsInt,
+  IsIn,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IssueStatus, IssuePriority, IssueType } from '../../../generated/prisma/enums.js';
+import {
+  IssueStatus,
+  IssuePriority,
+  IssueType,
+} from '../../../generated/prisma/enums.js';
 import { Type } from 'class-transformer';
 
 export class QueryIssueDto {
@@ -29,7 +42,9 @@ export class QueryIssueDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ enum: ['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'] })
+  @ApiPropertyOptional({
+    enum: ['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'],
+  })
   @IsOptional()
   @IsIn(['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'])
   sortBy?: string;

@@ -12,7 +12,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ProjectService } from './project.service.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
-import { CurrentUser, Roles, type JwtPayload } from '../common/decorators/index.js';
+import {
+  CurrentUser,
+  Roles,
+  type JwtPayload,
+} from '../common/decorators/index.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 import { ProjectRole } from '../../generated/prisma/enums.js';
@@ -42,10 +46,7 @@ export class ProjectController {
   @Patch(':projectId')
   @UseGuards(RolesGuard)
   @Roles(ProjectRole.ADMIN, ProjectRole.PM)
-  update(
-    @Param('projectId') projectId: string,
-    @Body() dto: UpdateProjectDto,
-  ) {
+  update(@Param('projectId') projectId: string, @Body() dto: UpdateProjectDto) {
     return this.projectService.update(projectId, dto);
   }
 

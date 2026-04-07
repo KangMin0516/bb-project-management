@@ -93,7 +93,10 @@ export class DashboardService {
       totalIssues,
       memberCount,
       byStatus: byStatus.map((s) => ({ status: s.status, count: s._count })),
-      byPriority: byPriority.map((p) => ({ priority: p.priority, count: p._count })),
+      byPriority: byPriority.map((p) => ({
+        priority: p.priority,
+        count: p._count,
+      })),
       byType: byType.map((t) => ({ type: t.type, count: t._count })),
       byAssignee: byAssignee.map((a) => ({
         assignee: assigneeMap.get(a.assigneeId!) ?? null,

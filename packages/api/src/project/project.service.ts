@@ -33,7 +33,11 @@ export class ProjectService {
       },
       include: {
         members: {
-          include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+          include: {
+            user: {
+              select: { id: true, email: true, name: true, avatar: true },
+            },
+          },
         },
         _count: { select: { issues: true } },
       },
@@ -57,7 +61,11 @@ export class ProjectService {
       where: { id },
       include: {
         members: {
-          include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+          include: {
+            user: {
+              select: { id: true, email: true, name: true, avatar: true },
+            },
+          },
         },
         labels: true,
         _count: { select: { issues: true } },
@@ -79,7 +87,11 @@ export class ProjectService {
       data: dto,
       include: {
         members: {
-          include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+          include: {
+            user: {
+              select: { id: true, email: true, name: true, avatar: true },
+            },
+          },
         },
         _count: { select: { issues: true } },
       },

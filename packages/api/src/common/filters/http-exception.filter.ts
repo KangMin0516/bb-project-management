@@ -26,7 +26,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message =
         typeof res === 'string'
           ? res
-          : (res as Record<string, unknown>).message as string | string[];
+          : ((res as Record<string, unknown>).message as string | string[]);
     } else if (
       exception instanceof PrismaClientKnownRequestError &&
       exception.code === 'P2025'

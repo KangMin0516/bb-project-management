@@ -57,7 +57,9 @@ export class ProjectMemberService {
         where: { projectId, role: 'ADMIN' },
       });
       if (adminCount <= 1) {
-        throw new BadRequestException('Cannot change role: project must have at least one ADMIN');
+        throw new BadRequestException(
+          'Cannot change role: project must have at least one ADMIN',
+        );
       }
     }
 
@@ -84,7 +86,9 @@ export class ProjectMemberService {
         where: { projectId, role: 'ADMIN' },
       });
       if (adminCount <= 1) {
-        throw new BadRequestException('Cannot remove the last ADMIN from the project');
+        throw new BadRequestException(
+          'Cannot remove the last ADMIN from the project',
+        );
       }
     }
 

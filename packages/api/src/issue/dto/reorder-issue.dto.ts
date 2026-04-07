@@ -1,6 +1,14 @@
 import { IsNumber, Min, IsIn } from 'class-validator';
 
-const ISSUE_STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED', 'RECHECK'] as const;
+const ISSUE_STATUSES = [
+  'BACKLOG',
+  'TODO',
+  'IN_PROGRESS',
+  'REVIEW_QA',
+  'DONE',
+  'CANCELED',
+  'RECHECK',
+] as const;
 
 export class ReorderIssueDto {
   @IsIn(ISSUE_STATUSES)
