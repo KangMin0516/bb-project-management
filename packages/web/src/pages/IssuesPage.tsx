@@ -5,7 +5,7 @@ import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
-import { getDueBadge } from '@/lib/time'
+import { getDueBadge, isIssueOverdue } from '@/lib/time'
 import {
   AssigneeAvatars, LabelChips, FilterDivider, ClearFiltersButton,
   DropdownFilters, SearchInput, hasActiveFilters, toggleSet,
@@ -206,16 +206,17 @@ export default function IssuesPage() {
             <tbody className="divide-y divide-gray-100">
               {displayItems.map((issue) => {
                 const badge = getDueBadge(issue.dueDate)
+                const overdue = isIssueOverdue(issue)
                 return (
                   <tr
                     key={issue.id}
                     onClick={() => setSelectedIssue(issue)}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className={cn('cursor-pointer hover:bg-gray-50', overdue && 'bg-red-50/50')}
                   >
                     <td className="px-6 py-2 font-mono text-xs text-gray-400">
                       {project?.key}-{issue.number}
                     </td>
-                    <td className="max-w-xs truncate px-3 py-2 font-medium text-gray-900">
+                    <td className={cn('max-w-xs truncate px-3 py-2 font-medium', overdue ? 'text-red-700' : 'text-gray-900')}>
                       <span className="mr-1 text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
                       {issue.title}
                     </td>

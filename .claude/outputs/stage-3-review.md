@@ -1,39 +1,40 @@
-## Stage 3: 코드리뷰 통합 결과
+## Stage 3: 코드리뷰 종합 결과 — 오버듀 이슈 강조 표시
 
 ### 전체 요약
 - **Critical**: 0건
-- **Warning**: 수정 가능한 것 3건 → 수정 완료, 나머지 수용
-- **Info**: 5건 (향후 개선 사항)
-- **결론**: 리뷰 통과 — `/4-test` 진행 가능
+- **Warning**: 2건
+- **Info**: 2건
+- **결론**: Critical 없음, Warning은 DRY 관련으로 수정 권장
 
 ---
 
-### Warning Issues (수정 완료)
+### Warning
 
-| # | 파일 | 이슈 | 수정 |
-|---|------|------|------|
-| W1 | `template.service.ts` | update/remove 소유권 검증 중복 (DRY) | `findOwned()` private 메서드로 추출 |
-| W2 | `create-template.dto.ts` | name에 `@IsNotEmpty()` 누락 | 추가 |
-| W3 | `dashboard.service.ts` | myIssues take 제한 없음 | `take: 100` 상한 설정 |
+**W1. 날짜 비교 로직 중복 (DRY 위반)**
+- `isOverdue()`와 `getDueBadge()` 내부에 동일한 날짜 정규화 로직 중복
+- 권장: `dueDiff()` 내부 헬퍼 추출하여 재사용
 
-### Warning Issues (수용)
+**W2. 오버듀 판정 조건 중복 (Shotgun Surgery 위험)**
+- `issue.status !== 'DONE' && issue.status !== 'CANCELED'` 조건이 IssueCard.tsx, IssuesPage.tsx에 반복
+- 권장: `isIssueOverdue(issue)` 통합 함수로 한 곳에서 관리
 
-| # | 파일 | 이슈 | 판단 |
-|---|------|------|------|
-| W4 | `CreateIssueModal.tsx` | 동일 타입 템플릿 여러 개일 때 첫 번째만 사용 | 현재 운영 규모에서 충분, 추후 선택 UI 확장 가능 |
-| W5 | `DashboardPage.tsx` | overdue 비교 시 timezone 미고려 | `getDueBadge`와 동일 로직 사용 중, 실사용 상 문제 없음 |
-| W6 | `template.controller.ts` | 글로벌 리소스 Guard 없음 | 의도적 설계 (글로벌 템플릿) |
+---
 
-### Info (향후 개선)
+### Info
 
-- TemplateManager 컴포넌트 분리 (현재 210줄, 허용 범위)
-- DashboardPage new Date() 중복 생성 최적화
-- Priority 정렬 매직 오브젝트 → constants.ts 이동
-- IssueTemplate projectId 확장 고려
-- 이슈 클릭 시 보드에서 해당 이슈 하이라이트
+**I1. useMemo 전략 불일치**
+- `dueBadge`는 useMemo로 감싸져 있으나 `overdue`는 인라인 계산
+- 성능 영향 미미하나 일관성 측면에서 통일 권장
+
+**I2. hover 배경색 충돌**
+- 오버듀 행의 `bg-red-50/50`이 hover 시 `hover:bg-gray-50`으로 덮어씌워짐
+- 기능 이슈 아님, UX 개선 시 `hover:bg-red-100/50` 고려
+
+---
 
 ### 긍정적 사항
-- 기존 NestJS 모듈 패턴 일관성 유지
-- 소유권 검증 적절
-- React Query 캐시 무효화 정확
-- descriptionTouched 패턴으로 UX 배려
+1. SRP 준수 — `isOverdue()` 순수 함수 분리
+2. DONE/CANCELED 제외 비즈니스 로직 정확
+3. 변경 범위 최소 (3파일, API 변경 없음)
+4. 보안 이슈 없음
+5. 기존 dueBadge 기능 완전 보존
