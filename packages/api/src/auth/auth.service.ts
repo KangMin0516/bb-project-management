@@ -1,10 +1,12 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { hash, compare } from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
@@ -27,7 +29,7 @@ export class AuthService {
 
     const passwordHash = await hash(dto.password, 12);
 
-    const user = await this.prisma.user.create({
+    await this.prisma.user.create({
       data: {
         email: dto.email,
         name: dto.name,
@@ -35,7 +37,10 @@ export class AuthService {
       },
     });
 
-    return this.buildTokenResponse(user.id, user.email);
+    return {
+      message:
+        '가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.',
+    };
   }
 
   async login(dto: LoginDto) {
@@ -52,6 +57,36 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.status === 'PENDING') {
+      throw new ForbiddenException('관리자 승인 대기 중입니다.');
+    }
+
+    if (user.status === 'REJECTED') {
+      throw new ForbiddenException('가입이 거절되었습니다.');
+    }
+
+    return this.buildTokenResponse(user.id, user.email);
+  }
+
+  async refresh(refreshToken: string) {
+    // Refresh token format: "userId:uuid"
+    const separatorIndex = refreshToken.indexOf(':');
+    if (separatorIndex === -1) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const userId = refreshToken.substring(0, separatorIndex);
+    const token = refreshToken.substring(separatorIndex + 1);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, status: 'ACTIVE' },
+      select: { id: true, email: true, refreshToken: true },
+    });
+
+    if (!user?.refreshToken || !(await compare(token, user.refreshToken))) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     return this.buildTokenResponse(user.id, user.email);
   }
 
@@ -63,6 +98,7 @@ export class AuthService {
         email: true,
         name: true,
         avatar: true,
+        isSuperuser: true,
         createdAt: true,
       },
     });
@@ -70,10 +106,23 @@ export class AuthService {
     return user;
   }
 
-  private buildTokenResponse(userId: string, email: string) {
+  private async buildTokenResponse(userId: string, email: string) {
     const payload = { sub: userId, email };
+    const accessToken = this.jwt.sign(payload);
+
+    // Generate refresh token as "userId:uuid", store only the uuid hash
+    const uuid = randomUUID();
+    const refreshToken = `${userId}:${uuid}`;
+    const refreshTokenHash = await hash(uuid, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: refreshTokenHash },
+    });
+
     return {
-      accessToken: this.jwt.sign(payload),
+      accessToken,
+      refreshToken,
       user: { id: userId, email },
     };
   }
