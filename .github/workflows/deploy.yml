@@ -100,7 +100,7 @@ jobs:
 
             # Run database migrations
             echo "Running database migrations..."
-            if ! $COMPOSE run --rm app sh -c "cd /app/packages/api && npx prisma migrate deploy"; then
+            if ! $COMPOSE run --rm --user root app sh -c "cd /app/packages/api && npx prisma migrate deploy"; then
               echo "=== Migration failed ==="
               exit 1
             fi
