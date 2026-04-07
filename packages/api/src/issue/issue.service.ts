@@ -7,6 +7,8 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateIssueDto } from './dto/create-issue.dto.js';
 import type { UpdateIssueDto } from './dto/update-issue.dto.js';
 import type { QueryIssueDto } from './dto/query-issue.dto.js';
+import type { BulkUpdateIssueDto } from './dto/bulk-update-issue.dto.js';
+import type { BulkDeleteIssueDto } from './dto/bulk-delete-issue.dto.js';
 import type { IssueWhereInput } from '../../generated/prisma/models.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
 import { IssueType } from '../../generated/prisma/enums.js';
@@ -29,6 +31,47 @@ export class IssueService {
     private prisma: PrismaService,
     private notificationService: NotificationService,
   ) {}
+
+  private static readonly TRACKED_FIELDS = [
+    'title', 'description', 'status', 'priority',
+    'type', 'assigneeId', 'parentId', 'dueDate',
+  ] as const;
+
+  private buildActivities(
+    existing: Record<string, unknown>,
+    updates: Record<string, unknown>,
+  ): { field: string; oldValue: string | null; newValue: string | null }[] {
+    const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    for (const key of IssueService.TRACKED_FIELDS) {
+      const value = updates[key];
+      if (value === undefined) continue;
+      const oldStr = existing[key] != null ? String(existing[key]) : null;
+      const newStr = value != null ? String(value) : null;
+      if (newStr !== oldStr) {
+        activities.push({ field: key, oldValue: oldStr, newValue: newStr });
+      }
+    }
+    return activities;
+  }
+
+  private notifyAssignment(params: {
+    projectKey: string;
+    issueNumber: number;
+    issueTitle: string;
+    issueId: string;
+    projectId: string;
+    newAssigneeId: string;
+    actorId: string;
+  }) {
+    this.notificationService.create({
+      type: 'ASSIGNED',
+      message: `${params.projectKey}-${params.issueNumber} "${params.issueTitle}" has been assigned to you`,
+      userId: params.newAssigneeId,
+      issueId: params.issueId,
+      projectId: params.projectId,
+      actorId: params.actorId,
+    }).catch(() => {});
+  }
 
   private async validateHierarchy(
     type: string | undefined,
@@ -270,35 +313,10 @@ export class IssueService {
     }
 
     // Track changes for activity log
-    const TRACKED_FIELDS = [
-      'title',
-      'description',
-      'status',
-      'priority',
-      'type',
-      'assigneeId',
-      'parentId',
-      'dueDate',
-    ] as const;
-    const activities: {
-      field: string;
-      oldValue: string | null;
-      newValue: string | null;
-    }[] = [];
-
-    for (const key of TRACKED_FIELDS) {
-      const value = data[key as keyof typeof data];
-      const oldVal = existing[key as keyof typeof existing];
-      const oldStr = oldVal != null ? String(oldVal) : null;
-      const newStr = value != null ? String(value) : null;
-      if (value !== undefined && newStr !== oldStr) {
-        activities.push({
-          field: key,
-          oldValue: oldStr,
-          newValue: newStr,
-        });
-      }
-    }
+    const activities = this.buildActivities(
+      existing as unknown as Record<string, unknown>,
+      data as unknown as Record<string, unknown>,
+    );
 
     const issue = await this.prisma.issue.update({
       where: { id: issueId },
@@ -332,14 +350,15 @@ export class IssueService {
         where: { id: projectId },
         select: { key: true },
       });
-      this.notificationService.create({
-        type: 'ASSIGNED',
-        message: `${project?.key ?? ''}-${existing.number} "${existing.title}" has been assigned to you`,
-        userId: data.assigneeId,
+      this.notifyAssignment({
+        projectKey: project?.key ?? '',
+        issueNumber: existing.number,
+        issueTitle: existing.title,
         issueId,
         projectId,
+        newAssigneeId: data.assigneeId,
         actorId: userId,
-      }).catch(() => {});
+      });
     }
 
     return issue;
@@ -435,5 +454,76 @@ export class IssueService {
 
     await this.prisma.issue.delete({ where: { id: issueId } });
     return { deleted: true };
+  }
+
+  async bulkUpdate(projectId: string, dto: BulkUpdateIssueDto, userId: string) {
+    const { issueIds, ...updates } = dto;
+
+    // Verify all issues belong to this project
+    const issues = await this.prisma.issue.findMany({
+      where: { id: { in: issueIds }, projectId },
+      select: { id: true, status: true, priority: true, assigneeId: true, number: true, title: true },
+    });
+
+    if (issues.length === 0) {
+      throw new NotFoundException('No matching issues found');
+    }
+
+    if (issues.length !== issueIds.length) {
+      throw new BadRequestException(
+        `${issueIds.length - issues.length} issue(s) not found in this project`,
+      );
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { key: true },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const issue of issues) {
+        const activities = this.buildActivities(
+          issue as unknown as Record<string, unknown>,
+          updates as unknown as Record<string, unknown>,
+        );
+
+        if (activities.length === 0) continue;
+
+        await tx.issue.update({
+          where: { id: issue.id },
+          data: {
+            ...(updates.status !== undefined && { status: updates.status }),
+            ...(updates.priority !== undefined && { priority: updates.priority }),
+            ...(updates.assigneeId !== undefined && { assigneeId: updates.assigneeId }),
+            activities: {
+              create: activities.map((a) => ({ ...a, userId })),
+            },
+          },
+        });
+
+        // Notify new assignee
+        if (updates.assigneeId && updates.assigneeId !== issue.assigneeId) {
+          this.notifyAssignment({
+            projectKey: project?.key ?? '',
+            issueNumber: issue.number,
+            issueTitle: issue.title,
+            issueId: issue.id,
+            projectId,
+            newAssigneeId: updates.assigneeId,
+            actorId: userId,
+          });
+        }
+      }
+    });
+
+    return { updated: issues.length };
+  }
+
+  async bulkDelete(projectId: string, dto: BulkDeleteIssueDto) {
+    const result = await this.prisma.issue.deleteMany({
+      where: { id: { in: dto.issueIds }, projectId },
+    });
+
+    return { deleted: result.count };
   }
 }

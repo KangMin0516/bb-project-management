@@ -15,6 +15,8 @@ import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
 import { ReorderIssueDto } from './dto/reorder-issue.dto.js';
+import { BulkUpdateIssueDto } from './dto/bulk-update-issue.dto.js';
+import { BulkDeleteIssueDto } from './dto/bulk-delete-issue.dto.js';
 import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 
@@ -45,6 +47,23 @@ export class IssueController {
   @Get('board')
   board(@Param('projectId') projectId: string) {
     return this.issueService.findByStatus(projectId);
+  }
+
+  @Patch('bulk')
+  bulkUpdate(
+    @Param('projectId') projectId: string,
+    @Body() dto: BulkUpdateIssueDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.issueService.bulkUpdate(projectId, dto, user.sub);
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(
+    @Param('projectId') projectId: string,
+    @Body() dto: BulkDeleteIssueDto,
+  ) {
+    return this.issueService.bulkDelete(projectId, dto);
   }
 
   @Get(':issueId')

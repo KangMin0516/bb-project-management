@@ -108,6 +108,10 @@ export const issueApi = {
     api.patch<{ data: Issue }>(`/projects/${projectId}/issues/${issueId}/reorder`, data).then((r) => r.data.data),
   delete: (projectId: string, issueId: string) =>
     api.delete(`/projects/${projectId}/issues/${issueId}`),
+  bulkUpdate: (projectId: string, data: { issueIds: string[]; status?: string; priority?: string; assigneeId?: string | null }) =>
+    api.patch<{ data: { updated: number } }>(`/projects/${projectId}/issues/bulk`, data).then((r) => r.data.data),
+  bulkDelete: (projectId: string, issueIds: string[]) =>
+    api.post<{ data: { deleted: number } }>(`/projects/${projectId}/issues/bulk-delete`, { issueIds }).then((r) => r.data.data),
 
   // Activities
   activities: (projectId: string, issueId: string) =>
