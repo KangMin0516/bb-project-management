@@ -20,6 +20,14 @@ export const STATUS_COLORS: Record<string, string> = {
   RECHECK: 'bg-orange-400',
 }
 
+export const PRIORITIES = ['HIGH', 'MEDIUM', 'LOW'] as const
+
+export const PRIORITY_LABELS: Record<string, string> = {
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low',
+}
+
 export const PRIORITY_COLORS: Record<string, string> = {
   HIGH: 'bg-red-100 text-red-700',
   MEDIUM: 'bg-yellow-100 text-yellow-700',

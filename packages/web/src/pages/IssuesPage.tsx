@@ -14,6 +14,7 @@ import {
 import ViewToggle, { type ViewOption } from '@/components/view/ViewToggle'
 import IssueTreeView from '@/components/issue/IssueTreeView'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
+import BulkActionBar from '@/components/issue/BulkActionBar'
 import { Plus, ChevronUp, ChevronDown, List, GitBranch } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
@@ -38,6 +39,7 @@ export default function IssuesPage() {
   )
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
 
   const handleViewChange = useCallback((mode: ViewMode) => {
@@ -140,6 +142,22 @@ export default function IssuesPage() {
     )
   }, [data?.items, filters.labels])
 
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === displayItems.length && displayItems.length > 0) return new Set()
+      return new Set(displayItems.map((i) => i.id))
+    })
+  }, [displayItems])
+
+  const toggleSelectOne = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
   if (!projectId) return null
 
   return (
@@ -156,7 +174,17 @@ export default function IssuesPage() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Bulk Action Bar / Filters */}
+      {selectedIds.size > 0 ? (
+        <div className="border-b border-gray-200 bg-white px-6 py-2">
+          <BulkActionBar
+            projectId={projectId}
+            selectedIds={selectedIds}
+            members={memberList.map((m) => ({ id: m.id, name: m.name }))}
+            onClear={() => setSelectedIds(new Set())}
+          />
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-6 py-2">
         <ViewToggle options={VIEW_OPTIONS} value={viewMode} onChange={handleViewChange} />
         <FilterDivider />
@@ -177,6 +205,7 @@ export default function IssuesPage() {
           <ClearFiltersButton onClick={() => setFilters(INITIAL_FILTER)} />
         )}
       </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
@@ -194,6 +223,14 @@ export default function IssuesPage() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50 text-left text-xs font-medium text-gray-500">
               <tr>
+                <th className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={displayItems.length > 0 && selectedIds.size === displayItems.length}
+                    onChange={toggleSelectAll}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="group cursor-pointer px-6 py-2" onClick={() => toggleSort('number')}>
                   ID <SortIcon field="number" />
                 </th>
@@ -223,8 +260,20 @@ export default function IssuesPage() {
                   <tr
                     key={issue.id}
                     onClick={() => setSelectedIssue(issue)}
-                    className={cn('cursor-pointer hover:bg-gray-50', overdue && 'bg-red-50/50')}
+                    className={cn(
+                      'cursor-pointer hover:bg-gray-50',
+                      overdue && 'bg-red-50/50',
+                      selectedIds.has(issue.id) && 'bg-primary-50',
+                    )}
                   >
+                    <td className="w-8 px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(issue.id)}
+                        onChange={() => toggleSelectOne(issue.id)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </td>
                     <td className="px-6 py-2 font-mono text-xs text-gray-400">
                       {project?.key}-{issue.number}
                     </td>
@@ -273,7 +322,7 @@ export default function IssuesPage() {
               })}
               {displayItems.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-8 text-center text-gray-400">
                     No issues found
                   </td>
                 </tr>
