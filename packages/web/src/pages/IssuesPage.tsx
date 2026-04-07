@@ -1,5 +1,5 @@
-import { useState, useCallback, useDeferredValue, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useCallback, useDeferredValue, useMemo, useEffect } from 'react'
+import { useParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -28,6 +28,7 @@ const VIEW_OPTIONS: ViewOption<ViewMode>[] = [
 
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const location = useLocation()
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER)
   const deferredSearch = useDeferredValue(filters.search)
   const [sortBy, setSortBy] = useState<SortField | ''>('')
@@ -90,6 +91,17 @@ export default function IssuesPage() {
     queryFn: () => issueApi.list(projectId!, params),
     enabled: !!projectId,
   })
+
+  // Open issue detail when navigated from search/notification
+  useEffect(() => {
+    const state = location.state as { selectedIssueId?: string } | null
+    if (state?.selectedIssueId && data?.items) {
+      const issue = data.items.find((i) => i.id === state.selectedIssueId)
+      if (issue) setSelectedIssue(issue)
+      // Clear state to prevent re-opening on re-renders
+      window.history.replaceState({}, '')
+    }
+  }, [location.state, data?.items])
 
   const deleteMutation = useMutation({
     mutationFn: (issueId: string) => issueApi.delete(projectId!, issueId),
