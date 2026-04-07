@@ -44,8 +44,8 @@ FROM base AS production
 RUN apk add --no-cache curl
 
 # Create non-root user
-RUN addgroup --gid 1000 appgroup && \
-    adduser --uid 1000 --ingroup appgroup --shell /bin/sh --disabled-password appuser
+RUN addgroup --gid 1001 appgroup && \
+    adduser --uid 1001 --ingroup appgroup --shell /bin/sh --disabled-password appuser
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
