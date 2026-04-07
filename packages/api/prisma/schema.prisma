@@ -32,6 +32,7 @@ model User {
   createdIssues  Issue[]    @relation("CreatedIssues")
   activities     Activity[]
   comments       Comment[]
+  attachments    Attachment[]
   apiKeys        ApiKey[]
 
   @@map("users")
@@ -104,9 +105,10 @@ model Issue {
   parent   Issue?  @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
   children Issue[] @relation("SubIssues")
 
-  labels     IssueLabel[]
-  activities Activity[]
-  comments   Comment[]
+  labels      IssueLabel[]
+  activities  Activity[]
+  comments    Comment[]
+  attachments Attachment[]
 
   @@unique([projectId, number])
   @@index([projectId, status])
@@ -196,8 +198,34 @@ model Comment {
   userId String? @map("user_id")
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  attachments Attachment[]
+
   @@index([issueId])
   @@map("comments")
+}
+
+// ─── Attachment ─────────────────────────────────────────────
+
+model Attachment {
+  id        String   @id @default(uuid())
+  fileName  String   @map("file_name") @db.VarChar(500)
+  fileSize  Int      @map("file_size")
+  mimeType  String   @map("mime_type") @db.VarChar(200)
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  issueId   String? @map("issue_id")
+  issue     Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  commentId String?  @map("comment_id")
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  uploaderId String @map("uploader_id")
+  uploader   User   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
+  @@index([commentId])
+  @@map("attachments")
 }
 
 // ─── API Key ────────────────────────────────────────────────

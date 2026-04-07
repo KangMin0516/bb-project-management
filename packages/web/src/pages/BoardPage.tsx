@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
-import { issueApi, type Issue, type IssueDetail, type Activity, type Comment, type UpdateIssuePayload } from '@/api/issues'
+import { issueApi, uploadApi, type Issue, type IssueDetail, type Attachment, type Activity, type Comment, type UpdateIssuePayload } from '@/api/issues'
 import { projectApi, type ProjectMember } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
@@ -12,6 +12,7 @@ import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
 import { timeAgo } from '@/lib/time'
+import { Trash2 } from 'lucide-react'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import CommentInput from '@/components/comment/CommentInput'
@@ -254,6 +255,38 @@ function IssueDetailPanel({
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: () => issueApi.delete(projectId, issue.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+      onClose()
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue'))
+    },
+  })
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadApi.upload(file, { issueId: issue.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'))
+    },
+  })
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: (id: string) => uploadApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete file'))
+    },
+  })
+
   const d: Issue | IssueDetail = detail || issue
 
   return (
@@ -283,6 +316,18 @@ function IssueDetailPanel({
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 5 22 12 13 19" /><polyline points="2 5 11 12 2 19" /></svg>
                 )}
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this issue? This cannot be undone.')) {
+                    deleteMutation.mutate()
+                  }
+                }}
+                aria-label="Delete issue"
+                className="text-gray-400 hover:text-red-500"
+                title="Delete issue"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
               <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
@@ -489,6 +534,32 @@ function IssueDetailPanel({
             </div>
           )}
 
+          {/* Attachments */}
+          <div>
+            <span className="block text-xs font-medium text-gray-500 mb-1">
+              Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
+            </span>
+            {detail?.attachments && detail.attachments.length > 0 && (
+              <div className="space-y-1 mb-2">
+                {detail.attachments.map((att) => (
+                  <AttachmentItem key={att.id} attachment={att} onDelete={(id) => deleteAttachmentMutation.mutate(id)} />
+                ))}
+              </div>
+            )}
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) uploadMutation.mutate(file)
+                  e.target.value = ''
+                }}
+              />
+              {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
+            </label>
+          </div>
+
         </div>
         )}
 
@@ -614,6 +685,41 @@ function ActivityTab({
       ) : (
         <p className="text-sm text-gray-400 italic">No activity yet</p>
       )}
+    </div>
+  )
+}
+
+function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete: (id: string) => void }) {
+  const isImage = attachment.mimeType.startsWith('image/')
+  const isVideo = attachment.mimeType.startsWith('video/')
+  const sizeStr = attachment.fileSize > 1024 * 1024
+    ? `${(attachment.fileSize / (1024 * 1024)).toFixed(1)} MB`
+    : `${(attachment.fileSize / 1024).toFixed(0)} KB`
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+      {isImage && (
+        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+          <img src={attachment.url} alt={attachment.fileName} className="h-10 w-10 rounded object-cover" />
+        </a>
+      )}
+      {isVideo && (
+        <video src={attachment.url} className="h-10 w-10 rounded object-cover" muted />
+      )}
+      {!isImage && !isVideo && (
+        <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-500">
+          FILE
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-medium text-gray-700 hover:text-primary-600">
+          {attachment.fileName}
+        </a>
+        <span className="text-xs text-gray-400">{sizeStr}</span>
+      </div>
+      <button onClick={() => onDelete(attachment.id)} className="text-gray-400 hover:text-red-500">
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
