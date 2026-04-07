@@ -22,6 +22,10 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_REGION: ${{ secrets.AWS_S3_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           APP_PORT: ${{ vars.APP_PORT }}
           DB_PORT: ${{ vars.DB_PORT }}
           DOMAIN: ${{ vars.DOMAIN }}
@@ -31,7 +35,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           command_timeout: 15m
-          envs: GH_TOKEN,JWT_SECRET,ADMIN_EMAIL,ADMIN_PASSWORD,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,CORS_ORIGINS,APP_PORT,DB_PORT,DOMAIN
+          envs: GH_TOKEN,JWT_SECRET,ADMIN_EMAIL,ADMIN_PASSWORD,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,CORS_ORIGINS,AWS_S3_BUCKET,AWS_S3_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,APP_PORT,DB_PORT,DOMAIN
           script: |
             set -e
 
@@ -64,6 +68,10 @@ jobs:
             POSTGRES_PASSWORD=$POSTGRES_PASSWORD
             POSTGRES_DB=${POSTGRES_DB:-bbpm_db}
             CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+            AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
+            AWS_S3_REGION=${AWS_S3_REGION:-ap-northeast-2}
+            AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+            AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
             APP_PORT=${APP_PORT:-3000}
             DB_PORT=${DB_PORT:-5433}
             NODE_ENV=production
@@ -176,7 +184,7 @@ jobs:
                 include /etc/letsencrypt/options-ssl-nginx.conf;
                 ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-                client_max_body_size 10M;
+                client_max_body_size 55M;
 
                 location / {
                     proxy_pass http://localhost:APP_PORT_PLACEHOLDER;
@@ -197,7 +205,7 @@ jobs:
                 listen 80;
                 server_name DOMAIN_PLACEHOLDER;
 
-                client_max_body_size 10M;
+                client_max_body_size 55M;
 
                 location / {
                     proxy_pass http://localhost:APP_PORT_PLACEHOLDER;
