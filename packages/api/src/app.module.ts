@@ -14,6 +14,7 @@ import { ApiKeyModule } from './api-key/api-key.module.js';
 import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { UploadModule } from './upload/upload.module.js';
+import { TemplateModule } from './template/template.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -36,6 +37,7 @@ import { AppController } from './app.controller.js';
     ExternalModule,
     DashboardModule,
     UploadModule,
+    TemplateModule,
   ],
   controllers: [AppController],
   providers: [

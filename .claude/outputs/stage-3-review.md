@@ -1,40 +1,39 @@
 ## Stage 3: 코드리뷰 통합 결과
 
 ### 전체 요약
-- **Critical**: 2건 → 모두 수정 완료
-- **Warning**: 4건 → 모두 수정 완료
+- **Critical**: 0건
+- **Warning**: 수정 가능한 것 3건 → 수정 완료, 나머지 수용
+- **Info**: 5건 (향후 개선 사항)
 - **결론**: 리뷰 통과 — `/4-test` 진행 가능
 
 ---
 
-### Critical Issues (수정 완료)
-
-| # | 파일 | 이슈 | 수정 내용 |
-|---|------|------|-----------|
-| C1 | `upload.controller.ts` | 파일 미전송 시 `file`이 undefined → 런타임 에러 | `if (!file)` null check + BadRequestException 추가 |
-| C2 | `upload.service.ts` | `remove()`에서 S3 bucket 미설정 시 빈 문자열로 DeleteObject 호출 | `if (this.bucket)` 조건 추가 |
-
 ### Warning Issues (수정 완료)
 
-| # | 파일 | 이슈 | 수정 내용 |
-|---|------|------|-----------|
-| W1 | `upload.service.ts` | `findByIssue`, `findByComment` 미사용 dead code | 삭제 |
-| W2 | `issues.ts` | `IssueDetail.attachments` optional → API는 항상 반환 | required로 변경 |
-| W3 | `upload.service.ts` | S3 삭제 에러 무시 (`.catch(() => {})`) | Logger 추가, warn 레벨 로그 |
-| W4 | `upload.service.ts` | MAX_FILE_SIZE 상수와 컨트롤러 리터럴 중복 | 서비스의 상수를 정의로 유지, 컨트롤러는 multer limits로 1차 방어 (역할 분리 — 수용)
+| # | 파일 | 이슈 | 수정 |
+|---|------|------|------|
+| W1 | `template.service.ts` | update/remove 소유권 검증 중복 (DRY) | `findOwned()` private 메서드로 추출 |
+| W2 | `create-template.dto.ts` | name에 `@IsNotEmpty()` 누락 | 추가 |
+| W3 | `dashboard.service.ts` | myIssues take 제한 없음 | `take: 100` 상한 설정 |
 
----
+### Warning Issues (수용)
 
-### 리뷰 통과 항목
-- Prisma Attachment 모델 설계 적절 (polymorphic FK, cascade delete, index)
-- 이슈 삭제 flow 정상 (confirm → deleteMutation → refetch)
-- 부모 이슈 필터링 로직 정확 (SUB_TASK→non-SUB_TASK, TASK/BUG→EPIC only)
-- 프로젝트 생성 후 Settings 이동 올바르게 구현
-- 기존 코드 패턴/컨벤션 준수
+| # | 파일 | 이슈 | 판단 |
+|---|------|------|------|
+| W4 | `CreateIssueModal.tsx` | 동일 타입 템플릿 여러 개일 때 첫 번째만 사용 | 현재 운영 규모에서 충분, 추후 선택 UI 확장 가능 |
+| W5 | `DashboardPage.tsx` | overdue 비교 시 timezone 미고려 | `getDueBadge`와 동일 로직 사용 중, 실사용 상 문제 없음 |
+| W6 | `template.controller.ts` | 글로벌 리소스 Guard 없음 | 의도적 설계 (글로벌 템플릿) |
 
-### 변경 파일 (수정)
-| 파일 | 수정 사항 |
-|------|-----------|
-| `packages/api/src/upload/upload.controller.ts` | file null check 추가 |
-| `packages/api/src/upload/upload.service.ts` | bucket check, Logger, dead code 제거 |
-| `packages/web/src/api/issues.ts` | attachments required 타입 |
+### Info (향후 개선)
+
+- TemplateManager 컴포넌트 분리 (현재 210줄, 허용 범위)
+- DashboardPage new Date() 중복 생성 최적화
+- Priority 정렬 매직 오브젝트 → constants.ts 이동
+- IssueTemplate projectId 확장 고려
+- 이슈 클릭 시 보드에서 해당 이슈 하이라이트
+
+### 긍정적 사항
+- 기존 NestJS 모듈 패턴 일관성 유지
+- 소유권 검증 적절
+- React Query 캐시 무효화 정확
+- descriptionTouched 패턴으로 UX 배려

@@ -83,8 +83,12 @@ export class DashboardService {
             parent: { select: { id: true, number: true, title: true } },
             _count: { select: { children: true } },
           },
-          orderBy: [{ dueDate: 'asc' }, { priority: 'asc' }],
-          take: 10,
+          orderBy: [
+            { dueDate: { sort: 'asc', nulls: 'last' } },
+            { priority: 'asc' },
+            { createdAt: 'desc' },
+          ],
+          take: 100,
         })
       : [];
 

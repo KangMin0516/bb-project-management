@@ -1,10 +1,16 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { projectApi } from '@/api/projects'
 import { FolderKanban, Users, TicketCheck } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import TemplateManager from '@/components/template/TemplateManager'
+
+type Tab = 'projects' | 'templates'
 
 export default function ProjectsPage() {
   const navigate = useNavigate()
+  const [tab, setTab] = useState<Tab>('projects')
   const { data: projects, isLoading, isError } = useQuery({
     queryKey: ['projects'],
     queryFn: projectApi.list,
@@ -25,16 +31,37 @@ export default function ProjectsPage() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-        <Link
-          to="/projects/new"
-          className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-        >
-          New Project
-        </Link>
+        <div className="flex items-center gap-6">
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+            {(['projects', 'templates'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-sm font-medium transition',
+                  tab === t
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700',
+                )}
+              >
+                {t === 'projects' ? 'Projects' : 'Templates'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {tab === 'projects' && (
+          <Link
+            to="/projects/new"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            New Project
+          </Link>
+        )}
       </div>
 
-      {!projects?.length ? (
+      {tab === 'templates' ? (
+        <TemplateManager />
+      ) : !projects?.length ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
           <FolderKanban className="mx-auto mb-3 h-12 w-12 text-gray-300" />
           <p className="text-gray-500">No projects yet. Create your first project.</p>
