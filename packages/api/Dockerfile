@@ -29,7 +29,7 @@ COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
 
 COPY packages/shared packages/shared
 COPY packages/api packages/api
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Build shared package first, then API
 RUN corepack enable pnpm && \
@@ -78,7 +78,7 @@ COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
 
 COPY packages/shared packages/shared
 COPY packages/api packages/api
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN corepack enable pnpm && \
     cd packages/shared && pnpm build && \
