@@ -17,7 +17,9 @@ export class LabelService {
     });
 
     if (existing) {
-      throw new ConflictException(`Label "${dto.name}" already exists in this project`);
+      throw new ConflictException(
+        `Label "${dto.name}" already exists in this project`,
+      );
     }
 
     return this.prisma.label.create({
@@ -34,7 +36,9 @@ export class LabelService {
   }
 
   async update(projectId: string, labelId: string, dto: UpdateLabelDto) {
-    const label = await this.prisma.label.findUnique({ where: { id: labelId } });
+    const label = await this.prisma.label.findUnique({
+      where: { id: labelId },
+    });
     if (!label || label.projectId !== projectId) {
       throw new NotFoundException('Label not found');
     }
@@ -43,7 +47,8 @@ export class LabelService {
       const dup = await this.prisma.label.findUnique({
         where: { projectId_name: { projectId, name: dto.name } },
       });
-      if (dup) throw new ConflictException(`Label "${dto.name}" already exists`);
+      if (dup)
+        throw new ConflictException(`Label "${dto.name}" already exists`);
     }
 
     return this.prisma.label.update({
@@ -53,7 +58,9 @@ export class LabelService {
   }
 
   async remove(projectId: string, labelId: string) {
-    const label = await this.prisma.label.findUnique({ where: { id: labelId } });
+    const label = await this.prisma.label.findUnique({
+      where: { id: labelId },
+    });
     if (!label || label.projectId !== projectId) {
       throw new NotFoundException('Label not found');
     }

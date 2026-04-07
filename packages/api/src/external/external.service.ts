@@ -30,7 +30,8 @@ export class ExternalService {
       const user = await this.prisma.user.findUnique({
         where: { email: dto.assigneeEmail },
       });
-      if (!user) throw new BadRequestException(`User "${dto.assigneeEmail}" not found`);
+      if (!user)
+        throw new BadRequestException(`User "${dto.assigneeEmail}" not found`);
       assigneeId = user.id;
     }
 
@@ -71,12 +72,18 @@ export class ExternalService {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
     });
-    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const issue = await this.prisma.issue.findUnique({
-      where: { projectId_number: { projectId: project.id, number: issueNumber } },
+      where: {
+        projectId_number: { projectId: project.id, number: issueNumber },
+      },
     });
-    if (!issue) throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+    if (!issue)
+      throw new NotFoundException(
+        `Issue ${projectKey}-${issueNumber} not found`,
+      );
 
     // Resolve assignee by email
     let assigneeId: string | null | undefined;
@@ -87,7 +94,10 @@ export class ExternalService {
         const user = await this.prisma.user.findUnique({
           where: { email: dto.assigneeEmail },
         });
-        if (!user) throw new BadRequestException(`User "${dto.assigneeEmail}" not found`);
+        if (!user)
+          throw new BadRequestException(
+            `User "${dto.assigneeEmail}" not found`,
+          );
         assigneeId = user.id;
       }
     }
@@ -110,34 +120,42 @@ export class ExternalService {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
     });
-    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const issue = await this.prisma.issue.findUnique({
-      where: { projectId_number: { projectId: project.id, number: issueNumber } },
+      where: {
+        projectId_number: { projectId: project.id, number: issueNumber },
+      },
       include: {
         assignee: { select: { id: true, email: true, name: true } },
         creator: { select: { id: true, email: true, name: true } },
         labels: { include: { label: true } },
         children: {
-          select: { id: true, number: true, title: true, status: true, priority: true },
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            status: true,
+            priority: true,
+          },
         },
       },
     });
 
-    if (!issue) throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+    if (!issue)
+      throw new NotFoundException(
+        `Issue ${projectKey}-${issueNumber} not found`,
+      );
     return issue;
   }
 
-  async listIssues(
-    projectKey: string,
-    status?: string,
-    page = 1,
-    limit = 50,
-  ) {
+  async listIssues(projectKey: string, status?: string, page = 1, limit = 50) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
     });
-    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const where = {
       projectId: project.id,

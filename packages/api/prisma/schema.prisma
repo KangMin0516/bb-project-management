@@ -9,15 +9,23 @@ datasource db {
 
 // ─── User ───────────────────────────────────────────────────
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   name         String
-  passwordHash String   @map("password_hash")
+  passwordHash String     @map("password_hash")
   avatar       String?
-  isSuperuser  Boolean  @default(false) @map("is_superuser")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  status       UserStatus @default(PENDING)
+  isSuperuser  Boolean    @default(false) @map("is_superuser")
+  refreshToken String?    @map("refresh_token")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   memberships    ProjectMember[]
   assignedIssues Issue[]    @relation("AssignedIssues")

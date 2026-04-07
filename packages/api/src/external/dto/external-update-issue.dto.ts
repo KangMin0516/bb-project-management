@@ -6,10 +6,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IssueStatus,
-  IssuePriority,
-} from '../../../generated/prisma/enums.js';
+import { IssueStatus, IssuePriority } from '../../../generated/prisma/enums.js';
 
 export class ExternalUpdateIssueDto {
   @ApiPropertyOptional()

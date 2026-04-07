@@ -57,7 +57,7 @@ jobs:
             # Create .env file
             cat > .env << ENVEOF
             JWT_SECRET=$JWT_SECRET
-            JWT_EXPIRES_IN=8h
+            JWT_EXPIRES_IN=1h
             ADMIN_EMAIL=${ADMIN_EMAIL:-admin@burningb.com}
             ADMIN_PASSWORD=$ADMIN_PASSWORD
             POSTGRES_USER=${POSTGRES_USER:-bbpm}

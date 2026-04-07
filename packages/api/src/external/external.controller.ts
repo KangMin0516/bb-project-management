@@ -14,7 +14,11 @@ import { ExternalService } from './external.service.js';
 import { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
-import { Public, CurrentUser, type JwtPayload } from '../common/decorators/index.js';
+import {
+  Public,
+  CurrentUser,
+  type JwtPayload,
+} from '../common/decorators/index.js';
 
 @ApiTags('External API (API Key Auth)')
 @ApiHeader({ name: 'X-API-Key', description: 'API Key for authentication' })
@@ -39,7 +43,12 @@ export class ExternalController {
     @Body() dto: ExternalUpdateIssueDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.externalService.updateIssue(projectKey, issueNumber, dto, user.sub);
+    return this.externalService.updateIssue(
+      projectKey,
+      issueNumber,
+      dto,
+      user.sub,
+    );
   }
 
   @Get('issues/:projectKey/:issueNumber')

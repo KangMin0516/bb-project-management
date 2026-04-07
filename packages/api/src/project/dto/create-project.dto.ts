@@ -7,10 +7,14 @@ export class CreateProjectDto {
   @MaxLength(100)
   name!: string;
 
-  @ApiProperty({ example: 'BBPM', description: 'Unique project key (uppercase letters/numbers)' })
+  @ApiProperty({
+    example: 'BBPM',
+    description: 'Unique project key (uppercase letters/numbers)',
+  })
   @IsString()
   @Matches(/^[A-Z][A-Z0-9_]{1,9}$/, {
-    message: 'Key must be 2-10 uppercase letters/numbers, starting with a letter',
+    message:
+      'Key must be 2-10 uppercase letters/numbers, starting with a letter',
   })
   key!: string;
 
