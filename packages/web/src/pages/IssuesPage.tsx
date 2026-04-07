@@ -1,5 +1,5 @@
 import { useState, useCallback, useDeferredValue, useMemo, useEffect } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -15,7 +15,8 @@ import ViewToggle, { type ViewOption } from '@/components/view/ViewToggle'
 import IssueTreeView from '@/components/issue/IssueTreeView'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import BulkActionBar from '@/components/issue/BulkActionBar'
-import { Plus, ChevronUp, ChevronDown, List, GitBranch } from 'lucide-react'
+import IssueActionMenu, { copyIssueLink } from '@/components/issue/IssueActionMenu'
+import { Plus, ChevronUp, ChevronDown, List, GitBranch, Link2 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -30,6 +31,7 @@ const VIEW_OPTIONS: ViewOption<ViewMode>[] = [
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER)
   const deferredSearch = useDeferredValue(filters.search)
   const [sortBy, setSortBy] = useState<SortField | ''>('')
@@ -94,16 +96,25 @@ export default function IssuesPage() {
     enabled: !!projectId,
   })
 
-  // Open issue detail when navigated from search/notification
+  // Open issue detail when navigated from search/notification/share link
   useEffect(() => {
+    if (!data?.items) return
+    // From location state (search/notification)
     const state = location.state as { selectedIssueId?: string } | null
-    if (state?.selectedIssueId && data?.items) {
+    if (state?.selectedIssueId) {
       const issue = data.items.find((i) => i.id === state.selectedIssueId)
       if (issue) setSelectedIssue(issue)
-      // Clear state to prevent re-opening on re-renders
       window.history.replaceState({}, '')
+      return
     }
-  }, [location.state, data?.items])
+    // From query param (share link redirect)
+    const openId = searchParams.get('open')
+    if (openId) {
+      const issue = data.items.find((i) => i.id === openId)
+      if (issue) setSelectedIssue(issue)
+      setSearchParams({}, { replace: true })
+    }
+  }, [location.state, data?.items, searchParams, setSearchParams])
 
   const deleteMutation = useMutation({
     mutationFn: (issueId: string) => issueApi.delete(projectId!, issueId),
@@ -306,16 +317,14 @@ export default function IssuesPage() {
                     <td className="whitespace-nowrap px-3 py-2 text-xs text-gray-400">
                       {new Date(issue.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-3 py-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <IssueActionMenu
+                        projectKey={project?.key || ''}
+                        issueNumber={issue.number}
+                        onDelete={() => {
                           if (confirm('Delete this issue?')) deleteMutation.mutate(issue.id)
                         }}
-                        className="text-xs text-red-400 hover:text-red-600"
-                      >
-                        Delete
-                      </button>
+                      />
                     </td>
                   </tr>
                 )
@@ -347,6 +356,7 @@ export default function IssuesPage() {
       {selectedIssue && (
         <IssueSlideOver
           projectId={projectId}
+          projectKey={project?.key || ''}
           issue={selectedIssue}
           onClose={() => setSelectedIssue(null)}
         />
@@ -358,10 +368,12 @@ export default function IssuesPage() {
 // Lightweight detail slide-over for the issues table
 function IssueSlideOver({
   projectId,
+  projectKey,
   issue,
   onClose,
 }: {
   projectId: string
+  projectKey: string
   issue: Issue
   onClose: () => void
 }) {
@@ -382,7 +394,16 @@ function IssueSlideOver({
         <div className="border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-sm text-gray-400">#{d.number}</span>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => copyIssueLink(projectKey, d.number)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Copy link"
+              >
+                <Link2 className="h-4 w-4" />
+              </button>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
           </div>
           <h2 className="mt-1 text-lg font-bold text-gray-900">{d.title}</h2>
         </div>
