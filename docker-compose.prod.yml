@@ -82,7 +82,8 @@ services:
 
   web:
     build:
-      context: ./packages/web
+      context: .
+      dockerfile: packages/web/Dockerfile
       target: production
     container_name: bbpm-web
     ports:
