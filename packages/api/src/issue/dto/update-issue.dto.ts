@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsUUID,
   IsInt,
+  IsDateString,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
@@ -57,6 +58,12 @@ export class UpdateIssueDto {
   @IsOptional()
   @IsInt()
   order?: number;
+
+  @ApiPropertyOptional({ description: 'Due date (ISO 8601), null to clear' })
+  @IsOptional()
+  @ValidateIf((o) => o.dueDate !== null)
+  @IsDateString()
+  dueDate?: string | null;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

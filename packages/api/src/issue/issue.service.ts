@@ -117,7 +117,7 @@ export class IssueService {
   }
 
   async findAll(projectId: string, query: QueryIssueDto) {
-    const { status, priority, type, assigneeId, search, page = 1, limit = 50 } = query;
+    const { status, priority, type, assigneeId, search, sortBy, sortOrder, page = 1, limit = 50 } = query;
 
     const where: IssueWhereInput = {
       projectId,
@@ -133,11 +133,15 @@ export class IssueService {
       }),
     };
 
+    const orderBy = sortBy
+      ? { [sortBy]: sortOrder || 'desc' }
+      : [{ status: 'asc' as const }, { order: 'asc' as const }];
+
     const [items, total] = await Promise.all([
       this.prisma.issue.findMany({
         where,
         include: issueInclude,
-        orderBy: [{ status: 'asc' }, { order: 'asc' }],
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -239,7 +243,7 @@ export class IssueService {
     }
 
     // Track changes for activity log
-    const TRACKED_FIELDS = ['title', 'description', 'status', 'priority', 'type', 'assigneeId', 'parentId'] as const;
+    const TRACKED_FIELDS = ['title', 'description', 'status', 'priority', 'type', 'assigneeId', 'parentId', 'dueDate'] as const;
     const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
 
     for (const key of TRACKED_FIELDS) {

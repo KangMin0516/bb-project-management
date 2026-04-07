@@ -9,6 +9,7 @@ export interface Issue {
   priority: string
   type: string
   order: number
+  dueDate: string | null
   createdAt: string
   updatedAt: string
   projectId: string
@@ -64,6 +65,7 @@ export interface CreateIssuePayload {
   type?: string
   assigneeId?: string
   parentId?: string
+  dueDate?: string
   labelIds?: string[]
 }
 
@@ -75,6 +77,7 @@ export interface UpdateIssuePayload {
   type?: string
   assigneeId?: string | null
   parentId?: string | null
+  dueDate?: string | null
   order?: number
   labelIds?: string[]
 }

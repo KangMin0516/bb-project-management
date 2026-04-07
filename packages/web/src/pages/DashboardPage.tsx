@@ -1,11 +1,13 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '@/api/dashboard'
 import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
+import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
+import { getDueBadge } from '@/lib/time'
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard', projectId],
@@ -47,6 +49,41 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* My Issues */}
+      {stats.myIssues.length > 0 && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 text-sm font-semibold text-gray-700">My Issues ({stats.myIssues.length})</h2>
+          <div className="space-y-1">
+            {stats.myIssues.map((issue) => {
+              const badge = getDueBadge(issue.dueDate)
+              return (
+                <div
+                  key={issue.id}
+                  onClick={() => navigate(`/projects/${projectId}/board`)}
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50"
+                >
+                  <span className="text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
+                  <span className="font-mono text-xs text-gray-400">{stats.project.key}-{issue.number}</span>
+                  <span className="flex-1 truncate text-sm font-medium text-gray-900">{issue.title}</span>
+                  {badge && (
+                    <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', badge.className)}>
+                      {badge.text}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
+                    <span className="text-xs text-gray-500">{issue.status.replace(/_/g, ' ')}</span>
+                  </div>
+                  <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
+                    {issue.priority}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-6">
         {/* By Status */}
