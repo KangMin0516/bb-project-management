@@ -10,10 +10,30 @@ interface Props {
 
 export function copyIssueLink(projectKey: string, issueNumber: number) {
   const url = `${window.location.origin}/share/${projectKey}-${issueNumber}`
-  navigator.clipboard.writeText(url).then(
-    () => useToastStore.getState().addToast('Link copied!', 'success'),
-    () => useToastStore.getState().addToast('Failed to copy link', 'error'),
-  )
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => useToastStore.getState().addToast('Link copied!', 'success'),
+      () => fallbackCopy(url),
+    )
+  } else {
+    fallbackCopy(url)
+  }
+}
+
+function fallbackCopy(text: string) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  try {
+    document.execCommand('copy')
+    useToastStore.getState().addToast('Link copied!', 'success')
+  } catch {
+    useToastStore.getState().addToast('Failed to copy link', 'error')
+  }
+  document.body.removeChild(textarea)
 }
 
 export default function IssueActionMenu({ projectKey, issueNumber, onDelete }: Props) {
