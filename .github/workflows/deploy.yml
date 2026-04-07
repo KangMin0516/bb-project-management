@@ -228,8 +228,11 @@ jobs:
                 if ! command -v certbot &> /dev/null; then
                   apt-get update && apt-get install -y certbot python3-certbot-nginx
                 fi
-                certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@burningbros.vn --redirect
-                echo "SSL certificate installed for $DOMAIN"
+                if certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@burningbros.vn --redirect; then
+                  echo "SSL certificate installed for $DOMAIN"
+                else
+                  echo "WARNING: SSL certificate installation failed (DNS may not be configured yet). Skipping."
+                fi
               fi
             fi
 
