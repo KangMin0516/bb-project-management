@@ -87,6 +87,49 @@ export class IssueService {
       .catch(() => {});
   }
 
+  /** Auto-assign unassigned children when parent assignee changes (1-level only) */
+  private async autoAssignUnassignedChildren(
+    parentId: string,
+    assigneeId: string,
+    projectKey: string,
+    projectId: string,
+    actorId: string,
+  ) {
+    const unassignedChildren = await this.prisma.issue.findMany({
+      where: { parentId, assigneeId: null },
+      select: { id: true, number: true, title: true },
+    });
+    if (unassignedChildren.length === 0) return;
+
+    await this.prisma.$transaction([
+      this.prisma.issue.updateMany({
+        where: { id: { in: unassignedChildren.map((c) => c.id) } },
+        data: { assigneeId },
+      }),
+      this.prisma.activity.createMany({
+        data: unassignedChildren.map((c) => ({
+          issueId: c.id,
+          userId: actorId,
+          field: 'assigneeId',
+          oldValue: null,
+          newValue: assigneeId,
+        })),
+      }),
+    ]);
+
+    for (const child of unassignedChildren) {
+      this.notifyAssignment({
+        projectKey,
+        issueNumber: child.number,
+        issueTitle: child.title,
+        issueId: child.id,
+        projectId,
+        newAssigneeId: assigneeId,
+        actorId,
+      });
+    }
+  }
+
   private async validateHierarchy(
     type: string | undefined,
     parentId: string | null | undefined,
@@ -411,25 +454,36 @@ export class IssueService {
       include: issueInclude,
     });
 
-    // Notify new assignee
+    // Notify new assignee + auto-assign unassigned children
     if (
       data.assigneeId !== undefined &&
       data.assigneeId !== existing.assigneeId &&
       data.assigneeId
     ) {
+      const newAssigneeId = data.assigneeId;
       const project = await this.prisma.project.findUnique({
         where: { id: projectId },
         select: { key: true },
       });
+      const projectKey = project?.key ?? '';
+
       this.notifyAssignment({
-        projectKey: project?.key ?? '',
+        projectKey,
         issueNumber: existing.number,
         issueTitle: existing.title,
         issueId,
         projectId,
-        newAssigneeId: data.assigneeId,
+        newAssigneeId,
         actorId: userId,
       });
+
+      await this.autoAssignUnassignedChildren(
+        issueId,
+        newAssigneeId,
+        projectKey,
+        projectId,
+        userId,
+      );
     }
 
     return issue;
