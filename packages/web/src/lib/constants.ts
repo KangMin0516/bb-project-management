@@ -28,6 +28,12 @@ export const PRIORITY_LABELS: Record<string, string> = {
   LOW: 'Low',
 }
 
+export const PRIORITY_ORDER: Record<string, number> = {
+  HIGH: 0,
+  MEDIUM: 1,
+  LOW: 2,
+}
+
 export const PRIORITY_COLORS: Record<string, string> = {
   HIGH: 'bg-red-100 text-red-700',
   MEDIUM: 'bg-yellow-100 text-yellow-700',

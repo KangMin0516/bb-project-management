@@ -98,6 +98,7 @@ model Issue {
   type        IssueType     @default(TASK)
   order       Int           @default(0)
   dueDate     DateTime?     @map("due_date")
+  focusDate   DateTime?     @map("focus_date") @db.Date
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 

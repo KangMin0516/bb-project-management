@@ -34,15 +34,26 @@ export class IssueService {
   ) {}
 
   private static readonly TRACKED_FIELDS = [
-    'title', 'description', 'status', 'priority',
-    'type', 'assigneeId', 'parentId', 'dueDate',
+    'title',
+    'description',
+    'status',
+    'priority',
+    'type',
+    'assigneeId',
+    'parentId',
+    'dueDate',
+    'focusDate',
   ] as const;
 
   private buildActivities(
     existing: Record<string, unknown>,
     updates: Record<string, unknown>,
   ): { field: string; oldValue: string | null; newValue: string | null }[] {
-    const activities: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    const activities: {
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }[] = [];
     for (const key of IssueService.TRACKED_FIELDS) {
       const value = updates[key];
       if (value === undefined) continue;
@@ -64,14 +75,16 @@ export class IssueService {
     newAssigneeId: string;
     actorId: string;
   }) {
-    this.notificationService.create({
-      type: 'ASSIGNED',
-      message: `${params.projectKey}-${params.issueNumber} "${params.issueTitle}" has been assigned to you`,
-      userId: params.newAssigneeId,
-      issueId: params.issueId,
-      projectId: params.projectId,
-      actorId: params.actorId,
-    }).catch(() => {});
+    this.notificationService
+      .create({
+        type: 'ASSIGNED',
+        message: `${params.projectKey}-${params.issueNumber} "${params.issueTitle}" has been assigned to you`,
+        userId: params.newAssigneeId,
+        issueId: params.issueId,
+        projectId: params.projectId,
+        actorId: params.actorId,
+      })
+      .catch(() => {});
   }
 
   private async validateHierarchy(
@@ -300,13 +313,33 @@ export class IssueService {
         },
         sourceLinks: {
           include: {
-            targetIssue: { select: { id: true, number: true, title: true, status: true, priority: true, type: true, project: { select: { key: true } } } },
+            targetIssue: {
+              select: {
+                id: true,
+                number: true,
+                title: true,
+                status: true,
+                priority: true,
+                type: true,
+                project: { select: { key: true } },
+              },
+            },
             creator: { select: { id: true, name: true } },
           },
         },
         targetLinks: {
           include: {
-            sourceIssue: { select: { id: true, number: true, title: true, status: true, priority: true, type: true, project: { select: { key: true } } } },
+            sourceIssue: {
+              select: {
+                id: true,
+                number: true,
+                title: true,
+                status: true,
+                priority: true,
+                type: true,
+                project: { select: { key: true } },
+              },
+            },
             creator: { select: { id: true, name: true } },
           },
         },
@@ -500,7 +533,14 @@ export class IssueService {
     // Verify all issues belong to this project
     const issues = await this.prisma.issue.findMany({
       where: { id: { in: issueIds }, projectId },
-      select: { id: true, status: true, priority: true, assigneeId: true, number: true, title: true },
+      select: {
+        id: true,
+        status: true,
+        priority: true,
+        assigneeId: true,
+        number: true,
+        title: true,
+      },
     });
 
     if (issues.length === 0) {
@@ -531,8 +571,12 @@ export class IssueService {
           where: { id: issue.id },
           data: {
             ...(updates.status !== undefined && { status: updates.status }),
-            ...(updates.priority !== undefined && { priority: updates.priority }),
-            ...(updates.assigneeId !== undefined && { assigneeId: updates.assigneeId }),
+            ...(updates.priority !== undefined && {
+              priority: updates.priority,
+            }),
+            ...(updates.assigneeId !== undefined && {
+              assigneeId: updates.assigneeId,
+            }),
             activities: {
               create: activities.map((a) => ({ ...a, userId })),
             },

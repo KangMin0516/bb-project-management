@@ -1,17 +1,18 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { dashboardApi } from '@/api/dashboard'
+import { issueApi, type Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
-import { getDueBadge } from '@/lib/time'
-
-type SortMode = 'dueDate' | 'priority'
+import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_ORDER, TYPE_ICONS } from '@/lib/constants'
+import { getDueBadge, isOverdue, todayDateString, isFocusToday } from '@/lib/time'
+import { Star, Zap, Clock, CheckCircle2 } from 'lucide-react'
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [sortMode, setSortMode] = useState<SortMode>('dueDate')
+  const queryClient = useQueryClient()
+  const [sortMode, setSortMode] = useState<'dueDate' | 'priority'>('dueDate')
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard', projectId],
@@ -19,22 +20,53 @@ export default function DashboardPage() {
     enabled: !!projectId,
   })
 
-  const sortedMyIssues = useMemo(() => {
-    if (!stats?.myIssues) return []
-    const issues = [...stats.myIssues]
-    if (sortMode === 'priority') {
-      const order: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-      issues.sort((a, b) => (order[a.priority] ?? 9) - (order[b.priority] ?? 9))
-    }
-    // dueDate sort is default from API
-    return issues
-  }, [stats?.myIssues, sortMode])
+  const toggleFocusMutation = useMutation({
+    mutationFn: ({ issueId, focusDate }: { issueId: string; focusDate: string | null }) =>
+      issueApi.update(projectId!, issueId, { focusDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', projectId] })
+    },
+    onError: (err) => {
+      console.error('Failed to toggle focus:', err)
+    },
+  })
 
-  const overdueCount = useMemo(() => {
-    if (!stats?.myIssues) return 0
-    const now = new Date()
-    return stats.myIssues.filter((i) => i.dueDate && new Date(i.dueDate) < now).length
-  }, [stats?.myIssues])
+  const emptyIssues: Issue[] = useMemo(() => [], [])
+  const myIssues = stats?.myIssues ?? emptyIssues
+  const myFocusIssues = stats?.myFocusIssues ?? emptyIssues
+
+  const sortedOtherIssues = useMemo(() => {
+    if (myIssues.length === 0) return []
+    const issues = [...myIssues]
+    if (sortMode === 'priority') {
+      issues.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9))
+    }
+    return issues
+  }, [myIssues, sortMode])
+
+  const allMyIssues = useMemo(() => [...myFocusIssues, ...myIssues], [myFocusIssues, myIssues])
+  const overdueCount = useMemo(
+    () => allMyIssues.filter((i) => isOverdue(i.dueDate)).length,
+    [allMyIssues],
+  )
+
+  // Split focus issues into working now vs planned
+  const workingNow = useMemo(
+    () => myFocusIssues.filter((i) => i.status === 'IN_PROGRESS'),
+    [myFocusIssues],
+  )
+  const plannedToday = useMemo(
+    () => myFocusIssues.filter((i) => i.status !== 'IN_PROGRESS'),
+    [myFocusIssues],
+  )
+
+  const handleToggleFocus = (issue: Issue) => {
+    const isCurrentlyFocused = isFocusToday(issue.focusDate)
+    toggleFocusMutation.mutate({
+      issueId: issue.id,
+      focusDate: isCurrentlyFocused ? null : todayDateString(),
+    })
+  }
 
   if (isLoading || !stats) {
     return (
@@ -49,7 +81,7 @@ export default function DashboardPage() {
       <h1 className="mb-6 text-xl font-bold text-gray-900">{stats.project.name} Dashboard</h1>
 
       {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="text-sm text-gray-500">Total Issues</div>
           <div className="mt-1 text-3xl font-bold text-gray-900">{stats.totalIssues}</div>
@@ -72,7 +104,9 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="text-sm text-gray-500">My Issues</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-gray-900">{stats.myIssues.length}</span>
+            <span className="text-3xl font-bold text-gray-900">
+              {stats.myIssues.length + stats.myFocusIssues.length}
+            </span>
             {overdueCount > 0 && (
               <span className="text-sm font-medium text-red-600">{overdueCount} overdue</span>
             )}
@@ -80,12 +114,75 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* My Issues — enhanced */}
-      {stats.myIssues.length > 0 && (
+      {/* Today's Focus */}
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-amber-500" />
+          <h2 className="text-sm font-semibold text-gray-900">Today's Focus</h2>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+            {stats.myFocusIssues.length}
+          </span>
+        </div>
+
+        {stats.myFocusIssues.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">
+            Click the star on any issue below to add it to today's focus
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {/* Working Now */}
+            {workingNow.length > 0 && (
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+                  <span className="text-xs font-medium text-blue-700">Working Now</span>
+                </div>
+                <div className="space-y-1">
+                  {workingNow.map((issue) => (
+                    <IssueRow
+                      key={issue.id}
+                      issue={issue}
+                      projectKey={stats.project.key}
+                      focused={true}
+                      onToggleFocus={handleToggleFocus}
+                      onClick={() => navigate(`/projects/${projectId}/board?open=${issue.id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Planned Today */}
+            {plannedToday.length > 0 && (
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Clock className="h-3 w-3 text-gray-400" />
+                  <span className="text-xs font-medium text-gray-500">Planned Today</span>
+                </div>
+                <div className="space-y-1">
+                  {plannedToday.map((issue) => (
+                    <IssueRow
+                      key={issue.id}
+                      issue={issue}
+                      projectKey={stats.project.key}
+                      focused={true}
+                      onToggleFocus={handleToggleFocus}
+                      onClick={() => navigate(`/projects/${projectId}/board?open=${issue.id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Other Assigned Issues */}
+      {sortedOtherIssues.length > 0 && (
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">
-              My Issues ({stats.myIssues.length})
+              Other Assigned ({sortedOtherIssues.length})
             </h2>
             <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
               {([['dueDate', 'Due Date'], ['priority', 'Priority']] as const).map(([key, label]) => (
@@ -105,43 +202,57 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="space-y-1">
-            {sortedMyIssues.map((issue) => {
-              const badge = getDueBadge(issue.dueDate)
-              const isOverdue = issue.dueDate && new Date(issue.dueDate) < new Date()
-              return (
-                <div
-                  key={issue.id}
-                  onClick={() => navigate(`/projects/${projectId}/board`)}
-                  className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50',
-                    isOverdue && 'bg-red-50/50',
-                  )}
-                >
-                  <span className="text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
-                  <span className="font-mono text-xs text-gray-400">{stats.project.key}-{issue.number}</span>
-                  <span className={cn('flex-1 truncate text-sm font-medium', isOverdue ? 'text-red-700' : 'text-gray-900')}>
-                    {issue.title}
-                  </span>
-                  {badge && (
-                    <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', badge.className)}>
-                      {badge.text}
-                    </span>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
-                    <span className="text-xs text-gray-500">{issue.status.replace(/_/g, ' ')}</span>
-                  </div>
-                  <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
-                    {issue.priority}
-                  </span>
-                </div>
-              )
-            })}
+            {sortedOtherIssues.map((issue) => (
+              <IssueRow
+                key={issue.id}
+                issue={issue}
+                projectKey={stats.project.key}
+                focused={false}
+                onToggleFocus={handleToggleFocus}
+                onClick={() => navigate(`/projects/${projectId}/board?open=${issue.id}`)}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Completion by Assignee */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <h2 className="text-sm font-semibold text-gray-700">Completion by Member</h2>
+          </div>
+          <div className="space-y-2.5">
+            {stats.completionByAssignee.map((stat) => {
+              const rate = stat.total ? Math.round((stat.done / stat.total) * 100) : 0
+              return (
+                <div key={stat.user.id} className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
+                    {stat.user.name?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <span className="w-20 truncate text-sm text-gray-600">{stat.user.name}</span>
+                  <div className="flex-1">
+                    <div className="h-2 rounded-full bg-gray-100">
+                      <div
+                        className="h-2 rounded-full bg-green-500 transition-all"
+                        style={{ width: `${rate}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500">
+                    {stat.done}/{stat.total}
+                  </span>
+                  <span className="w-10 text-right text-xs font-bold text-gray-700">{rate}%</span>
+                </div>
+              )
+            })}
+            {stats.completionByAssignee.length === 0 && (
+              <p className="text-sm text-gray-400">No assigned issues yet</p>
+            )}
+          </div>
+        </div>
+
         {/* By Status */}
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="mb-4 text-sm font-semibold text-gray-700">By Status</h2>
@@ -177,22 +288,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* By Assignee */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-gray-700">By Assignee</h2>
-          <div className="space-y-2">
-            {stats.byAssignee.map((a, i) => (
-              <div key={a.assignee?.id || i} className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
-                  {a.assignee?.name?.charAt(0).toUpperCase() || '?'}
-                </div>
-                <span className="flex-1 text-sm text-gray-600">{a.assignee?.name || 'Unassigned'}</span>
-                <span className="text-sm font-medium text-gray-900">{a.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Recent Activity */}
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="mb-4 text-sm font-semibold text-gray-700">Recent Activity</h2>
@@ -215,6 +310,70 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function IssueRow({
+  issue,
+  projectKey,
+  focused,
+  onToggleFocus,
+  onClick,
+}: {
+  issue: Issue
+  projectKey: string
+  focused: boolean
+  onToggleFocus: (issue: Issue) => void
+  onClick: () => void
+}) {
+  const badge = getDueBadge(issue.dueDate)
+  const overdue = !focused && isOverdue(issue.dueDate)
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2',
+        focused ? 'bg-gray-50' : 'hover:bg-gray-50',
+        overdue && 'bg-red-50/50',
+      )}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleFocus(issue) }}
+        className={cn(
+          'transition',
+          focused ? 'text-amber-400 hover:text-amber-500' : 'text-gray-300 hover:text-amber-400',
+        )}
+        title={focused ? "Remove from today's focus" : "Add to today's focus"}
+      >
+        <Star className={cn('h-3.5 w-3.5', focused && 'fill-current')} />
+      </button>
+      <span className="text-xs">{TYPE_ICONS[issue.type] || ''}</span>
+      <span className="font-mono text-xs text-gray-400">
+        {projectKey}-{issue.number}
+      </span>
+      <span
+        onClick={onClick}
+        className={cn(
+          'flex-1 cursor-pointer truncate text-sm font-medium hover:text-primary-700',
+          overdue ? 'text-red-700' : 'text-gray-900',
+        )}
+      >
+        {issue.title}
+      </span>
+      {badge && (
+        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', badge.className)}>
+          {badge.text}
+        </span>
+      )}
+      <div className="flex items-center gap-1.5">
+        <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
+        <span className="text-xs text-gray-500">{issue.status.replace(/_/g, ' ')}</span>
+      </div>
+      <span
+        className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}
+      >
+        {issue.priority}
+      </span>
     </div>
   )
 }

@@ -10,6 +10,7 @@ export interface Issue {
   type: string
   order: number
   dueDate: string | null
+  focusDate: string | null
   createdAt: string
   updatedAt: string
   projectId: string
@@ -114,6 +115,7 @@ export interface UpdateIssuePayload {
   assigneeId?: string | null
   parentId?: string | null
   dueDate?: string | null
+  focusDate?: string | null
   order?: number
   labelIds?: string[]
   componentIds?: string[]
