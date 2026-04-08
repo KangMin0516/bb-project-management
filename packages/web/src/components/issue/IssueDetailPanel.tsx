@@ -1,19 +1,18 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, uploadApi, type Issue, type IssueDetail, type Attachment, type Activity, type Comment, type UpdateIssuePayload } from '@/api/issues'
-import { projectApi, type ProjectMember } from '@/api/projects'
+import { issueApi, uploadApi, type Issue, type UpdateIssuePayload } from '@/api/issues'
+import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
 import { STATUSES } from '@/lib/constants'
+import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
-import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
-import { Trash2, Link2 } from 'lucide-react'
-import { copyIssueLink, type ShareContext } from '@/components/issue/IssueActionMenu'
+import { Trash2, Link2, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { copyIssueLink } from '@/components/issue/IssueActionMenu'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
-import CommentInput from '@/components/comment/CommentInput'
-import CommentItem from '@/components/comment/CommentItem'
-import ActivityTimeline from '@/components/activity/ActivityTimeline'
+import ActivityTab from '@/components/issue/ActivityTab'
+import AttachmentItem from '@/components/issue/AttachmentItem'
 import LinkedIssues from '@/components/issue/LinkedIssues'
 
 interface IssueDetailPanelProps {
@@ -38,19 +37,22 @@ export default function IssueDetailPanel({
   const [editingDescription, setEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState('')
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (editingDescription) {
           setEditingDescription(false)
         } else {
-          onClose()
+          onCloseRef.current()
         }
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, editingDescription])
+  }, [editingDescription])
 
   const { data: detail } = useQuery({
     queryKey: ['issue', projectId, issue.id],
@@ -117,7 +119,9 @@ export default function IssueDetailPanel({
     },
   })
 
-  const d: Issue | IssueDetail = detail || issue
+  const d = detail ?? issue
+  const labels = d.labels ?? []
+  const components = d.components ?? []
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
@@ -146,14 +150,10 @@ export default function IssueDetailPanel({
                   localStorage.setItem('issue-panel-expanded', String(next))
                 }}
                 aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 title={expanded ? 'Collapse' : 'Expand'}
               >
-                {expanded ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 19 2 12 11 5" /><polyline points="22 19 13 12 22 5" /></svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 5 22 12 13 19" /><polyline points="2 5 11 12 2 19" /></svg>
-                )}
+                {expanded ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
               </button>
               <button
                 onClick={() => {
@@ -162,21 +162,27 @@ export default function IssueDetailPanel({
                   }
                 }}
                 aria-label="Delete issue"
-                className="text-gray-400 hover:text-red-500"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500"
                 title="Delete issue"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
-              <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={onClose} aria-label="Close" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">✕</button>
             </div>
           </div>
-          {d.parent && (
+          {detail?.parent && (
             <p className="mt-1 text-xs text-gray-400">
               <button
-                onClick={() => onNavigate({ id: d.parent!.id, number: d.parent!.number, title: d.parent!.title } as Issue)}
+                onClick={() => {
+                  const parent = detail.parent!
+                  issueApi.get(projectId, parent.id).then(
+                    (fullIssue) => onNavigate(fullIssue),
+                    (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+                  )
+                }}
                 className="hover:text-primary-600 hover:underline"
               >
-                #{d.parent.number} {d.parent.title}
+                #{detail.parent.number} {detail.parent.title}
               </button>
               <span className="mx-1">&gt;</span>
               <span>#{d.number} {d.title}</span>
@@ -320,12 +326,12 @@ export default function IssueDetailPanel({
             <span className="block text-xs font-medium text-gray-500 mb-1">Labels</span>
             <div className="flex flex-wrap gap-1">
               {(projectLabels || []).map((label) => {
-                const isSelected = d.labels.some((l) => l.label.id === label.id)
+                const isSelected = labels.some((l) => l.label.id === label.id)
                 return (
                   <button
                     key={label.id}
                     onClick={() => {
-                      const currentIds = d.labels.map((l) => l.label.id)
+                      const currentIds = labels.map((l) => l.label.id)
                       const nextIds = isSelected
                         ? currentIds.filter((id) => id !== label.id)
                         : [...currentIds, label.id]
@@ -356,12 +362,12 @@ export default function IssueDetailPanel({
             <span className="block text-xs font-medium text-gray-500 mb-1">Components</span>
             <div className="flex flex-wrap gap-1">
               {projectComponents.map((comp) => {
-                const isSelected = d.components?.some((ic) => ic.component.id === comp.id)
+                const isSelected = components.some((ic) => ic.component.id === comp.id)
                 return (
                   <button
                     key={comp.id}
                     onClick={() => {
-                      const currentIds = d.components?.map((ic) => ic.component.id) || []
+                      const currentIds = components.map((ic) => ic.component.id)
                       const nextIds = isSelected
                         ? currentIds.filter((id) => id !== comp.id)
                         : [...currentIds, comp.id]
@@ -390,7 +396,12 @@ export default function IssueDetailPanel({
                 {detail.children.map((child) => (
                   <button
                     key={child.id}
-                    onClick={() => onNavigate({ id: child.id, number: child.number, title: child.title } as Issue)}
+                    onClick={() => {
+                      issueApi.get(projectId, child.id).then(
+                        (fullIssue) => onNavigate(fullIssue),
+                        (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+                      )
+                    }}
                     className="flex w-full items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors text-left"
                   >
                     <span className="font-mono text-xs text-gray-400">#{child.number}</span>
@@ -402,7 +413,6 @@ export default function IssueDetailPanel({
             </div>
           )}
 
-          {/* Linked Issues */}
           {detail && (
             <LinkedIssues
               projectId={projectId}
@@ -412,7 +422,6 @@ export default function IssueDetailPanel({
             />
           )}
 
-          {/* Attachments */}
           <div>
             <span className="block text-xs font-medium text-gray-500 mb-1">
               Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
@@ -445,150 +454,6 @@ export default function IssueDetailPanel({
         <ActivityTab projectId={projectId} issueId={issue.id} activities={detail?.activities || []} members={members || []} />
         )}
       </div>
-    </div>
-  )
-}
-
-// Unified timeline: comments + activities
-type TimelineItem =
-  | { type: 'comment'; data: Comment; createdAt: string }
-  | { type: 'activity'; data: Activity; createdAt: string }
-
-function ActivityTab({
-  projectId,
-  issueId,
-  activities,
-  members,
-}: {
-  projectId: string
-  issueId: string
-  activities: Activity[]
-  members: ProjectMember[]
-}) {
-  const queryClient = useQueryClient()
-  const currentUser = useAuthStore((s) => s.user)
-
-  const { data: commentsData } = useQuery({
-    queryKey: ['comments', projectId, issueId],
-    queryFn: () => issueApi.comments(projectId, issueId),
-  })
-
-  const createCommentMutation = useMutation({
-    mutationFn: (content: string) => issueApi.createComment(projectId, issueId, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment'))
-    },
-  })
-
-  const updateCommentMutation = useMutation({
-    mutationFn: ({ commentId, content }: { commentId: string; content: string }) =>
-      issueApi.updateComment(projectId, issueId, commentId, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment'))
-    },
-  })
-
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) => issueApi.deleteComment(projectId, issueId, commentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment'))
-    },
-  })
-
-  const timeline = useMemo<TimelineItem[]>(() => {
-    const items: TimelineItem[] = []
-
-    for (const a of activities) {
-      items.push({ type: 'activity', data: a, createdAt: a.createdAt })
-    }
-
-    if (commentsData?.items) {
-      for (const c of commentsData.items) {
-        items.push({ type: 'comment', data: c, createdAt: c.createdAt })
-      }
-    }
-
-    // Sort newest first
-    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    return items
-  }, [activities, commentsData])
-
-  return (
-    <div className="p-6 space-y-6">
-      <CommentInput
-        members={members}
-        onSubmit={(content) => createCommentMutation.mutate(content)}
-        isSubmitting={createCommentMutation.isPending}
-      />
-
-      {timeline.length > 0 ? (
-        <div className="space-y-4">
-          {timeline.map((item) =>
-            item.type === 'comment' ? (
-              <CommentItem
-                key={`c-${item.data.id}`}
-                comment={item.data as Comment}
-                currentUserId={currentUser?.id || ''}
-                onUpdate={(commentId, content) => updateCommentMutation.mutate({ commentId, content })}
-                onDelete={(commentId) => deleteCommentMutation.mutate(commentId)}
-                isUpdating={updateCommentMutation.isPending}
-              />
-            ) : (
-              <ActivityTimeline
-                key={`a-${item.data.id}`}
-                activities={[item.data as Activity]}
-                members={members}
-              />
-            ),
-          )}
-        </div>
-      ) : (
-        <p className="text-sm text-gray-400 italic">No activity yet</p>
-      )}
-    </div>
-  )
-}
-
-function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete: (id: string) => void }) {
-  const isImage = attachment.mimeType.startsWith('image/')
-  const isVideo = attachment.mimeType.startsWith('video/')
-  const sizeStr = attachment.fileSize > 1024 * 1024
-    ? `${(attachment.fileSize / (1024 * 1024)).toFixed(1)} MB`
-    : `${(attachment.fileSize / 1024).toFixed(0)} KB`
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
-      {isImage && (
-        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-          <img src={attachment.url} alt={attachment.fileName} className="h-10 w-10 rounded object-cover" />
-        </a>
-      )}
-      {isVideo && (
-        <video src={attachment.url} className="h-10 w-10 rounded object-cover" muted />
-      )}
-      {!isImage && !isVideo && (
-        <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-500">
-          FILE
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-medium text-gray-700 hover:text-primary-600">
-          {attachment.fileName}
-        </a>
-        <span className="text-xs text-gray-400">{sizeStr}</span>
-      </div>
-      <button onClick={() => onDelete(attachment.id)} className="text-gray-400 hover:text-red-500">
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
     </div>
   )
 }

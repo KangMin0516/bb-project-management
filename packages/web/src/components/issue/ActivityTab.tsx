@@ -94,7 +94,7 @@ export default function ActivityTab({
             item.type === 'comment' ? (
               <CommentItem
                 key={`c-${item.data.id}`}
-                comment={item.data as Comment}
+                comment={item.data}
                 currentUserId={currentUser?.id || ''}
                 onUpdate={(commentId, content) => updateCommentMutation.mutate({ commentId, content })}
                 onDelete={(commentId) => deleteCommentMutation.mutate(commentId)}
@@ -103,7 +103,7 @@ export default function ActivityTab({
             ) : (
               <ActivityTimeline
                 key={`a-${item.data.id}`}
-                activities={[item.data as Activity]}
+                activities={[item.data]}
                 members={members}
               />
             ),

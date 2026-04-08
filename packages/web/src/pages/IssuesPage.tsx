@@ -1,5 +1,5 @@
 import { useState, useCallback, useDeferredValue, useMemo, useEffect } from 'react'
-import { useParams, useLocation, useSearchParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -18,6 +18,7 @@ import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import BulkActionBar from '@/components/issue/BulkActionBar'
 import IssueActionMenu from '@/components/issue/IssueActionMenu'
+import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
 import { Plus, ChevronUp, ChevronDown, List, GitBranch } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
@@ -33,7 +34,6 @@ const VIEW_OPTIONS: ViewOption<ViewMode>[] = [
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
-  const [searchParams, setSearchParams] = useSearchParams()
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER)
   const deferredSearch = useDeferredValue(filters.search)
   const [sortBy, setSortBy] = useState<SortField | ''>('')
@@ -108,25 +108,19 @@ export default function IssuesPage() {
     enabled: !!projectId,
   })
 
-  // Open issue detail when navigated from search/notification/share link
+  // Open issue detail from location state (search/notification)
   useEffect(() => {
     if (!data?.items) return
-    // From location state (search/notification)
     const state = location.state as { selectedIssueId?: string } | null
     if (state?.selectedIssueId) {
       const issue = data.items.find((i) => i.id === state.selectedIssueId)
       if (issue) setSelectedIssue(issue)
       window.history.replaceState({}, '')
-      return
     }
-    // From query param (share link redirect)
-    const openId = searchParams.get('open')
-    if (openId) {
-      const issue = data.items.find((i) => i.id === openId)
-      if (issue) setSelectedIssue(issue)
-      setSearchParams({}, { replace: true })
-    }
-  }, [location.state, data?.items, searchParams, setSearchParams])
+  }, [location.state, data?.items])
+
+  // Open issue detail from share link (?open= query param)
+  useOpenIssueFromUrl(data?.items, setSelectedIssue)
 
   const deleteMutation = useMutation({
     mutationFn: (issueId: string) => issueApi.delete(projectId!, issueId),

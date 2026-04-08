@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { Search } from 'lucide-react'
 import { STATUSES } from '@/lib/constants'
 

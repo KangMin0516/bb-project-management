@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { MoreHorizontal, Link2, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
+import type { ShareContext } from '@/lib/types'
 
-export type ShareContext = 'board' | 'issues'
+export type { ShareContext }
 
 export interface IssueActionMenuProps {
   projectKey: string
