@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   List,
+  FileText,
   Settings,
   LogOut,
   ChevronDown,
@@ -47,6 +48,7 @@ export default function AppLayout() {
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/issues`, icon: List, label: 'Issues' },
+        { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
         { to: `/projects/${projectId}/settings`, icon: Settings, label: 'Settings' },
       ]
     : []
