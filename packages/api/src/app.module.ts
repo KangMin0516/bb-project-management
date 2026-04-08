@@ -20,6 +20,7 @@ import { NotificationModule } from './notification/notification.module.js';
 import { ShareModule } from './share/share.module.js';
 import { IssueLinkModule } from './issue-link/issue-link.module.js';
 import { ComponentModule } from './component/component.module.js';
+import { SpecificationModule } from './specification/specification.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -48,6 +49,7 @@ import { AppController } from './app.controller.js';
     ShareModule,
     IssueLinkModule,
     ComponentModule,
+    SpecificationModule,
   ],
   controllers: [AppController],
   providers: [
