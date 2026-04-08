@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useState, useCallback, useMemo } from 'react'
+import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { issueApi, type Issue } from '@/api/issues'
@@ -8,13 +8,13 @@ import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
+import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [searchParams, setSearchParams] = useSearchParams()
   const [createModal, setCreateModal] = useState<string | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set())
@@ -46,15 +46,9 @@ export default function BoardPage() {
     },
   })
 
-  // Open issue detail when navigated from share link
-  useEffect(() => {
-    const openId = searchParams.get('open')
-    if (!openId || !board) return
-    const allIssues = Object.values(board).flat()
-    const issue = allIssues.find((i) => i.id === openId)
-    if (issue) setSelectedIssue(issue)
-    setSearchParams({}, { replace: true })
-  }, [board, searchParams, setSearchParams])
+  // Open issue detail from share link (?open= query param)
+  const allBoardIssues = useMemo(() => board ? Object.values(board).flat() : undefined, [board])
+  useOpenIssueFromUrl(allBoardIssues, setSelectedIssue, { showNotFound: true })
 
   const handleAddClick = useCallback((status: string) => {
     setCreateModal(status)

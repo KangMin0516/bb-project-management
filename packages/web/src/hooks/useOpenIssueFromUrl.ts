@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Issue } from '@/api/issues'
 import { useToastStore } from '@/stores/toast'
@@ -10,7 +10,8 @@ export function useOpenIssueFromUrl(
 ) {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const stableOnSelect = useCallback(onSelect, [])
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
 
   useEffect(() => {
     const openId = searchParams.get('open')
@@ -18,10 +19,13 @@ export function useOpenIssueFromUrl(
 
     const issue = issues.find((i) => i.id === openId)
     if (issue) {
-      stableOnSelect(issue)
+      onSelectRef.current(issue)
     } else if (options?.showNotFound) {
       useToastStore.getState().addToast('Issue not found on this page', 'warning')
     }
-    setSearchParams({}, { replace: true })
-  }, [issues, searchParams, setSearchParams, stableOnSelect, options?.showNotFound])
+    setSearchParams((prev) => {
+      prev.delete('open')
+      return prev
+    }, { replace: true })
+  }, [issues, searchParams, setSearchParams, options?.showNotFound])
 }
