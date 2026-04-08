@@ -1,3 +1,13 @@
+export function todayDateString(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function isFocusToday(focusDate: string | null): boolean {
+  if (!focusDate) return false
+  return focusDate.slice(0, 10) === todayDateString()
+}
+
 function dueDiff(dueDate: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

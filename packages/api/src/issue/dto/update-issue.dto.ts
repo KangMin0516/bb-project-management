@@ -65,12 +65,23 @@ export class UpdateIssueDto {
   @IsDateString()
   dueDate?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Focus date (YYYY-MM-DD), null to clear',
+  })
+  @IsOptional()
+  @ValidateIf((o) => o.focusDate !== null)
+  @IsDateString()
+  focusDate?: string | null;
+
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsUUID('4', { each: true })
   labelIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Component IDs to attach', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Component IDs to attach',
+    type: [String],
+  })
   @IsOptional()
   @IsUUID('4', { each: true })
   componentIds?: string[];
