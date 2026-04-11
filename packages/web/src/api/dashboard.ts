@@ -7,6 +7,29 @@ export interface CompletionStat {
   done: number
 }
 
+export interface BurndownPoint {
+  date: string
+  openCount: number
+}
+
+export interface WorkloadAssignee {
+  assigneeId: string
+  name: string
+  avatar: string | null
+  statuses: Record<string, number>
+  total: number
+}
+
+export interface OverdueIssue {
+  id: string
+  number: number
+  title: string
+  status: string
+  priority: string
+  dueDate: string
+  assignee: { id: string; name: string; avatar: string | null } | null
+}
+
 export interface DashboardStats {
   project: { id: string; name: string; key: string }
   totalIssues: number
@@ -16,6 +39,10 @@ export interface DashboardStats {
   byType: { type: string; count: number }[]
   byAssignee: { assignee: { id: string; name: string; avatar: string | null } | null; count: number }[]
   completionByAssignee: CompletionStat[]
+  workloadByAssignee: WorkloadAssignee[]
+  burndownData: BurndownPoint[]
+  overdueIssues: OverdueIssue[]
+  overdueCount: number
   recentActivities: Activity[]
   myIssues: Issue[]
   myFocusIssues: Issue[]

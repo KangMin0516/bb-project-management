@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IssueService } from './issue.service.js';
+import { IssueLinkService } from '../issue-link/issue-link.service.js';
 import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
@@ -25,7 +26,10 @@ import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 @Controller('projects/:projectId/issues')
 @UseGuards(ProjectMemberGuard)
 export class IssueController {
-  constructor(private issueService: IssueService) {}
+  constructor(
+    private issueService: IssueService,
+    private issueLinkService: IssueLinkService,
+  ) {}
 
   @Post()
   create(
@@ -47,6 +51,11 @@ export class IssueController {
   @Get('board')
   board(@Param('projectId') projectId: string) {
     return this.issueService.findByStatus(projectId);
+  }
+
+  @Get('dependencies')
+  dependencies(@Param('projectId') projectId: string) {
+    return this.issueLinkService.findProjectDependencies(projectId);
   }
 
   @Patch('bulk')
