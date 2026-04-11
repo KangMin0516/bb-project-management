@@ -240,7 +240,7 @@ export class DashboardService {
     thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 29);
     thirtyDaysAgo.setUTCHours(0, 0, 0, 0);
 
-    // Get all issues in the project with their creation and completion info
+    // Get all issues in the project with creation info and current status
     const issues = await this.prisma.issue.findMany({
       where: { projectId },
       select: {
@@ -251,12 +251,12 @@ export class DashboardService {
       },
     });
 
-    // Get status-change activities to DONE/CANCELED within the window
-    const doneActivities = await this.prisma.activity.findMany({
+    // Get ALL status-change activities within the window (not just DONE)
+    // to correctly handle reopened issues
+    const statusActivities = await this.prisma.activity.findMany({
       where: {
         issue: { projectId },
         field: 'status',
-        newValue: { in: ['DONE', 'CANCELED'] },
         createdAt: { gte: thirtyDaysAgo },
       },
       select: {
@@ -267,46 +267,94 @@ export class DashboardService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Build a map: issueId -> earliest date it was marked DONE/CANCELED
+    // Build a map: issueId -> latest closed date (only if currently closed)
+    // Use current status to exclude reopened issues
     const closedDateMap = new Map<string, Date>();
-    for (const act of doneActivities) {
-      if (!closedDateMap.has(act.issueId)) {
+    const closedStatuses = new Set([IssueStatus.DONE, IssueStatus.CANCELED]);
+
+    // Track latest status transition per issue
+    const latestStatusByIssue = new Map<string, { status: string; date: Date }>();
+    for (const act of statusActivities) {
+      latestStatusByIssue.set(act.issueId, { status: act.newValue!, date: act.createdAt });
+      if (closedStatuses.has(act.newValue as IssueStatus)) {
         closedDateMap.set(act.issueId, act.createdAt);
+      } else {
+        // Reopened — remove closed date
+        closedDateMap.delete(act.issueId);
       }
     }
 
     // For issues currently DONE/CANCELED that have no activity record in window,
     // use their updatedAt as approximation
     for (const issue of issues) {
-      if (
-        (issue.status === IssueStatus.DONE ||
-          issue.status === IssueStatus.CANCELED) &&
-        !closedDateMap.has(issue.id)
-      ) {
+      if (closedStatuses.has(issue.status) && !closedDateMap.has(issue.id)) {
         closedDateMap.set(issue.id, issue.updatedAt);
       }
     }
 
+    // Pre-sort issues by createdAt for efficient sweep
+    const sortedIssues = [...issues].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+
+    // Collect close/reopen events sorted by date for sweep algorithm
+    type Event = { date: Date; delta: number };
+    const events: Event[] = [];
+    for (const act of statusActivities) {
+      if (closedStatuses.has(act.newValue as IssueStatus)) {
+        events.push({ date: act.createdAt, delta: -1 });
+      } else {
+        // Check if this issue was previously closed (reopen event)
+        events.push({ date: act.createdAt, delta: +1 });
+      }
+    }
+
+    // Count initial open issues before the window
+    let baseOpen = 0;
+    for (const issue of issues) {
+      if (issue.createdAt <= thirtyDaysAgo) {
+        const closedDate = closedDateMap.get(issue.id);
+        // Check if it was closed before the window started
+        const closedBefore =
+          closedDate && closedDate < thirtyDaysAgo;
+        // Also check updatedAt for issues closed before window with no activity
+        if (!closedBefore) baseOpen++;
+      }
+    }
+
+    // Simpler approach: for each day, count directly but use sorted arrays
+    // to avoid O(30*N) — use sorted creation dates + event-based deltas
     const result: { date: string; openCount: number }[] = [];
+    let issueIdx = 0;
+    let openCount = baseOpen;
+
+    // Sort events by date
+    events.sort((a, b) => a.date.getTime() - b.date.getTime());
+    let eventIdx = 0;
+
     for (let d = 0; d < 30; d++) {
       const day = new Date(thirtyDaysAgo);
       day.setUTCDate(day.getUTCDate() + d);
       const dayEnd = new Date(day);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
-      let openCount = 0;
-      for (const issue of issues) {
-        // Issue must have been created on or before this day
-        if (issue.createdAt > dayEnd) continue;
-        // Check if it was closed by this day
-        const closedDate = closedDateMap.get(issue.id);
-        if (closedDate && closedDate <= dayEnd) continue;
-        openCount++;
+      // Add newly created issues up to dayEnd
+      while (issueIdx < sortedIssues.length && sortedIssues[issueIdx].createdAt <= dayEnd) {
+        if (sortedIssues[issueIdx].createdAt > thirtyDaysAgo) {
+          openCount++;
+        }
+        issueIdx++;
+      }
+
+      // Apply close/reopen events up to dayEnd
+      while (eventIdx < events.length && events[eventIdx].date <= dayEnd) {
+        openCount += events[eventIdx].delta;
+        eventIdx++;
       }
 
       result.push({
         date: day.toISOString().slice(0, 10),
-        openCount,
+        openCount: Math.max(0, openCount),
       });
     }
 
