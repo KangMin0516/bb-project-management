@@ -31,7 +31,11 @@ function InlineField({ label, display, children }: { label: string; display: Rea
     <div className="flex items-center gap-2 py-1.5">
       <span className="w-20 shrink-0 text-xs font-medium text-gray-400">{label}</span>
       {editing ? (
-        <div className="flex-1" onBlur={() => setTimeout(() => setEditing(false), 150)}>
+        <div className="flex-1" onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setEditing(false)
+          }
+        }}>
           {children}
         </div>
       ) : (
@@ -225,35 +229,12 @@ export default function IssueDetailPanel({
             </p>
           )}
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
-
-          {/* Tabs */}
-          <div className="mt-3 flex gap-4 border-b border-gray-200 -mb-4">
-            {(['details', 'activity'] as const).map((tab) => {
-              let label: string = tab === 'details' ? `Details${linkCount > 0 ? ` · ${linkCount}` : ''}` : tab
-              if (tab === 'activity' && detail) label = `Activity (${detail.activities.length})`
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-2 text-sm font-medium capitalize transition-colors ${
-                    activeTab === tab
-                      ? 'border-b-2 border-primary-600 text-primary-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
         </div>
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'details' && (
-          <div className="space-y-5 p-6">
-          {/* Compact metadata */}
-          <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/50 px-3">
+          {/* Compact metadata (scrolls away) */}
+          <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/50 px-3 mx-6 mt-4">
             <InlineField
               label="Status"
               display={
@@ -306,11 +287,6 @@ export default function IssueDetailPanel({
                 ))}
               </select>
             </InlineField>
-
-            <div className="flex items-center gap-2 py-1.5">
-              <span className="w-20 shrink-0 text-xs font-medium text-gray-400">Creator</span>
-              <span className="text-sm text-gray-700">{d.creator?.name}</span>
-            </div>
 
             <InlineField
               label="Due Date"
@@ -404,6 +380,29 @@ export default function IssueDetailPanel({
             )}
           </div>
 
+          {/* Sticky Tabs */}
+          <div className="sticky top-0 z-10 flex gap-4 border-b border-gray-200 bg-white px-6 pt-4">
+            {(['details', 'activity'] as const).map((tab) => {
+              let label: string = tab === 'details' ? `Details${linkCount > 0 ? ` · ${linkCount}` : ''}` : tab
+              if (tab === 'activity' && detail) label = `Activity (${detail.activities.length})`
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-2 text-sm font-medium capitalize transition-colors ${
+                    activeTab === tab
+                      ? 'border-b-2 border-primary-600 text-primary-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {activeTab === 'details' && (
+          <div className="space-y-5 p-6">
             {/* Description */}
             <div>
               <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
@@ -450,6 +449,32 @@ export default function IssueDetailPanel({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <span className="block text-xs font-medium text-gray-500 mb-1">
+                Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
+              </span>
+              {detail?.attachments && detail.attachments.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {detail.attachments.map((att) => (
+                    <AttachmentItem key={att.id} attachment={att} onDelete={(id) => deleteAttachmentMutation.mutate(id)} />
+                  ))}
+                </div>
+              )}
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadMutation.mutate(file)
+                    e.target.value = ''
+                  }}
+                />
+                {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
+              </label>
             </div>
 
             {/* Sub-tasks */}
@@ -514,32 +539,6 @@ export default function IssueDetailPanel({
                   + Add sub-task
                 </button>
               )}
-            </div>
-
-            {/* Attachments */}
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">
-                Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
-              </span>
-              {detail?.attachments && detail.attachments.length > 0 && (
-                <div className="space-y-1 mb-2">
-                  {detail.attachments.map((att) => (
-                    <AttachmentItem key={att.id} attachment={att} onDelete={(id) => deleteAttachmentMutation.mutate(id)} />
-                  ))}
-                </div>
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) uploadMutation.mutate(file)
-                    e.target.value = ''
-                  }}
-                />
-                {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
-              </label>
             </div>
 
             {/* Links (merged from Links tab) */}

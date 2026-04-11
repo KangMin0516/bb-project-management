@@ -195,7 +195,7 @@ function ActivityItem({
   projectKey?: string
 }) {
   const { field, oldValue, newValue, user, createdAt } = activity
-  const isCreation = !oldValue && field === 'status'
+  const isCreation = field === 'created' || (!oldValue && field === 'status')
   const isDescription = field === 'description'
   const Icon = FIELD_ICONS[field] || CircleDot
 

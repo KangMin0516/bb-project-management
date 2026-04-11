@@ -241,6 +241,17 @@ export class IssueService {
         include: issueInclude,
       });
 
+      // Create "created" activity log
+      await tx.activity.create({
+        data: {
+          field: 'created',
+          oldValue: null,
+          newValue: null,
+          issueId: issue.id,
+          userId: creatorId,
+        },
+      });
+
       return issue;
     });
   }
