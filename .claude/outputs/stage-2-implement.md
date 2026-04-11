@@ -1,56 +1,39 @@
-## Stage 2: 구현 보고서 — 글로벌 이슈 검색 + 알림 시스템
+# 구현 완료 보고: 스펙 섹션 강화
 
-### 신규 파일 (12개)
+## 변경 파일 목록
 
-| 파일 | 목적 |
-|------|------|
-| `packages/api/src/search/search.module.ts` | 검색 모듈 |
-| `packages/api/src/search/search.controller.ts` | `GET /search/issues` API |
-| `packages/api/src/search/search.service.ts` | 크로스 프로젝트 검색 로직 |
-| `packages/api/src/search/dto/search-query.dto.ts` | 검색 쿼리 DTO |
-| `packages/api/src/notification/notification.module.ts` | 알림 모듈 |
-| `packages/api/src/notification/notification.controller.ts` | 알림 CRUD API |
-| `packages/api/src/notification/notification.service.ts` | 알림 생성/조회/읽음 처리 |
-| `packages/api/prisma/migrations/...add_notification/` | Notification 테이블 마이그레이션 |
-| `packages/web/src/api/search.ts` | 검색 API 클라이언트 |
-| `packages/web/src/api/notifications.ts` | 알림 API 클라이언트 |
-| `packages/web/src/components/search/CommandPalette.tsx` | Cmd+K 커맨드 팔레트 |
-| `packages/web/src/components/notification/NotificationBell.tsx` | 벨 아이콘 + 드롭다운 |
+- `packages/web/src/components/spec/SpecContent.tsx` — forwardRef 전환, issueLinks prop, 섹션별 이슈 뱃지, scrollToSection 노출
+- `packages/web/src/components/spec/SpecCommentPanel.tsx` — 필터 칩 UI, filterSectionTitle/onClearFilter/onScrollToSection props
+- `packages/web/src/pages/SpecificationsPage.tsx` — URL params(specId/section), SpecContent ref, 네비게이션 핸들러
+- `packages/web/src/components/issue/LinkedIssues.tsx` — LinkSpecModal 2단계 UI, SpecLinkItem 클릭 네비게이션, sectionSlug 표시
 
-### 수정 파일 (6개)
+## 주요 변경사항
 
-| 파일 | 변경 내용 |
-|------|-----------|
-| `packages/api/prisma/schema.prisma` | Notification 모델 + User/Issue relation 추가 |
-| `packages/api/src/app.module.ts` | SearchModule, NotificationModule 등록 |
-| `packages/api/src/issue/issue.module.ts` | NotificationModule import |
-| `packages/api/src/issue/issue.service.ts` | 이슈 할당 변경 시 ASSIGNED 알림 생성 |
-| `packages/api/src/comment/comment.module.ts` | NotificationModule import |
-| `packages/api/src/comment/comment.service.ts` | 댓글 생성 시 COMMENTED + @멘션 MENTIONED 알림 |
-| `packages/web/src/components/layout/AppLayout.tsx` | CommandPalette + NotificationBell + Search 버튼 |
+### 1. 댓글 필터 시각화 + 스크롤
+- 댓글 패널 헤더에 필터 칩(chip) 표시: 섹션명 + X 해제 버튼
+- 댓글의 섹션 뱃지 클릭 → 필터 적용 + 본문 해당 섹션으로 스크롤
+- SpecContent를 forwardRef로 전환, scrollToSection을 imperative handle로 노출
 
-### 주요 구현사항
+### 2. 이슈↔스펙 섹션 레벨 연결
+- LinkSpecModal: Step 1(스펙 선택) → Step 2(섹션 선택) 2단계 UI
+- "Entire specification" 옵션 + 개별 섹션 목록 (레벨별 들여쓰기)
+- createSpecLink 호출 시 sectionSlug 전달
 
-**기능 A: 글로벌 검색**
-- `GET /search/issues?q=keyword` — 사용자 소속 프로젝트 전체 이슈 검색
-- Cmd+K / Ctrl+K로 커맨드 팔레트 토글
-- 디바운스 300ms, 방향키 탐색, Enter 이동, ESC 닫기
-- 최대 20건 반환, 최신 수정순
+### 3. 스펙 본문 섹션에 연결 이슈 표시
+- issueLinks를 sectionSlug별 그룹핑
+- 각 헤딩 옆에 이슈 뱃지(#번호 + 상태 dot) 표시
+- 뱃지 클릭 → 이슈 페이지로 이동
 
-**기능 B: 알림 시스템**
-- Notification 모델 (type, message, isRead, userId, issueId, projectId, actorId)
-- 3가지 이벤트: ASSIGNED, COMMENTED, MENTIONED
-- 자기 자신에게는 알림 미생성 (actorId === userId 체크)
-- @멘션: `@username` 패턴 파싱 후 해당 유저에게 알림
-- 30초 폴링으로 unread count 갱신
-- 벨 아이콘 (사이드바 하단) + 드롭다운 + unread 배지
+### 4. 양방향 클릭 네비게이션
+- SpecLinkItem 클릭 → `/projects/:id/specs?specId=xxx&section=yyy`
+- 이슈 뱃지 클릭 → `/projects/:id/issues?issue=xxx`
+- URL params에서 specId/section 파싱 → 자동 선택 + 스크롤
 
-### 자체 점검
+## 자체 점검
 
-- [x] API 타입 오류 없음 (`tsc --noEmit`)
-- [x] Web 타입 오류 없음 (`tsc --noEmit`)
+- [x] 타입 오류 없음 (Web 통과)
 - [x] import 경로 정확
-- [x] 기존 코드 패턴 일관성 (NestJS 모듈/서비스/컨트롤러 패턴 동일)
-- [x] DB 마이그레이션 생성 및 적용 완료
-- [x] 기획서 모든 항목 구현 완료
+- [x] 기존 코드 패턴과 일관성
+- [x] 기획서의 모든 항목 구현 완료
 - [x] 불필요한 변경 없음
+- [x] API 변경 없음 (기존 API만 활용)

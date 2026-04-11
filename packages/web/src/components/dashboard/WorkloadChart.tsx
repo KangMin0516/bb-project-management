@@ -1,15 +1,5 @@
 import type { WorkloadAssignee } from '@/api/dashboard'
-import { STATUSES, STATUS_LABELS } from '@/lib/constants'
-
-const STATUS_BAR_COLORS: Record<string, string> = {
-  BACKLOG: 'bg-gray-400',
-  TODO: 'bg-blue-400',
-  IN_PROGRESS: 'bg-yellow-400',
-  REVIEW_QA: 'bg-purple-400',
-  DONE: 'bg-green-400',
-  CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
-}
+import { STATUSES, STATUS_LABELS, STATUS_BAR_COLORS } from '@/lib/constants'
 
 interface Props {
   data: WorkloadAssignee[]

@@ -1,140 +1,99 @@
-## 기획서: 글로벌 이슈 검색 + 알림 시스템
+# 기획서: 스펙 섹션 강화 — 댓글 UX + 섹션 레벨 이슈 연결
 
----
+## 요구사항 요약
 
-## 기능 A: 글로벌 이슈 검색 (Cmd+K 커맨드 팔레트)
+1. **댓글 패널 필터 시각화**: 현재 적용 중인 섹션 필터를 댓글 패널 헤더에 칩(chip)으로 표시 + 해제 버튼
+2. **댓글→섹션 스크롤**: 댓글 패널에서 섹션 뱃지 클릭 시 본문의 해당 섹션으로 스크롤
+3. **이슈↔스펙 섹션 레벨 연결**: LinkSpecModal에서 스펙 선택 후 섹션까지 선택 가능
+4. **스펙 본문 섹션에 연결 이슈 표시**: 각 헤딩 옆에 연결된 이슈 뱃지(번호+상태) 표시
+5. **양방향 클릭 네비게이션**: 이슈 디테일→스펙 페이지(섹션 포커스), 스펙 섹션→이슈 디테일
 
-### 요구사항 요약
-사용자가 속한 모든 프로젝트의 이슈를 Cmd+K 단축키로 검색. 제목/번호/설명 통합 검색.
+## 현재 구현 상태 (이미 있는 것)
 
-### 구현 방안
+- SpecContent.tsx: TOC에 섹션별 미해결 댓글 수 뱃지 ✅
+- SpecContent.tsx: 헤딩 hover → 댓글 아이콘 + 클릭 시 필터 토글 ✅
+- SpecCommentPanel.tsx: filterSection prop으로 필터링 ✅
+- SpecCommentPanel.tsx: "Clear filter" 텍스트 링크 ✅
+- IssueSpecLink: sectionSlug 필드 존재 (DB/API) ✅
+- IssueSpecLink: 프론트에서 sectionSlug 미사용 (항상 빈 문자열) ❌
 
-#### 1. API — `GET /search/issues?q=keyword`
-- 새 `SearchModule` 생성 (NestJS)
-- 사용자가 멤버인 프로젝트의 이슈만 검색 (권한 필터링)
-- Prisma `contains` + `insensitive` 모드 사용 (기존 issue.service 패턴 동일)
-- 검색 대상: title, description, project.key + number (예: "PRJ-12")
-- 최대 20건 반환, 최신순 정렬
+## 영향 범위
 
-```
-GET /search/issues?q=login
-Response: { items: [{ id, number, title, status, priority, project: { id, key, name } }] }
-```
+- **서비스**: Web (프론트엔드)
+- **수정 파일**:
+  - `packages/web/src/components/spec/SpecContent.tsx` — 섹션에 연결 이슈 뱃지 추가
+  - `packages/web/src/components/spec/SpecCommentPanel.tsx` — 필터 칩 UI, 섹션 클릭→본문 스크롤 콜백
+  - `packages/web/src/pages/SpecificationsPage.tsx` — scrollToSection 콜백 전달, 네비게이션 핸들러
+  - `packages/web/src/components/issue/LinkedIssues.tsx` — LinkSpecModal에 섹션 선택 단계 추가, 스펙 링크 클릭→네비게이션
+- **신규 파일**: 없음
 
-#### 2. Web — CommandPalette 컴포넌트
-- `Cmd+K` (Mac) / `Ctrl+K` (Windows) 로 토글
-- 모달 오버레이 + 검색 입력 + 결과 리스트
-- 디바운스 300ms 적용
-- 방향키 탐색 + Enter로 이슈 상세 이동 (`/projects/:projectId/board`)
-- ESC로 닫기
-- AppLayout에 마운트 (전역)
+## 구현 방안
 
-#### 신규 파일
+### 1단계: 댓글 패널 필터 시각화 + 스크롤
 
-| 파일 | 목적 |
-|------|------|
-| `packages/api/src/search/search.module.ts` | 검색 모듈 |
-| `packages/api/src/search/search.controller.ts` | `GET /search/issues` |
-| `packages/api/src/search/search.service.ts` | 검색 로직 |
-| `packages/api/src/search/dto/search-query.dto.ts` | 쿼리 DTO |
-| `packages/web/src/api/search.ts` | 검색 API 클라이언트 |
-| `packages/web/src/components/search/CommandPalette.tsx` | 커맨드 팔레트 UI |
+**SpecCommentPanel.tsx:**
+- 헤더에 `filterSection`이 있을 때 섹션명 칩(chip) 표시 (배경색 + X 버튼으로 해제)
+- 기존 "Clear filter" 텍스트를 칩으로 대체
 
-#### 수정 파일
+**SpecificationsPage.tsx:**
+- `scrollToSection` 콜백을 SpecCommentPanel에 전달
+- 댓글의 섹션 뱃지 클릭 시: (1) 필터 적용 + (2) 본문 스크롤
 
-| 파일 | 변경 사유 |
-|------|-----------|
-| `packages/api/src/app.module.ts` | SearchModule 등록 |
-| `packages/web/src/components/layout/AppLayout.tsx` | CommandPalette 마운트 |
+**SpecContent.tsx:**
+- `scrollToSection`을 외부에서 호출할 수 있도록 ref 또는 콜백 패턴 제공
+- 현재 이미 `scrollToSection` 함수가 있으나 내부에서만 사용 → 부모로 노출
 
----
+### 2단계: 이슈↔스펙 섹션 레벨 연결
 
-## 기능 B: 알림 시스템 (인앱)
+**LinkedIssues.tsx (LinkSpecModal 수정):**
+- 현재: 스펙 선택 → 바로 링크 생성
+- 변경: 스펙 선택 → 해당 스펙의 섹션 목록 표시 → "전체 스펙" 또는 특정 섹션 선택 → 링크 생성
+- 2단계 UI: Step 1(스펙 선택) → Step 2(섹션 선택, "Entire spec" 옵션 포함)
+- `createSpecLink` 호출 시 `sectionSlug` 전달
 
-### 요구사항 요약
-이슈 할당, 댓글 작성, @멘션 시 인앱 알림 생성. 사이드바에 벨 아이콘 + 드롭다운.
+**SpecLinkItem (LinkedIssues.tsx):**
+- `sectionSlug`이 있으면 스펙 제목 옆에 `§ 섹션명` 표시
+- 클릭 시 `/projects/:projectId/specs`로 이동 + 해당 스펙 선택 + 섹션 스크롤
 
-### 알림 생성 이벤트
+**API 변경**: 없음 (sectionSlug 이미 지원, spec.sections 이미 include 가능)
 
-| 이벤트 | 수신자 | 메시지 예시 |
-|--------|--------|-------------|
-| 이슈 할당 | 새 담당자 | "PRJ-12가 나에게 할당되었습니다" |
-| 댓글 작성 | 이슈 담당자 (작성자 제외) | "홍길동이 PRJ-12에 댓글을 남겼습니다" |
-| @멘션 | 멘션된 사용자 | "홍길동이 PRJ-12에서 나를 멘션했습니다" |
+단, LinkSpecModal에서 선택한 스펙의 섹션 목록이 필요 → `specApi.get(projectId, specId)`로 sections 조회
 
-### 구현 방안
+### 3단계: 스펙 본문 섹션에 연결 이슈 표시
 
-#### 1. DB — Notification 모델
+**SpecContent.tsx:**
+- props에 `issueLinks` 추가 (SpecDetail.issueLinks)
+- sectionSlug별로 그룹핑하여 각 헤딩 옆에 이슈 뱃지 표시
+- 이슈 뱃지: `[PITB-42]` 형식, 상태 색상 dot, 클릭 시 이슈 페이지로 이동
 
-```prisma
-model Notification {
-  id        String   @id @default(uuid())
-  type      String   // ASSIGNED, COMMENTED, MENTIONED
-  message   String
-  isRead    Boolean  @default(false)
-  userId    String   // 수신자
-  user      User     @relation(fields: [userId], references: [id])
-  issueId   String?
-  issue     Issue?   @relation(fields: [issueId], references: [id])
-  projectId String?
-  actorId   String?  // 발생시킨 사용자
-  createdAt DateTime @default(now())
+**SpecificationsPage.tsx:**
+- `detail.issueLinks`를 SpecContent에 전달
 
-  @@index([userId, isRead, createdAt])
-}
-```
+### 4단계: 양방향 네비게이션
 
-#### 2. API — NotificationModule
-- `GET /notifications` — 내 알림 목록 (최신 50건, unread 우선)
-- `PATCH /notifications/:id/read` — 읽음 처리
-- `PATCH /notifications/read-all` — 전체 읽음 처리
-- `GET /notifications/unread-count` — 읽지 않은 알림 수
+**이슈→스펙 (LinkedIssues.tsx):**
+- SpecLinkItem 클릭 시 `react-router`의 `useNavigate`로 스펙 페이지 이동
+- URL에 query param으로 섹션 지정: `/projects/:id/specs?specId=xxx&section=yyy`
 
-#### 3. 알림 생성 트리거
-- `issue.service.ts` — `update()` 에서 assigneeId 변경 시 알림 생성
-- `comment.service.ts` — `create()` 에서 담당자에게 알림 + @멘션 파싱
-- `NotificationService.create()` 를 각 서비스에서 호출
+**스펙→이슈 (SpecContent.tsx):**
+- 이슈 뱃지 클릭 시 이슈 페이지로 이동: `/projects/:id/issues?issue=xxx`
+- 또는 현재 보드 뷰에서 이슈 디테일 패널 열기
 
-#### 4. Web — 알림 UI
-- 사이드바 하단 (유저 프로필 위)에 벨 아이콘 + unread 배지
-- 클릭 시 드롭다운 리스트 (최근 알림)
-- 클릭 시 해당 이슈로 이동 + 읽음 처리
-- 30초 폴링으로 unread count 갱신
+**SpecificationsPage.tsx:**
+- URL query param에서 `specId`, `section` 파싱 → 자동 선택 + 스크롬
 
-#### 신규 파일
+## API 변경사항
 
-| 파일 | 목적 |
-|------|------|
-| `packages/api/src/notification/notification.module.ts` | 알림 모듈 |
-| `packages/api/src/notification/notification.controller.ts` | 알림 API |
-| `packages/api/src/notification/notification.service.ts` | 알림 CRUD + 생성 로직 |
-| `packages/api/prisma/migrations/...add_notification/` | Notification 테이블 |
-| `packages/web/src/api/notifications.ts` | 알림 API 클라이언트 |
-| `packages/web/src/components/notification/NotificationBell.tsx` | 벨 아이콘 + 드롭다운 |
+없음. 기존 API만 활용:
+- `GET /specifications/:specId` — sections, issueLinks 이미 포함
+- `POST /spec-links` — sectionSlug 이미 지원
 
-#### 수정 파일
+## 리스크 및 고려사항
 
-| 파일 | 변경 사유 |
-|------|-----------|
-| `packages/api/prisma/schema.prisma` | Notification 모델 추가 |
-| `packages/api/src/app.module.ts` | NotificationModule 등록 |
-| `packages/api/src/issue/issue.service.ts` | 할당 변경 시 알림 생성 |
-| `packages/api/src/comment/comment.service.ts` | 댓글/멘션 시 알림 생성 |
-| `packages/web/src/components/layout/AppLayout.tsx` | 벨 아이콘 + CommandPalette 추가 |
+- **섹션 slug 변경**: 마크다운 헤딩을 수정하면 sectionSlug가 변경됨 → 기존 링크가 깨질 수 있음 (이미 설계 시 soft reference로 결정, 표시만 fallback)
+- **성능**: LinkSpecModal에서 스펙 선택 후 섹션 조회를 위한 추가 API 호출 1회 → 이미 캐시된 경우 빠름
 
----
+## 예상 작업량
 
-## 전체 영향 범위
-
-- **서비스**: API + Web
-- **신규 파일**: 12개
-- **수정 파일**: 6개 (일부 중복)
-- **DB 마이그레이션**: 1건 (Notification 테이블)
-
-### 리스크
-- @멘션 파싱: 댓글 내 `@username` 패턴 매칭 필요 → 단순 정규식으로 처리
-- 폴링 부하: 30초 간격 + unread count만 조회하므로 부하 최소
-
-### 예상 작업량
-- 파일 수: ~18개 (신규 12 + 수정 6)
+- 파일 수: 4개 수정
 - 복잡도: 보통

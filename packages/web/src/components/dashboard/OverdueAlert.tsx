@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 import type { OverdueIssue } from '@/api/dashboard'
+import InfoTooltip from '@/components/ui/InfoTooltip'
 
 interface Props {
   issues: OverdueIssue[]
@@ -29,6 +30,14 @@ export default function OverdueAlert({ issues, projectKey, onIssueClick }: Props
         <h2 className="text-sm font-semibold text-red-800">
           Overdue Issues
         </h2>
+        <InfoTooltip
+          iconClassName="text-red-400 hover:bg-red-100 hover:text-red-600"
+          lines={[
+            { lang: 'EN', text: 'Issues past their due date that are still open. These need immediate attention.' },
+            { lang: 'KR', text: '마감일이 지났지만 아직 완료되지 않은 이슈입니다. 우선 처리가 필요합니다.' },
+            { lang: 'VN', text: 'Các issue đã quá hạn nhưng chưa hoàn thành. Cần xử lý ngay.' },
+          ]}
+        />
         <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
           {issues.length}
         </span>

@@ -11,6 +11,7 @@ import BurndownChart from '@/components/dashboard/BurndownChart'
 import WorkloadChart from '@/components/dashboard/WorkloadChart'
 import OverdueAlert from '@/components/dashboard/OverdueAlert'
 import DependencyGraph from '@/components/dashboard/DependencyGraph'
+import InfoTooltip from '@/components/ui/InfoTooltip'
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -123,6 +124,11 @@ export default function DashboardPage() {
         <div className="mb-4 flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
           <h2 className="text-sm font-semibold text-gray-900">Today's Focus</h2>
+          <InfoTooltip lines={[
+              { lang: 'EN', text: "Issues you plan to focus on today. Click the star (★) to add. 'Working Now' = in progress, 'Planned Today' = queued." },
+              { lang: 'KR', text: '오늘 집중할 이슈 모음입니다. 별(★)을 클릭하여 추가합니다. Working Now=진행 중, Planned Today=오늘 예정.' },
+              { lang: 'VN', text: "Các issue tập trung hôm nay. Nhấn ngôi sao (★) để thêm. 'Working Now' = đang làm, 'Planned Today' = dự kiến hôm nay." },
+            ]} />
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
             {stats.myFocusIssues.length}
           </span>
@@ -237,6 +243,11 @@ export default function DashboardPage() {
         <div className="mb-3 flex items-center gap-2">
           <GitBranch className="h-4 w-4 text-purple-500" />
           <h2 className="text-sm font-semibold text-gray-700">Dependency Graph</h2>
+          <InfoTooltip lines={[
+              { lang: 'EN', text: 'Visualizes BLOCKS relationships between issues. Active blockers prevent other issues from progressing.' },
+              { lang: 'KR', text: '이슈 간 BLOCKS 관계를 시각화합니다. 활성 차단은 다른 이슈 진행을 막고 있는 항목입니다.' },
+              { lang: 'VN', text: 'Trực quan hóa quan hệ BLOCKS giữa các issue. Blocker đang hoạt động ngăn các issue khác tiến triển.' },
+            ]} />
         </div>
         <DependencyGraph />
       </div>
@@ -248,6 +259,11 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-blue-500" />
             <h2 className="text-sm font-semibold text-gray-700">Open Issues (Last 30 Days)</h2>
+            <InfoTooltip lines={[
+              { lang: 'EN', text: 'Shows open issue count over the last 30 days. Declining = issues being resolved. Rising = new issues outpace closures.' },
+              { lang: 'KR', text: '지난 30일간 미완료 이슈 수 추이입니다. 하강=이슈 해결 중, 상승=새 이슈가 해결보다 빠르게 생성 중.' },
+              { lang: 'VN', text: 'Hiển thị số issue mở trong 30 ngày qua. Giảm = issue đang được giải quyết. Tăng = issue mới nhiều hơn đóng.' },
+            ]} />
           </div>
           <BurndownChart data={stats.burndownData ?? []} />
         </div>
@@ -257,6 +273,11 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-indigo-500" />
             <h2 className="text-sm font-semibold text-gray-700">Workload Distribution</h2>
+            <InfoTooltip lines={[
+              { lang: 'EN', text: 'Shows issue count per assignee, broken down by status. Helps identify workload imbalance.' },
+              { lang: 'KR', text: '담당자별 이슈 수를 상태별로 보여줍니다. 업무 편중 여부를 확인할 수 있습니다.' },
+              { lang: 'VN', text: 'Hiển thị số issue theo người phụ trách, phân theo trạng thái. Giúp phát hiện mất cân bằng công việc.' },
+            ]} />
           </div>
           <WorkloadChart data={stats.workloadByAssignee ?? []} />
         </div>
@@ -268,6 +289,11 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
             <h2 className="text-sm font-semibold text-gray-700">Completion by Member</h2>
+            <InfoTooltip lines={[
+              { lang: 'EN', text: 'Shows the ratio of completed (Done) issues to total issues per member.' },
+              { lang: 'KR', text: '멤버별 전체 이슈 대비 완료(Done) 이슈 비율을 보여줍니다.' },
+              { lang: 'VN', text: 'Hiển thị tỷ lệ issue hoàn thành (Done) trên tổng số issue theo từng thành viên.' },
+            ]} />
           </div>
           <div className="space-y-2.5">
             {stats.completionByAssignee.map((stat) => {

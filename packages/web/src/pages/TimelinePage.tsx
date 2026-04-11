@@ -5,29 +5,14 @@ import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import { SearchInput, DropdownFilters, AssigneeAvatars, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
-import { STATUS_COLORS, STATUS_LABELS, TYPE_ICONS } from '@/lib/constants'
+import { STATUS_COLORS, STATUS_BAR_COLORS, STATUS_LABELS, TYPE_ICONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 type GroupBy = 'type' | 'assignee'
 
-const STATUS_BAR_COLORS: Record<string, string> = {
-  BACKLOG: 'bg-gray-400/80',
-  TODO: 'bg-blue-400/80',
-  IN_PROGRESS: 'bg-yellow-400/80',
-  REVIEW_QA: 'bg-purple-400/80',
-  DONE: 'bg-green-400/80',
-  CANCELED: 'bg-red-400/80',
-  RECHECK: 'bg-orange-400/80',
-}
-
 const DAY_MS = 86400000
 
 function formatDate(date: Date): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${months[date.getMonth()]} ${date.getDate()}`
-}
-
-function formatWeek(date: Date): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return `${months[date.getMonth()]} ${date.getDate()}`
 }
@@ -341,7 +326,7 @@ export default function TimelinePage() {
                       style={{ left: `${week.offset}%` }}
                     >
                       <span className="text-[10px] font-medium text-gray-400 whitespace-nowrap pl-1">
-                        {formatWeek(week.date)}
+                        {formatDate(week.date)}
                       </span>
                     </div>
                   ))}

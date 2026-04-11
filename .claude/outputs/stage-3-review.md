@@ -1,33 +1,54 @@
-## Stage 3: 코드리뷰 종합 결과 — 글로벌 검색 + 알림 시스템
+# Stage 3: 코드리뷰 결과 — Timeline, Dependency Graph, Metrics Dashboard
 
-### 전체 요약
-- **Critical**: 1건 → **수정 완료**
-- **Warning**: 6건 → **5건 수정, 1건 보류 (FK relation)**
-- **Info**: 2건
-- **결론**: Critical 수정 완료, 주요 Warning 해결됨
+## 리뷰 대상
+- Timeline/Roadmap 뷰 (TimelinePage.tsx)
+- Dependency Graph (DependencyGraph.tsx)
+- 프로젝트 메트릭 대시보드 (BurndownChart, WorkloadChart, OverdueAlert, DashboardPage)
+- 백엔드 서비스 (dashboard.service.ts, issue-link.service.ts)
 
 ---
 
-### 수정 완료 항목
+## Critical Issues (수정 완료)
 
-| 이슈 | 등급 | 수정 내용 |
-|------|------|-----------|
-| 알림 생성 await 누락 | Critical | `.catch(() => {})` fire-and-forget 패턴 적용 (3곳) |
-| markAsRead 404 미반환 | Warning | `count === 0`일 때 `NotFoundException` throw |
-| NotificationType 느슨한 타입 | Warning | union type `'ASSIGNED' | 'COMMENTED' | 'MENTIONED'` 적용 |
-| 검색 2단계 쿼리 | Warning | `project.members.some` 서브쿼리로 단일 쿼리 최적화 |
-| 검색/알림 보드로만 이동 | Warning | Issues 페이지 + `selectedIssueId` state로 이슈 상세 직접 오픈 |
-| @멘션 정규식 느슨 | Warning | `/@([\w.]+)/g`로 개선 |
+### C1: getBurndownData O(30×N) 성능 문제
+- **위치**: `packages/api/src/dashboard/dashboard.service.ts` getBurndownData()
+- **문제**: 30일 × N개 이슈를 매번 순회하는 O(30*N) 루프
+- **수정**: 정렬된 이슈 + 이벤트 기반 sweep 알고리즘으로 O(N log N) 최적화
 
-### 보류 항목
+### C2: Burndown reopen 버그
+- **위치**: `packages/api/src/dashboard/dashboard.service.ts` getBurndownData()
+- **문제**: `earliest` DONE 활동만 기록하여 이슈가 재오픈된 경우에도 닫힌 것으로 처리
+- **수정**: 전체 status 활동을 추적하여 reopen 시 closedDateMap에서 제거
 
-| 이슈 | 등급 | 사유 |
-|------|------|------|
-| Notification FK relation 누락 | Warning | 추가 마이그레이션 필요, 향후 개선으로 보류 |
+---
 
-### 긍정적 사항
-- NestJS 모듈 패턴 일관성 우수
-- 알림 자기 자신 제외 로직 적절
-- 커맨드 팔레트 UX 완성도 높음 (디바운스, 키보드 탐색)
-- Notification 인덱스 최적화 적절
-- 폴링 30초 간격 합리적
+## Warning Issues (수정 완료)
+
+### W1: 중복 STATUS_BAR_COLORS 상수
+- **위치**: WorkloadChart.tsx, TimelinePage.tsx
+- **수정**: `@/lib/constants`에 통합 export, 두 파일에서 import로 변경
+
+### W2: 중복 formatDate/formatWeek 함수
+- **위치**: TimelinePage.tsx
+- **문제**: formatDate와 formatWeek가 동일한 구현
+- **수정**: formatWeek 제거, formatDate만 사용
+
+### W3: findProjectDependencies 단방향 쿼리
+- **위치**: `packages/api/src/issue-link/issue-link.service.ts`
+- **문제**: sourceIssue.projectId만 검색하여 target이 프로젝트에 속하는 경우 누락
+- **수정**: OR 조건으로 sourceIssue.projectId 또는 targetIssue.projectId 모두 검색
+
+---
+
+## 추가 개선 (수정 완료)
+
+### Timeline 메뉴 숨김
+- 사이드바 네비게이션에서 Timeline 항목 제거 (라우트는 유지)
+- GanttChart 미사용 import 제거
+
+### 대시보드 툴팁 추가
+- 번다운 차트, 워크로드 분포, 의존성 그래프, 완료율, 오늘의 포커스, 마감초과 이슈
+
+---
+
+## 전체 결과: **수정 완료 — `/4-test` 진행 가능**
