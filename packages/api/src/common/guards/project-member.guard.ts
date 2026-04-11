@@ -18,10 +18,25 @@ export class ProjectMemberGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user as JwtPayload;
-    const projectId = request.params.projectId;
+    let projectId = request.params.projectId;
 
     if (!projectId) {
       throw new ForbiddenException('Project context required');
+    }
+
+    // Resolve project key to UUID if needed
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+    if (!isUuid) {
+      const project = await this.prisma.project.findUnique({
+        where: { key: projectId },
+        select: { id: true },
+      });
+      if (!project) {
+        throw new ForbiddenException('Project not found');
+      }
+      projectId = project.id;
+      // Replace param so downstream services use the UUID
+      request.params.projectId = projectId;
     }
 
     // Superuser bypasses membership check

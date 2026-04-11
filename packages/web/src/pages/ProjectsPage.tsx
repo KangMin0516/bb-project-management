@@ -71,7 +71,7 @@ export default function ProjectsPage() {
           {projects.map((project) => (
             <button
               key={project.id}
-              onClick={() => navigate(`/projects/${project.id}/board`)}
+              onClick={() => navigate(`/projects/${project.key}/board`)}
               className="rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:shadow-md"
             >
               <div className="mb-1 font-mono text-xs text-gray-400">{project.key}</div>
