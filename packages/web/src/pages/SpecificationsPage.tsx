@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { specApi, type SpecStatus } from '@/api/specifications'
 import { projectApi } from '@/api/projects'
-import SpecContent from '@/components/spec/SpecContent'
+import SpecContent, { type SpecContentHandle } from '@/components/spec/SpecContent'
 import SpecCommentPanel from '@/components/spec/SpecCommentPanel'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import { useToastStore } from '@/stores/toast'
@@ -11,12 +11,18 @@ import { getErrorMessage } from '@/lib/error'
 import { Plus, FileText, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SPEC_STATUS_COLORS } from '@/lib/constants'
+import { issueApi } from '@/api/issues'
+import CreateIssueModal from '@/components/issue/CreateIssueModal'
 
 export default function SpecificationsPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const specContentRef = useRef<SpecContentHandle>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('specId'))
   const [filterSection, setFilterSection] = useState<string | null>(null)
+  const [pendingScrollSection, setPendingScrollSection] = useState<string | null>(searchParams.get('section'))
   const [showCreate, setShowCreate] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
   const [createContent, setCreateContent] = useState('')
@@ -26,6 +32,7 @@ export default function SpecificationsPage() {
   const [showSidebar, setShowSidebar] = useState(true)
   const [showComments, setShowComments] = useState(true)
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
+  const [createIssueForSection, setCreateIssueForSection] = useState<string | null>(null)
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -77,19 +84,67 @@ export default function SpecificationsPage() {
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete specification')),
   })
 
+  // Scroll to section after detail loads (from URL params or navigation)
+  useEffect(() => {
+    if (pendingScrollSection && detail) {
+      requestAnimationFrame(() => {
+        specContentRef.current?.scrollToSection(pendingScrollSection)
+        setFilterSection(pendingScrollSection)
+        setPendingScrollSection(null)
+        setSearchParams((prev) => {
+          prev.delete('specId')
+          prev.delete('section')
+          return prev
+        }, { replace: true })
+      })
+    }
+  }, [pendingScrollSection, detail, setSearchParams])
+
   const handleSectionClick = useCallback((sectionId: string) => {
     setFilterSection((prev) => (prev === sectionId ? null : sectionId))
   }, [])
 
-  if (!projectId) return null
+  const handleScrollToSection = useCallback((sectionId: string) => {
+    specContentRef.current?.scrollToSection(sectionId)
+  }, [])
+
+  const handleClearFilter = useCallback(() => {
+    setFilterSection(null)
+  }, [])
+
+  const handleIssueClick = useCallback((issueId: string) => {
+    navigate(`/projects/${projectId}/issues?issue=${issueId}`)
+  }, [navigate, projectId])
+
+  const handleCreateIssue = useCallback((sectionSlug: string) => {
+    setCreateIssueForSection(sectionSlug)
+  }, [])
+
+  const handleIssueCreated = useCallback((issueId: string) => {
+    if (!selectedId || !projectId) return
+    issueApi.createSpecLink(projectId, issueId, {
+      specId: selectedId,
+      sectionSlug: createIssueForSection || undefined,
+    }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['specification', projectId, selectedId] })
+      useToastStore.getState().addToast('Issue created and linked to spec section')
+    }).catch((err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Issue created but failed to link to spec'))
+    })
+  }, [selectedId, projectId, createIssueForSection, queryClient])
 
   // Group specs by category
-  const grouped = new Map<string, typeof specs>()
-  for (const spec of specs || []) {
-    const cat = spec.category || 'Uncategorized'
-    if (!grouped.has(cat)) grouped.set(cat, [])
-    grouped.get(cat)!.push(spec)
-  }
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof specs>()
+    for (const spec of specs || []) {
+      const cat = spec.category || 'Uncategorized'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(spec)
+    }
+    return map
+  }, [specs])
+
+  if (!projectId) return null
 
   return (
     <div className="flex h-full">
@@ -298,10 +353,14 @@ export default function SpecificationsPage() {
                   <MarkdownEditor value={draftContent} onChange={setDraftContent} minRows={20} />
                 ) : (
                   <SpecContent
+                    ref={specContentRef}
                     content={detail.content}
                     sections={detail.sections}
                     comments={detail.comments}
+                    issueLinks={detail.issueLinks}
                     onSectionClick={handleSectionClick}
+                    onIssueClick={handleIssueClick}
+                    onCreateIssue={handleCreateIssue}
                   />
                 )}
               </div>
@@ -314,7 +373,10 @@ export default function SpecificationsPage() {
                     specId={detail.id}
                     comments={detail.comments}
                     filterSection={filterSection}
+                    filterSectionTitle={filterSection ? detail.sections.find((s) => s.sectionId === filterSection)?.title : null}
                     onSectionClick={handleSectionClick}
+                    onClearFilter={handleClearFilter}
+                    onScrollToSection={handleScrollToSection}
                   />
                 </div>
               )}
@@ -329,6 +391,15 @@ export default function SpecificationsPage() {
           </div>
         )}
       </div>
+
+      {/* Create issue modal (from section heading) */}
+      {createIssueForSection !== null && (
+        <CreateIssueModal
+          projectId={projectId}
+          onClose={() => setCreateIssueForSection(null)}
+          onCreated={handleIssueCreated}
+        />
+      )}
 
       {/* Create modal */}
       {showCreate && (

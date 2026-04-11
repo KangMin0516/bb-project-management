@@ -1,17 +1,26 @@
-import { type JSX, useMemo, useEffect, useRef, useCallback, useState } from 'react'
+import { type JSX, useMemo, useEffect, useRef, useCallback, useState, useImperativeHandle, forwardRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
-import type { SpecSection, SpecComment } from '@/api/specifications'
-import { MessageSquare } from 'lucide-react'
+import type { SpecSection, SpecComment, SpecIssueLink } from '@/api/specifications'
+import { MessageSquare, Plus } from 'lucide-react'
+import { STATUS_COLORS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import '@/components/markdown/markdown.css'
+
+export interface SpecContentHandle {
+  scrollToSection: (sectionId: string) => void
+}
 
 interface Props {
   content: string
   sections: SpecSection[]
   comments: SpecComment[]
+  issueLinks?: SpecIssueLink[]
   onSectionClick: (sectionId: string) => void
+  onIssueClick?: (issueId: string) => void
+  onCreateIssue?: (sectionSlug: string) => void
 }
 
 function slugify(text: string) {
@@ -22,7 +31,7 @@ function slugify(text: string) {
     .slice(0, 100)
 }
 
-export default function SpecContent({ content, sections, comments, onSectionClick }: Props) {
+const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ content, sections, comments, issueLinks, onSectionClick, onIssueClick, onCreateIssue }, ref) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [activeTocId, setActiveTocId] = useState<string | null>(null)
 
@@ -66,6 +75,22 @@ export default function SpecContent({ content, sections, comments, onSectionClic
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
+  useImperativeHandle(ref, () => ({ scrollToSection }), [scrollToSection])
+
+  // Group issue links by sectionSlug
+  const issueLinksBySection = useMemo(() => {
+    const map = new Map<string, SpecIssueLink[]>()
+    if (issueLinks) {
+      for (const link of issueLinks) {
+        const slug = link.sectionSlug || ''
+        const list = map.get(slug) || []
+        list.push(link)
+        map.set(slug, list)
+      }
+    }
+    return map
+  }, [issueLinks])
+
   // Custom heading components that add IDs and comment badges
   const headingComponents = useMemo(() => {
     const createHeading = (level: number) => {
@@ -74,17 +99,45 @@ export default function SpecContent({ content, sections, comments, onSectionClic
         const text = typeof children === 'string' ? children : String(children)
         const id = slugify(text)
         const count = commentCounts.get(id) || 0
+        const sectionIssues = issueLinksBySection.get(id) || []
         return (
           // @ts-expect-error dynamic tag
           <Tag id={id} {...props} className="group relative">
             {children}
             <button
               onClick={(e) => { e.preventDefault(); onSectionClick(id) }}
-              className="ml-2 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium opacity-0 transition group-hover:opacity-100 hover:bg-gray-100"
+              className={cn(
+                'ml-2 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition hover:bg-gray-100',
+                count > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              )}
             >
               <MessageSquare className="h-3 w-3 text-gray-400" />
               {count > 0 && <span className="text-amber-600">{count}</span>}
             </button>
+            {onCreateIssue && (
+              <button
+                onClick={(e) => { e.preventDefault(); onCreateIssue(id) }}
+                className="ml-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-medium opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
+                title="Create issue for this section"
+              >
+                <Plus className="h-3 w-3 text-gray-400" />
+              </button>
+            )}
+            {sectionIssues.length > 0 && (
+              <span className="ml-1 inline-flex items-center gap-1">
+                {sectionIssues.map((link) => (
+                  <button
+                    key={link.id}
+                    onClick={(e) => { e.preventDefault(); onIssueClick?.(link.issue.id) }}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-medium text-blue-700 hover:bg-blue-100 transition"
+                    title={`#${link.issue.number} ${link.issue.title}`}
+                  >
+                    <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[link.issue.status])} />
+                    #{link.issue.number}
+                  </button>
+                ))}
+              </span>
+            )}
           </Tag>
         )
       }
@@ -98,7 +151,7 @@ export default function SpecContent({ content, sections, comments, onSectionClic
       h5: createHeading(5),
       h6: createHeading(6),
     }
-  }, [commentCounts, onSectionClick])
+  }, [commentCounts, issueLinksBySection, onSectionClick, onIssueClick, onCreateIssue])
 
   return (
     <div className="flex gap-6">
@@ -145,4 +198,6 @@ export default function SpecContent({ content, sections, comments, onSectionClic
       </div>
     </div>
   )
-}
+})
+
+export default SpecContent

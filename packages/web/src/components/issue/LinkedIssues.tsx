@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { issueApi, type IssueLink, type IssueLinkType, type IssueSpecLink, type Issue } from '@/api/issues'
-import { specApi, type SpecListItem } from '@/api/specifications'
+import { specApi, type SpecListItem, type SpecDetail } from '@/api/specifications'
 import { STATUS_COLORS, PRIORITY_COLORS, SPEC_STATUS_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { X, Link2, Plus, Search, FileText } from 'lucide-react'
+import { X, Link2, Plus, Search, FileText, ChevronLeft } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -200,6 +201,7 @@ export default function LinkedIssues({
 
 function SpecLinkItem({ link, projectId, issueId }: { link: IssueSpecLink; projectId: string; issueId: string }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const deleteMutation = useMutation({
     mutationFn: () => issueApi.deleteSpecLink(projectId, issueId, link.id),
     onSuccess: () => {
@@ -210,10 +212,21 @@ function SpecLinkItem({ link, projectId, issueId }: { link: IssueSpecLink; proje
     },
   })
 
+  const handleClick = () => {
+    const params = new URLSearchParams({ specId: link.spec.id })
+    if (link.sectionSlug) params.set('section', link.sectionSlug)
+    navigate(`/projects/${projectId}/specs?${params}`)
+  }
+
   return (
     <div className="flex items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm group">
       <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-      <span className="flex-1 truncate text-gray-700 text-xs">{link.spec.title}</span>
+      <button onClick={handleClick} className="flex-1 truncate text-gray-700 text-xs text-left hover:text-primary-600 transition-colors">
+        {link.spec.title}
+        {link.sectionSlug && (
+          <span className="ml-1 text-gray-400">§ {link.sectionSlug}</span>
+        )}
+      </button>
       {link.spec.category && (
         <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] font-medium text-gray-500 shrink-0">
           {link.spec.category}
@@ -244,6 +257,7 @@ function LinkSpecModal({
   onClose: () => void
 }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSpec, setSelectedSpec] = useState<SpecListItem | null>(null)
   const queryClient = useQueryClient()
 
   const { data: specs } = useQuery({
@@ -251,9 +265,15 @@ function LinkSpecModal({
     queryFn: () => specApi.list(projectId),
   })
 
+  const { data: specDetail } = useQuery({
+    queryKey: ['specification', projectId, selectedSpec?.id],
+    queryFn: () => specApi.get(projectId, selectedSpec!.id),
+    enabled: !!selectedSpec,
+  })
+
   const createMutation = useMutation({
-    mutationFn: (specId: string) =>
-      issueApi.createSpecLink(projectId, issueId, { specId }),
+    mutationFn: (data: { specId: string; sectionSlug?: string }) =>
+      issueApi.createSpecLink(projectId, issueId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] })
       onClose()
@@ -284,53 +304,96 @@ function LinkSpecModal({
       >
         <div className="border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Link Specification</h3>
+            <div className="flex items-center gap-2">
+              {selectedSpec && (
+                <button onClick={() => setSelectedSpec(null)} className="text-gray-400 hover:text-gray-600">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <h3 className="text-sm font-semibold text-gray-900">
+                {selectedSpec ? 'Select Section' : 'Link Specification'}
+              </h3>
+            </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="h-4 w-4" />
             </button>
           </div>
+          {selectedSpec && (
+            <p className="mt-1 text-xs text-gray-500 truncate">{selectedSpec.title}</p>
+          )}
         </div>
 
         <div className="p-4 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title or category..."
-              className="w-full rounded border border-gray-300 pl-7 pr-2 py-1.5 text-sm"
-              autoFocus
-            />
-          </div>
+          {!selectedSpec ? (
+            <>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title or category..."
+                  className="w-full rounded border border-gray-300 pl-7 pr-2 py-1.5 text-sm"
+                  autoFocus
+                />
+              </div>
 
-          <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
-            {filtered.length > 0 ? (
-              filtered.map((spec: SpecListItem) => (
+              <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+                {filtered.length > 0 ? (
+                  filtered.map((spec: SpecListItem) => (
+                    <button
+                      key={spec.id}
+                      onClick={() => setSelectedSpec(spec)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
+                    >
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <span className="flex-1 truncate text-gray-700">{spec.title}</span>
+                      {spec.category && (
+                        <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] font-medium text-gray-500 shrink-0">
+                          {spec.category}
+                        </span>
+                      )}
+                      <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium shrink-0', SPEC_STATUS_COLORS[spec.status] || '')}>
+                        {spec.status}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-center text-xs text-gray-400">
+                    {searchQuery ? 'No matching specs' : 'No specifications available'}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+              <button
+                onClick={() => createMutation.mutate({ specId: selectedSpec.id })}
+                disabled={createMutation.isPending}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 transition-colors disabled:opacity-50 font-medium"
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                <span className="text-gray-700">Entire specification</span>
+              </button>
+              {specDetail?.sections.map((sec) => (
                 <button
-                  key={spec.id}
-                  onClick={() => createMutation.mutate(spec.id)}
+                  key={sec.id}
+                  onClick={() => createMutation.mutate({ specId: selectedSpec.id, sectionSlug: sec.sectionId })}
                   disabled={createMutation.isPending}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors disabled:opacity-50"
+                  style={{ paddingLeft: `${(sec.level - 1) * 12 + 12}px` }}
                 >
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                  <span className="flex-1 truncate text-gray-700">{spec.title}</span>
-                  {spec.category && (
-                    <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] font-medium text-gray-500 shrink-0">
-                      {spec.category}
-                    </span>
-                  )}
-                  <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium shrink-0', SPEC_STATUS_COLORS[spec.status] || '')}>
-                    {spec.status}
-                  </span>
+                  <span className="text-[10px] text-gray-400 shrink-0">§</span>
+                  <span className="flex-1 truncate text-gray-700">{sec.title}</span>
                 </button>
-              ))
-            ) : (
-              <div className="px-3 py-4 text-center text-xs text-gray-400">
-                {searchQuery ? 'No matching specs' : 'No specifications available'}
-              </div>
-            )}
-          </div>
+              ))}
+              {!specDetail && (
+                <div className="px-3 py-4 text-center">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-600 border-t-transparent mx-auto" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
