@@ -123,6 +123,7 @@ model Issue {
   notifications Notification[]
   sourceLinks   IssueLink[] @relation("SourceLinks")
   targetLinks   IssueLink[] @relation("TargetLinks")
+  specLinks     IssueSpecLink[]
 
   @@unique([projectId, number])
   @@index([projectId, status])
@@ -387,8 +388,9 @@ model Specification {
   creatorId String @map("creator_id")
   creator   User   @relation("CreatedSpecs", fields: [creatorId], references: [id], onDelete: Cascade)
 
-  sections SpecSection[]
-  comments SpecComment[]
+  sections   SpecSection[]
+  comments   SpecComment[]
+  issueLinks IssueSpecLink[]
 
   @@index([projectId, status])
   @@map("specifications")
@@ -435,4 +437,24 @@ model SpecComment {
   @@index([userId])
   @@index([parentId])
   @@map("spec_comments")
+}
+
+// ─── Issue-Spec Link ───────────────────────────────────────
+
+model IssueSpecLink {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  issueId     String        @map("issue_id")
+  issue       Issue         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  specId      String        @map("spec_id")
+  spec        Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
+
+  sectionSlug String        @default("") @db.VarChar(100) @map("section_slug")
+
+  @@unique([issueId, specId, sectionSlug])
+  @@index([issueId])
+  @@index([specId])
+  @@map("issue_spec_links")
 }

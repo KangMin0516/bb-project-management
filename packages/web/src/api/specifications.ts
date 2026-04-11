@@ -44,10 +44,17 @@ export interface SpecListItem {
   _count: { comments: number }
 }
 
+export interface SpecIssueLink {
+  id: string
+  sectionSlug: string
+  issue: { id: string; number: number; title: string; status: string; priority: string }
+}
+
 export interface SpecDetail extends SpecListItem {
   content: string
   sections: SpecSection[]
   comments: SpecComment[]
+  issueLinks?: SpecIssueLink[]
 }
 
 export const specApi = {
@@ -65,6 +72,14 @@ export const specApi = {
 
   delete: (projectId: string, specId: string) =>
     api.delete(`/projects/${projectId}/specifications/${specId}`),
+
+  downloadOne: (projectId: string, specId: string) =>
+    api.get<Blob>(`/projects/${projectId}/specifications/${specId}/download`, { responseType: 'blob' }).then((r) => r.data),
+
+  downloadAll: (projectId: string) =>
+    api.get<{ data: { filename: string; content: string; category: string | null; status: string; order: number }[] }>(
+      `/projects/${projectId}/specifications/download/all`,
+    ).then((r) => r.data.data),
 
   // Comments
   listComments: (projectId: string, specId: string, sectionId?: string) =>

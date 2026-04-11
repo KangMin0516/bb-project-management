@@ -8,15 +8,9 @@ import SpecCommentPanel from '@/components/spec/SpecCommentPanel'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
-import { Plus, FileText, X } from 'lucide-react'
+import { Plus, FileText, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const STATUS_BADGE: Record<SpecStatus, string> = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  REVIEW: 'bg-amber-100 text-amber-700',
-  APPROVED: 'bg-green-100 text-green-700',
-  DEPRECATED: 'bg-red-100 text-red-600',
-}
+import { SPEC_STATUS_COLORS } from '@/lib/constants'
 
 export default function SpecificationsPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -29,6 +23,9 @@ export default function SpecificationsPage() {
   const [createCategory, setCreateCategory] = useState('')
   const [editingContent, setEditingContent] = useState(false)
   const [draftContent, setDraftContent] = useState('')
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [showComments, setShowComments] = useState(true)
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -97,56 +94,110 @@ export default function SpecificationsPage() {
   return (
     <div className="flex h-full">
       {/* Left sidebar — spec list */}
-      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <h1 className="text-sm font-bold text-gray-900">{project?.key} Specs</h1>
+      {showSidebar ? (
+        <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+            <h1 className="text-sm font-bold text-gray-900">{project?.key} Specs</h1>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="New specification"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  specApi.downloadAll(projectId).then((specs) => {
+                    for (const spec of specs) {
+                      const blob = new Blob([spec.content], { type: 'text/markdown' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${spec.filename}.md`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }
+                  })
+                }}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Download all as Markdown"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowSidebar(false)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Close sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2">
+            {isLoading ? (
+              <div className="flex h-20 items-center justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+              </div>
+            ) : (
+              [...grouped.entries()].map(([category, items]) => {
+                const isCollapsed = collapsedCategories.has(category)
+                return (
+                  <div key={category} className="mb-1">
+                    <button
+                      onClick={() => setCollapsedCategories((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(category)) next.delete(category)
+                        else next.add(category)
+                        return next
+                      })}
+                      className="flex w-full items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                    >
+                      <ChevronRight className={cn('h-3 w-3 transition-transform', !isCollapsed && 'rotate-90')} />
+                      <span className="flex-1 text-left">{category}</span>
+                      <span className="text-[9px] font-normal normal-case tracking-normal">{items!.length}</span>
+                    </button>
+                    {!isCollapsed && items!.map((spec) => (
+                      <button
+                        key={spec.id}
+                        onClick={() => { setSelectedId(spec.id); setFilterSection(null); setEditingContent(false) }}
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition',
+                          selectedId === spec.id
+                            ? 'bg-primary-50 text-primary-700'
+                            : 'text-gray-700 hover:bg-gray-50',
+                        )}
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <span className="flex-1 truncate">{spec.title}</span>
+                        {spec._count.comments > 0 && (
+                          <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[9px] font-medium text-amber-600">
+                            {spec._count.comments}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )
+              })
+            )}
+            {!isLoading && (!specs || specs.length === 0) && (
+              <p className="py-8 text-center text-sm text-gray-400">No specifications yet</p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex shrink-0 flex-col items-center border-r border-gray-200 bg-white py-3 px-1.5">
           <button
-            onClick={() => setShowCreate(true)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            onClick={() => setShowSidebar(true)}
+            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            title="Open sidebar"
           >
-            <Plus className="h-4 w-4" />
+            <PanelLeftOpen className="h-4 w-4" />
           </button>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-2">
-          {isLoading ? (
-            <div className="flex h-20 items-center justify-center">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-            </div>
-          ) : (
-            [...grouped.entries()].map(([category, items]) => (
-              <div key={category} className="mb-3">
-                <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                  {category}
-                </p>
-                {items!.map((spec) => (
-                  <button
-                    key={spec.id}
-                    onClick={() => { setSelectedId(spec.id); setFilterSection(null); setEditingContent(false) }}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition',
-                      selectedId === spec.id
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'text-gray-700 hover:bg-gray-50',
-                    )}
-                  >
-                    <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                    <span className="flex-1 truncate">{spec.title}</span>
-                    {spec._count.comments > 0 && (
-                      <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[9px] font-medium text-amber-600">
-                        {spec._count.comments}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ))
-          )}
-          {!isLoading && (!specs || specs.length === 0) && (
-            <p className="py-8 text-center text-sm text-gray-400">No specifications yet</p>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -154,11 +205,25 @@ export default function SpecificationsPage() {
           <>
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-lg font-bold text-gray-900">{detail.title}</h2>
-                <span className={cn('rounded px-2 py-0.5 text-[10px] font-medium', STATUS_BADGE[detail.status])}>
+                <span className={cn('rounded px-2 py-0.5 text-[10px] font-medium', SPEC_STATUS_COLORS[detail.status])}>
                   {detail.status}
                 </span>
+                {detail.issueLinks && detail.issueLinks.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    {detail.issueLinks.map((link) => (
+                      <span
+                        key={link.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                        title={`#${link.issue.number} ${link.issue.title} (${link.issue.status})`}
+                      >
+                        #{link.issue.number}
+                        <span className="text-blue-400">{link.issue.status.replace(/_/g, ' ')}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -194,10 +259,34 @@ export default function SpecificationsPage() {
                   </div>
                 )}
                 <button
+                  onClick={() => {
+                    specApi.downloadOne(projectId, detail.id).then((blob) => {
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${detail.title.replace(/[^a-zA-Z0-9가-힣\s_-]/g, '').replace(/\s+/g, '_')}.md`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    })
+                  }}
+                  className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  title="Download as Markdown"
+                >
+                  <Download className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />
+                  .md
+                </button>
+                <button
                   onClick={() => { if (confirm('Delete this specification?')) deleteMutation.mutate() }}
                   className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                 >
                   Delete
+                </button>
+                <button
+                  onClick={() => setShowComments((v) => !v)}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  title={showComments ? 'Hide comments' : 'Show comments'}
+                >
+                  {showComments ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -218,15 +307,17 @@ export default function SpecificationsPage() {
               </div>
 
               {/* Comment panel */}
-              <div className="w-80 shrink-0 border-l border-gray-200 bg-white">
-                <SpecCommentPanel
-                  projectId={projectId}
-                  specId={detail.id}
-                  comments={detail.comments}
-                  filterSection={filterSection}
-                  onSectionClick={handleSectionClick}
-                />
-              </div>
+              {showComments && (
+                <div className="w-80 shrink-0 border-l border-gray-200 bg-white">
+                  <SpecCommentPanel
+                    projectId={projectId}
+                    specId={detail.id}
+                    comments={detail.comments}
+                    filterSection={filterSection}
+                    onSectionClick={handleSectionClick}
+                  />
+                </div>
+              )}
             </div>
           </>
         ) : (

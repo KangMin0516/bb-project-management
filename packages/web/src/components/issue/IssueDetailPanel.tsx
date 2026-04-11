@@ -33,7 +33,7 @@ export default function IssueDetailPanel({
   onNavigate,
 }: IssueDetailPanelProps) {
   const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'links'>('details')
   const [editingDescription, setEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState('')
 
@@ -190,19 +190,25 @@ export default function IssueDetailPanel({
           )}
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
           <div className="mt-3 flex gap-4 border-b border-gray-200 -mb-4">
-            {(['details', 'activity'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-2 text-sm font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'border-b-2 border-primary-600 text-primary-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {tab === 'activity' && detail ? `Activity (${detail.activities.length})` : tab}
-              </button>
-            ))}
+            {(['details', 'activity', 'links'] as const).map((tab) => {
+              const linkCount = (detail?.sourceLinks?.length ?? 0) + (detail?.specLinks?.length ?? 0)
+              let label: string = tab
+              if (tab === 'activity' && detail) label = `Activity (${detail.activities.length})`
+              if (tab === 'links') label = linkCount > 0 ? `Links (${linkCount})` : 'Links'
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-2 text-sm font-medium capitalize transition-colors ${
+                    activeTab === tab
+                      ? 'border-b-2 border-primary-600 text-primary-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -413,15 +419,6 @@ export default function IssueDetailPanel({
             </div>
           )}
 
-          {detail && (
-            <LinkedIssues
-              projectId={projectId}
-              issueId={issue.id}
-              sourceLinks={detail.sourceLinks}
-              targetLinks={detail.targetLinks}
-            />
-          )}
-
           <div>
             <span className="block text-xs font-medium text-gray-500 mb-1">
               Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
@@ -447,6 +444,18 @@ export default function IssueDetailPanel({
             </label>
           </div>
 
+        </div>
+        )}
+
+        {activeTab === 'links' && detail && (
+        <div className="p-6">
+          <LinkedIssues
+            projectId={projectId}
+            issueId={issue.id}
+            sourceLinks={detail.sourceLinks}
+            targetLinks={detail.targetLinks}
+            specLinks={detail.specLinks}
+          />
         </div>
         )}
 

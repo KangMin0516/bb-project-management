@@ -174,6 +174,14 @@ export class SpecificationService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        issueLinks: {
+          include: {
+            issue: {
+              select: { id: true, number: true, title: true, status: true, priority: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -211,6 +219,36 @@ export class SpecificationService {
     await this.findSpecOrThrow(specId, projectId);
     await this.prisma.specification.delete({ where: { id: specId } });
     return { deleted: true };
+  }
+
+  // ─── Download ───────────────────────────────────────────
+
+  async exportOne(projectId: string, specId: string) {
+    const spec = await this.prisma.specification.findUnique({
+      where: { id: specId },
+      select: { title: true, content: true, category: true, status: true, projectId: true, order: true },
+    });
+    if (!spec || spec.projectId !== projectId) {
+      throw new NotFoundException('Specification not found');
+    }
+    const filename = spec.title
+      .replace(/[^a-zA-Z0-9가-힣\s_-]/g, '')
+      .replace(/\s+/g, '_');
+    return { filename, content: spec.content, category: spec.category, status: spec.status, order: spec.order };
+  }
+
+  async exportAll(projectId: string) {
+    const specs = await this.prisma.specification.findMany({
+      where: { projectId },
+      select: { title: true, content: true, category: true, status: true, order: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
+    return specs.map((spec) => {
+      const filename = spec.title
+        .replace(/[^a-zA-Z0-9가-힣\s_-]/g, '')
+        .replace(/\s+/g, '_');
+      return { filename, content: spec.content, category: spec.category, status: spec.status, order: spec.order };
+    });
   }
 
   // ─── Comments ────────────────────────────────────────────

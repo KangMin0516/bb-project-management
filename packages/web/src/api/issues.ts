@@ -46,6 +46,13 @@ export interface IssueLink {
   creator: { id: string; name: string } | null
 }
 
+export interface IssueSpecLink {
+  id: string
+  sectionSlug: string
+  createdAt: string
+  spec: { id: string; title: string; status: string; category: string | null }
+}
+
 export interface IssueDetail extends Issue {
   children: {
     id: string; number: number; title: string; status: string; priority: string
@@ -55,6 +62,7 @@ export interface IssueDetail extends Issue {
   attachments: Attachment[]
   sourceLinks?: IssueLink[]
   targetLinks?: IssueLink[]
+  specLinks?: IssueSpecLink[]
 }
 
 export interface Activity {
@@ -164,6 +172,12 @@ export const issueApi = {
     api.post<{ data: IssueLink }>(`/projects/${projectId}/issues/${issueId}/links`, data).then((r) => r.data.data),
   deleteLink: (projectId: string, issueId: string, linkId: string) =>
     api.delete(`/projects/${projectId}/issues/${issueId}/links/${linkId}`),
+
+  // Issue-Spec Links
+  createSpecLink: (projectId: string, issueId: string, data: { specId: string; sectionSlug?: string }) =>
+    api.post<{ data: IssueSpecLink }>(`/projects/${projectId}/issues/${issueId}/spec-links`, data).then((r) => r.data.data),
+  deleteSpecLink: (projectId: string, issueId: string, linkId: string) =>
+    api.delete(`/projects/${projectId}/issues/${issueId}/spec-links/${linkId}`),
 }
 
 export const uploadApi = {

@@ -3,12 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SpecificationService } from './specification.service.js';
 import { CreateSpecificationDto } from './dto/create-specification.dto.js';
@@ -70,6 +73,30 @@ export class SpecificationController {
     @Param('specId') specId: string,
   ) {
     return this.service.remove(projectId, specId);
+  }
+
+  // ─── Download ──────────────────────────────────────────
+
+  @Get(':specId/download')
+  async downloadOne(
+    @Param('projectId') projectId: string,
+    @Param('specId') specId: string,
+    @Res() res: Response,
+  ) {
+    const { filename, content } = await this.service.exportOne(projectId, specId);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}.md"`);
+    res.send(content);
+  }
+
+  @Get('download/all')
+  async downloadAll(
+    @Param('projectId') projectId: string,
+    @Res() res: Response,
+  ) {
+    const specs = await this.service.exportAll(projectId);
+    // Return as JSON array for client-side zip or bulk save
+    res.json({ success: true, data: specs });
   }
 
   // ─── Comments ────────────────────────────────────────────
