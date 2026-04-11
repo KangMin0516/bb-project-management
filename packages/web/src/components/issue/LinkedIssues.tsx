@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { issueApi, type IssueLink, type IssueLinkType, type IssueSpecLink, type Issue } from '@/api/issues'
-import { specApi, type SpecListItem, type SpecDetail } from '@/api/specifications'
+import { specApi, type SpecListItem } from '@/api/specifications'
 import { STATUS_COLORS, PRIORITY_COLORS, SPEC_STATUS_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { X, Link2, Plus, Search, FileText, ChevronLeft } from 'lucide-react'
@@ -64,6 +64,13 @@ export default function LinkedIssues({
   })
 
   const linkedIssues = useMemo<LinkedIssueDisplay[]>(() => {
+    const inverseType: Record<IssueLinkType, IssueLinkType> = {
+      BLOCKS: 'IS_BLOCKED_BY',
+      IS_BLOCKED_BY: 'BLOCKS',
+      RELATES_TO: 'RELATES_TO',
+      DUPLICATES: 'IS_DUPLICATED_BY',
+      IS_DUPLICATED_BY: 'DUPLICATES',
+    }
     const items: LinkedIssueDisplay[] = []
 
     if (sourceLinks) {
@@ -83,8 +90,25 @@ export default function LinkedIssues({
       }
     }
 
+    if (targetLinks) {
+      for (const link of targetLinks) {
+        if (link.sourceIssue) {
+          items.push({
+            linkId: link.id,
+            type: inverseType[link.type],
+            issueId: link.sourceIssue.id,
+            number: link.sourceIssue.number,
+            title: link.sourceIssue.title,
+            status: link.sourceIssue.status,
+            priority: link.sourceIssue.priority,
+            projectKey: link.sourceIssue.project.key,
+          })
+        }
+      }
+    }
+
     return items
-  }, [sourceLinks])
+  }, [sourceLinks, targetLinks])
 
   const grouped = useMemo(() => {
     const map = new Map<IssueLinkType, LinkedIssueDisplay[]>()
