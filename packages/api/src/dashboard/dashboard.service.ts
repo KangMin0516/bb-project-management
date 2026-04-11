@@ -270,7 +270,7 @@ export class DashboardService {
     // Build a map: issueId -> latest closed date (only if currently closed)
     // Use current status to exclude reopened issues
     const closedDateMap = new Map<string, Date>();
-    const closedStatuses = new Set([IssueStatus.DONE, IssueStatus.CANCELED]);
+    const closedStatuses = new Set<IssueStatus>([IssueStatus.DONE, IssueStatus.CANCELED]);
 
     // Track latest status transition per issue
     const latestStatusByIssue = new Map<string, { status: string; date: Date }>();
