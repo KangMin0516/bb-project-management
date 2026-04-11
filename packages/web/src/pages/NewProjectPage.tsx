@@ -18,7 +18,7 @@ export default function NewProjectPage() {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       // Seed default labels
       projectApi.seedLabels(project.id).catch(() => {})
-      navigate(`/projects/${project.id}/settings`)
+      navigate(`/projects/${project.key}/settings`)
     },
     onError: (err: unknown) => {
       setError(getErrorMessage(err, 'Failed to create project'))

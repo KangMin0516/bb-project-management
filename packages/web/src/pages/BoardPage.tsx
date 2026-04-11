@@ -7,7 +7,7 @@ import { projectApi } from '@/api/projects'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
-import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
+import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters, toggleSet } from '@/components/filter/FilterBar'
 import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
 import { STATUSES, ORDER_GAP } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
@@ -21,6 +21,10 @@ export default function BoardPage() {
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
   const [selectedComponents, setSelectedComponents] = useState<Set<string>>(new Set())
   const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterPriority, setFilterPriority] = useState('')
+  const [filterType, setFilterType] = useState('')
   const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
@@ -117,7 +121,9 @@ export default function BoardPage() {
   }, [board])
 
   const filteredBoard = useMemo(() => {
-    if (selectedAssignees.size === 0 && selectedLabels.size === 0 && selectedComponents.size === 0 && !selectedEpicId) return board
+    const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType
+    if (!hasFilters) return board
+    const searchLower = search.toLowerCase()
     const filtered: typeof board = {}
     for (const [status, issues] of Object.entries(board || {})) {
       const matching = issues.filter((issue) => {
@@ -125,12 +131,16 @@ export default function BoardPage() {
         const matchLabel = selectedLabels.size === 0 || issue.labels.some((il) => selectedLabels.has(il.label.id))
         const matchComponent = selectedComponents.size === 0 || issue.components?.some((ic) => selectedComponents.has(ic.component.id))
         const matchEpic = !selectedEpicId || issue.id === selectedEpicId || issue.parentId === selectedEpicId
-        return matchAssignee && matchLabel && matchComponent && matchEpic
+        const matchSearch = !search || issue.title.toLowerCase().includes(searchLower) || String(issue.number).includes(search)
+        const matchStatus = !filterStatus || issue.status === filterStatus
+        const matchPriority = !filterPriority || issue.priority === filterPriority
+        const matchType = !filterType || issue.type === filterType
+        return matchAssignee && matchLabel && matchComponent && matchEpic && matchSearch && matchStatus && matchPriority && matchType
       })
       if (matching.length > 0) filtered[status] = matching
     }
     return filtered
-  }, [board, selectedAssignees, selectedLabels, selectedComponents, selectedEpicId])
+  }, [board, selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
 
   const toggleAssignee = useCallback((id: string) => {
     setSelectedAssignees((prev) => toggleSet(prev, id))
@@ -156,6 +166,12 @@ export default function BoardPage() {
           <p className="text-sm text-gray-500">{project?.name}</p>
         </div>
         <div className="flex items-center gap-3">
+          <SearchInput value={search} onChange={setSearch} />
+          <DropdownFilters
+            status={filterStatus} priority={filterPriority} type={filterType}
+            onStatusChange={setFilterStatus} onPriorityChange={setFilterPriority} onTypeChange={setFilterType}
+          />
+          <FilterDivider />
           <AssigneeAvatars members={assignedMembers} selected={selectedAssignees} onToggle={toggleAssignee} />
           {assignedMembers.length > 0 && boardLabels.length > 0 && <FilterDivider />}
           <LabelChips labels={boardLabels} selected={selectedLabels} onToggle={toggleLabel} />
@@ -163,8 +179,8 @@ export default function BoardPage() {
           <ComponentChips components={boardComponents} selected={selectedComponents} onToggle={toggleComponent} />
           {boardLabels.length > 0 && boardEpics.length > 0 && <FilterDivider />}
           <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
-          {(selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId) && (
-            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null) }} />
+          {(selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType) && (
+            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(''); setFilterPriority(''); setFilterType('') }} />
           )}
         </div>
       </div>

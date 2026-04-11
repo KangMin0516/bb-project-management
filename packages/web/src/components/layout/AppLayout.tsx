@@ -32,7 +32,7 @@ export default function AppLayout() {
     queryFn: projectApi.list,
   })
 
-  const currentProject = projects?.find((p) => p.id === projectId)
+  const currentProject = projects?.find((p) => p.id === projectId || p.key === projectId)
 
   useEffect(() => {
     if (!showProjects) return
@@ -49,9 +49,9 @@ export default function AppLayout() {
   const navItems = projectId
     ? [
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
+        { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/issues`, icon: List, label: 'Issues' },
-        { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
         { to: `/projects/${projectId}/settings`, icon: Settings, label: 'Settings' },
       ]
     : []
@@ -98,12 +98,12 @@ export default function AppLayout() {
                   <button
                     key={p.id}
                     onClick={() => {
-                      navigate(`/projects/${p.id}/board`)
+                      navigate(`/projects/${p.key}/board`)
                       setShowProjects(false)
                     }}
                     className={cn(
                       'flex w-full items-center rounded-md px-3 py-1.5 text-sm',
-                      p.id === projectId
+                      (p.id === projectId || p.key === projectId)
                         ? 'bg-primary-50 text-primary-700'
                         : 'text-gray-600 hover:bg-gray-50',
                     )}
