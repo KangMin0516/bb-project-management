@@ -12,10 +12,13 @@ interface Props {
   specId: string
   comments: SpecComment[]
   filterSection?: string | null
+  filterSectionTitle?: string | null
   onSectionClick?: (sectionId: string) => void
+  onClearFilter?: () => void
+  onScrollToSection?: (sectionId: string) => void
 }
 
-export default function SpecCommentPanel({ projectId, specId, comments, filterSection, onSectionClick }: Props) {
+export default function SpecCommentPanel({ projectId, specId, comments, filterSection, filterSectionTitle, onSectionClick, onClearFilter, onScrollToSection }: Props) {
   const currentUser = useAuthStore((s) => s.user)
   const queryClient = useQueryClient()
   const [replyTo, setReplyTo] = useState<string | null>(null)
@@ -52,20 +55,28 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-900">Comments</span>
-          {unresolvedCount > 0 && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-              {unresolvedCount} open
-            </span>
-          )}
+      <div className="border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-900">Comments</span>
+            {unresolvedCount > 0 && (
+              <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                {unresolvedCount} open
+              </span>
+            )}
+          </div>
         </div>
         {filterSection && (
-          <button onClick={() => onSectionClick?.(filterSection)} className="text-xs text-primary-600 hover:underline">
-            Clear filter
-          </button>
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400">Section:</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700">
+              {filterSectionTitle || filterSection}
+              <button onClick={() => onClearFilter?.()} className="ml-0.5 rounded-full hover:bg-primary-100 p-0.5">
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          </div>
         )}
       </div>
 
@@ -105,6 +116,7 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
             onDelete={(id) => { if (confirm('Delete this comment?')) deleteMutation.mutate(id) }}
             isReplying={createMutation.isPending}
             onSectionClick={onSectionClick}
+            onScrollToSection={onScrollToSection}
           />
         ))}
 
@@ -118,7 +130,7 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
 
 function CommentThread({
   comment, currentUserId, replyTo, replyContent, onSetReplyTo, onSetReplyContent,
-  onReply, onToggleResolve, onDelete, isReplying, onSectionClick,
+  onReply, onToggleResolve, onDelete, isReplying, onSectionClick, onScrollToSection,
 }: {
   comment: SpecComment
   currentUserId: string
@@ -131,6 +143,7 @@ function CommentThread({
   onDelete: (id: string) => void
   isReplying: boolean
   onSectionClick?: (sectionId: string) => void
+  onScrollToSection?: (sectionId: string) => void
 }) {
   return (
     <div className={`rounded-lg border p-3 ${comment.resolved ? 'border-green-200 bg-green-50/50' : 'border-gray-200'}`}>
@@ -138,8 +151,12 @@ function CommentThread({
         <div className="flex-1 min-w-0">
           {comment.section && (
             <button
-              onClick={() => onSectionClick?.(comment.section!.sectionId)}
+              onClick={() => {
+                onSectionClick?.(comment.section!.sectionId)
+                onScrollToSection?.(comment.section!.sectionId)
+              }}
               className="mb-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:bg-gray-200"
+              title="Filter & scroll to section"
             >
               {comment.section.title}
             </button>

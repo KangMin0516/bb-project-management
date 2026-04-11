@@ -13,9 +13,10 @@ interface Props {
   projectId: string
   defaultStatus?: string
   onClose: () => void
+  onCreated?: (issueId: string) => void
 }
 
-export default function CreateIssueModal({ projectId, defaultStatus, onClose }: Props) {
+export default function CreateIssueModal({ projectId, defaultStatus, onClose, onCreated }: Props) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -83,9 +84,10 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose }: 
 
   const mutation = useMutation({
     mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+      onCreated?.(data.id)
       onClose()
     },
     onError: (err: unknown) => {
