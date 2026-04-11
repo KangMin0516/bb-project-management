@@ -102,6 +102,7 @@ export default function SpecificationsPage() {
 
   const handleSectionClick = useCallback((sectionId: string) => {
     setFilterSection((prev) => (prev === sectionId ? null : sectionId))
+    setShowComments(true)
   }, [])
 
   const handleScrollToSection = useCallback((sectionId: string) => {
@@ -127,7 +128,7 @@ export default function SpecificationsPage() {
       sectionSlug: createIssueForSection || undefined,
     }).then(() => {
       queryClient.invalidateQueries({ queryKey: ['specification', projectId, selectedId] })
-      useToastStore.getState().addToast('Issue created and linked to spec section')
+      useToastStore.getState().addToast('Issue created and linked to spec section', 'success')
     }).catch((err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Issue created but failed to link to spec'))
     })

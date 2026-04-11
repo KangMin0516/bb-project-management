@@ -4,8 +4,8 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
 import type { SpecSection, SpecComment, SpecIssueLink } from '@/api/specifications'
-import { MessageSquare, Plus } from 'lucide-react'
-import { STATUS_COLORS } from '@/lib/constants'
+import { MessageSquare, Plus, ExternalLink, X } from 'lucide-react'
+import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import '@/components/markdown/markdown.css'
 
@@ -34,6 +34,8 @@ function slugify(text: string) {
 const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ content, sections, comments, issueLinks, onSectionClick, onIssueClick, onCreateIssue }, ref) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [activeTocId, setActiveTocId] = useState<string | null>(null)
+  const [popoverIssue, setPopoverIssue] = useState<SpecIssueLink | null>(null)
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
 
   // Count unresolved comments per section
   const commentCounts = useMemo(() => {
@@ -102,12 +104,12 @@ const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ 
         const sectionIssues = issueLinksBySection.get(id) || []
         return (
           // @ts-expect-error dynamic tag
-          <Tag id={id} {...props} className="group relative">
-            {children}
+          <Tag id={id} {...props} className="group relative flex items-center gap-1.5 flex-wrap">
+            <span>{children}</span>
             <button
               onClick={(e) => { e.preventDefault(); onSectionClick(id) }}
               className={cn(
-                'ml-2 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition hover:bg-gray-100',
+                'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition hover:bg-gray-100',
                 count > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
               )}
             >
@@ -117,19 +119,29 @@ const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ 
             {onCreateIssue && (
               <button
                 onClick={(e) => { e.preventDefault(); onCreateIssue(id) }}
-                className="ml-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-medium opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
+                className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-medium opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
                 title="Create issue for this section"
               >
                 <Plus className="h-3 w-3 text-gray-400" />
               </button>
             )}
             {sectionIssues.length > 0 && (
-              <span className="ml-1 inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1">
                 {sectionIssues.map((link) => (
                   <button
                     key={link.id}
-                    onClick={(e) => { e.preventDefault(); onIssueClick?.(link.issue.id) }}
-                    className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-medium text-blue-700 hover:bg-blue-100 transition"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      setPopoverPos({ top: rect.bottom + 4, left: rect.left })
+                      setPopoverIssue((prev) => prev?.id === link.id ? null : link)
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium transition',
+                      popoverIssue?.id === link.id
+                        ? 'bg-blue-200 text-blue-800'
+                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100',
+                    )}
                     title={`#${link.issue.number} ${link.issue.title}`}
                   >
                     <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[link.issue.status])} />
@@ -151,14 +163,47 @@ const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ 
       h5: createHeading(5),
       h6: createHeading(6),
     }
-  }, [commentCounts, issueLinksBySection, onSectionClick, onIssueClick, onCreateIssue])
+  }, [commentCounts, issueLinksBySection, onSectionClick, onIssueClick, onCreateIssue, popoverIssue])
 
   return (
     <div className="flex gap-6">
+      {/* Issue popover */}
+      {popoverIssue && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setPopoverIssue(null)} />
+          <div
+            className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+            style={{ top: popoverPos.top, left: popoverPos.left }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className={cn('h-2 w-2 rounded-full shrink-0', STATUS_COLORS[popoverIssue.issue.status])} />
+                  <span className="text-[10px] text-gray-500">{STATUS_LABELS[popoverIssue.issue.status] || popoverIssue.issue.status}</span>
+                  <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium', PRIORITY_COLORS[popoverIssue.issue.priority])}>
+                    {popoverIssue.issue.priority}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm font-medium text-gray-900">#{popoverIssue.issue.number} {popoverIssue.issue.title}</p>
+              </div>
+              <button onClick={() => setPopoverIssue(null)} className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <button
+              onClick={() => { onIssueClick?.(popoverIssue.issue.id); setPopoverIssue(null) }}
+              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Go to issue
+            </button>
+          </div>
+        </>
+      )}
       {/* TOC sidebar */}
       {sections.length > 0 && (
-        <nav className="sticky top-0 hidden w-48 shrink-0 lg:block">
-          <div className="max-h-[calc(100vh-200px)] overflow-y-auto py-4">
+        <nav className="sticky top-0 hidden w-48 shrink-0 self-start lg:block">
+          <div className="max-h-[calc(100vh-10rem)] overflow-y-auto py-4">
             <p className="mb-2 text-xs font-medium uppercase text-gray-400">On this page</p>
             <ul className="space-y-0.5">
               {sections.map((sec) => (
