@@ -47,4 +47,11 @@ export const TYPE_ICONS: Record<string, string> = {
   SUB_TASK: '📎',
 }
 
+export const SPEC_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-600',
+  REVIEW: 'bg-amber-100 text-amber-700',
+  APPROVED: 'bg-green-100 text-green-700',
+  DEPRECATED: 'bg-red-100 text-red-600',
+}
+
 export const ORDER_GAP = 1000

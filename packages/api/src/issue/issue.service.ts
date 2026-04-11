@@ -386,6 +386,14 @@ export class IssueService {
             creator: { select: { id: true, name: true } },
           },
         },
+        specLinks: {
+          include: {
+            spec: {
+              select: { id: true, title: true, status: true, category: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
