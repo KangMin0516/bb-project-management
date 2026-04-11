@@ -128,6 +128,45 @@ export class IssueLinkService {
     return { sourceLinks, targetLinks };
   }
 
+  async findProjectDependencies(projectId: string) {
+    // Fetch all BLOCKS links where source issue belongs to this project.
+    // The reverse IS_BLOCKED_BY links are auto-created, so we only need BLOCKS
+    // to reconstruct the full dependency graph.
+    const links = await this.prisma.issueLink.findMany({
+      where: {
+        type: 'BLOCKS',
+        sourceIssue: { projectId },
+      },
+      include: {
+        sourceIssue: {
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            status: true,
+            priority: true,
+            type: true,
+            project: { select: { key: true } },
+          },
+        },
+        targetIssue: {
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            status: true,
+            priority: true,
+            type: true,
+            project: { select: { key: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return links;
+  }
+
   async remove(linkId: string, _userId: string) {
     const link = await this.prisma.issueLink.findUnique({
       where: { id: linkId },

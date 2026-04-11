@@ -12,6 +12,7 @@ import IssuesPage from '@/pages/IssuesPage'
 import DashboardPage from '@/pages/DashboardPage'
 import SettingsPage from '@/pages/SettingsPage'
 import SpecificationsPage from '@/pages/SpecificationsPage'
+import TimelinePage from '@/pages/TimelinePage'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/ToastContainer'
 
@@ -58,6 +59,7 @@ export default function App() {
                 <Route path="/projects/:projectId/board" element={<BoardPage />} />
                 <Route path="/projects/:projectId/issues" element={<IssuesPage />} />
                 <Route path="/projects/:projectId/specs" element={<SpecificationsPage />} />
+                <Route path="/projects/:projectId/timeline" element={<TimelinePage />} />
                 <Route path="/projects/:projectId/settings" element={<SettingsPage />} />
               </Route>
             </Route>

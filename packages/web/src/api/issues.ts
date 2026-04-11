@@ -129,11 +129,21 @@ export interface UpdateIssuePayload {
   componentIds?: string[]
 }
 
+export interface DependencyLink {
+  id: string
+  type: 'BLOCKS'
+  createdAt: string
+  sourceIssue: LinkedIssueInfo
+  targetIssue: LinkedIssueInfo
+}
+
 export const issueApi = {
   list: (projectId: string, params?: Record<string, string>) =>
     api.get<{ data: PaginatedIssues }>(`/projects/${projectId}/issues`, { params }).then((r) => r.data.data),
   board: (projectId: string) =>
     api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`).then((r) => r.data.data),
+  dependencies: (projectId: string) =>
+    api.get<{ data: DependencyLink[] }>(`/projects/${projectId}/issues/dependencies`).then((r) => r.data.data),
   get: (projectId: string, issueId: string) =>
     api.get<{ data: IssueDetail }>(`/projects/${projectId}/issues/${issueId}`).then((r) => r.data.data),
   create: (projectId: string, data: CreateIssuePayload) =>

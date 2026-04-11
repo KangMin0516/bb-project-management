@@ -6,7 +6,11 @@ import { issueApi, type Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_ORDER, TYPE_ICONS } from '@/lib/constants'
 import { getDueBadge, isOverdue, todayDateString, isFocusToday } from '@/lib/time'
-import { Star, Zap, Clock, CheckCircle2 } from 'lucide-react'
+import { Star, Zap, Clock, CheckCircle2, TrendingDown, Users, GitBranch } from 'lucide-react'
+import BurndownChart from '@/components/dashboard/BurndownChart'
+import WorkloadChart from '@/components/dashboard/WorkloadChart'
+import OverdueAlert from '@/components/dashboard/OverdueAlert'
+import DependencyGraph from '@/components/dashboard/DependencyGraph'
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -215,6 +219,48 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Overdue Alert */}
+      {stats.overdueIssues && stats.overdueIssues.length > 0 && (
+        <div className="mb-6">
+          <OverdueAlert
+            issues={stats.overdueIssues}
+            projectKey={stats.project.key}
+            projectId={projectId!}
+            onIssueClick={(id) => navigate(`/projects/${projectId}/board?open=${id}`)}
+          />
+        </div>
+      )}
+
+      {/* Dependency Graph */}
+      <div className="mb-6">
+        <div className="mb-3 flex items-center gap-2">
+          <GitBranch className="h-4 w-4 text-purple-500" />
+          <h2 className="text-sm font-semibold text-gray-700">Dependency Graph</h2>
+        </div>
+        <DependencyGraph />
+      </div>
+
+      {/* Advanced Metrics */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Burndown Chart */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <TrendingDown className="h-4 w-4 text-blue-500" />
+            <h2 className="text-sm font-semibold text-gray-700">Open Issues (Last 30 Days)</h2>
+          </div>
+          <BurndownChart data={stats.burndownData ?? []} />
+        </div>
+
+        {/* Workload Distribution */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-700">Workload Distribution</h2>
+          </div>
+          <WorkloadChart data={stats.workloadByAssignee ?? []} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Completion by Assignee */}
