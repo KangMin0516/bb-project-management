@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, uploadApi, type Issue, type UpdateIssuePayload } from '@/api/issues'
+import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
-import { STATUSES } from '@/lib/constants'
+import { STATUSES, STATUS_LABELS, PRIORITY_COLORS } from '@/lib/constants'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
@@ -24,6 +24,28 @@ interface IssueDetailPanelProps {
   onNavigate: (issue: Issue) => void
 }
 
+/** Click-to-edit inline field */
+function InlineField({ label, display, children }: { label: string; display: React.ReactNode; children: React.ReactNode }) {
+  const [editing, setEditing] = useState(false)
+  return (
+    <div className="flex items-center gap-2 py-1.5">
+      <span className="w-20 shrink-0 text-xs font-medium text-gray-400">{label}</span>
+      {editing ? (
+        <div className="flex-1" onBlur={() => setTimeout(() => setEditing(false), 150)}>
+          {children}
+        </div>
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          className="flex-1 rounded px-1.5 py-0.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition -mx-1.5"
+        >
+          {display}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function IssueDetailPanel({
   projectId,
   projectKey,
@@ -33,9 +55,11 @@ export default function IssueDetailPanel({
   onNavigate,
 }: IssueDetailPanelProps) {
   const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
-  const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'links'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
   const [editingDescription, setEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState('')
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false)
+  const [subtaskTitle, setSubtaskTitle] = useState('')
 
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -75,13 +99,15 @@ export default function IssueDetailPanel({
   })
 
   const queryClient = useQueryClient()
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
+  }
+
   const updateMutation = useMutation({
     mutationFn: (data: UpdateIssuePayload) => issueApi.update(projectId, issue.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
-    },
+    onSuccess: invalidateAll,
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
     },
@@ -101,9 +127,7 @@ export default function IssueDetailPanel({
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadApi.upload(file, { issueId: issue.id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'))
     },
@@ -111,25 +135,37 @@ export default function IssueDetailPanel({
 
   const deleteAttachmentMutation = useMutation({
     mutationFn: (id: string) => uploadApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issue.id] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete file'))
+    },
+  })
+
+  const createSubtaskMutation = useMutation({
+    mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
+    onSuccess: () => {
+      invalidateAll()
+      setSubtaskTitle('')
+      setShowSubtaskInput(false)
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create sub-task'))
     },
   })
 
   const d = detail ?? issue
   const labels = d.labels ?? []
   const components = d.components ?? []
+  const linkCount = (detail?.sourceLinks?.length ?? 0) + (detail?.specLinks?.length ?? 0)
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
       <div
-        className={`h-full w-full overflow-y-auto bg-white shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
+        className={`flex h-full w-full flex-col bg-white shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-gray-200 px-6 py-4">
+        {/* Header */}
+        <div className="shrink-0 border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-sm text-gray-400">
               {issue.number ? `#${issue.number}` : ''}
@@ -189,12 +225,12 @@ export default function IssueDetailPanel({
             </p>
           )}
           <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
+
+          {/* Tabs */}
           <div className="mt-3 flex gap-4 border-b border-gray-200 -mb-4">
-            {(['details', 'activity', 'links'] as const).map((tab) => {
-              const linkCount = (detail?.sourceLinks?.length ?? 0) + (detail?.specLinks?.length ?? 0)
-              let label: string = tab
+            {(['details', 'activity'] as const).map((tab) => {
+              let label: string = tab === 'details' ? `Details${linkCount > 0 ? ` · ${linkCount}` : ''}` : tab
               if (tab === 'activity' && detail) label = `Activity (${detail.activities.length})`
-              if (tab === 'links') label = linkCount > 0 ? `Links (${linkCount})` : 'Links'
               return (
                 <button
                   key={tab}
@@ -212,256 +248,319 @@ export default function IssueDetailPanel({
           </div>
         </div>
 
-        {activeTab === 'details' && (
-        <div className="space-y-4 p-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">Status</span>
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'details' && (
+          <div className="space-y-5 p-6">
+          {/* Compact metadata */}
+          <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/50 px-3">
+            <InlineField
+              label="Status"
+              display={
+                <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium">
+                  {STATUS_LABELS[d.status] || d.status}
+                </span>
+              }
+            >
               <select
                 value={d.status}
                 onChange={(e) => updateMutation.mutate({ status: e.target.value })}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                autoFocus
               >
-                {STATUSES.map(
-                  (s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>,
-                )}
+                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
               </select>
-            </div>
-            <div>
-              <span className="block text-xs font-medium text-gray-500 mb-1">Priority</span>
+            </InlineField>
+
+            <InlineField
+              label="Priority"
+              display={
+                <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[d.priority] || ''}`}>
+                  {d.priority}
+                </span>
+              }
+            >
               <select
                 value={d.priority}
                 onChange={(e) => updateMutation.mutate({ priority: e.target.value })}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                autoFocus
               >
-                {['HIGH', 'MEDIUM', 'LOW'].map(
-                  (p) => <option key={p} value={p}>{p}</option>,
-                )}
+                {['HIGH', 'MEDIUM', 'LOW'].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
-            </div>
-          </div>
+            </InlineField>
 
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
-            {editingDescription ? (
-              <div>
-                <MarkdownEditor
-                  value={draftDescription}
-                  onChange={setDraftDescription}
-                  placeholder="Add description..."
-                  minRows={6}
-                />
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateMutation.mutate({ description: draftDescription })
-                      setEditingDescription(false)
-                    }}
-                    className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingDescription(false)}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => {
-                  setDraftDescription(d.description || '')
-                  setEditingDescription(true)
-                }}
-                className="group cursor-pointer rounded-lg border border-transparent p-2 -m-2 hover:border-gray-200 hover:bg-gray-50"
+            <InlineField
+              label="Assignee"
+              display={<span className={d.assignee ? 'text-gray-700' : 'text-gray-400 italic'}>{d.assignee?.name || 'Unassigned'}</span>}
+            >
+              <select
+                value={d.assigneeId || ''}
+                onChange={(e) => updateMutation.mutate({ assigneeId: e.target.value || null })}
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                autoFocus
               >
-                {d.description ? (
-                  <MarkdownViewer content={d.description} />
-                ) : (
-                  <p className="text-sm text-gray-400 italic">Add description...</p>
+                <option value="">Unassigned</option>
+                {members?.map((m) => (
+                  <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                ))}
+              </select>
+            </InlineField>
+
+            <div className="flex items-center gap-2 py-1.5">
+              <span className="w-20 shrink-0 text-xs font-medium text-gray-400">Creator</span>
+              <span className="text-sm text-gray-700">{d.creator?.name}</span>
+            </div>
+
+            <InlineField
+              label="Due Date"
+              display={
+                d.dueDate
+                  ? <span className="text-gray-700">{new Date(d.dueDate).toLocaleDateString()}</span>
+                  : <span className="text-gray-400 italic">No due date</span>
+              }
+            >
+              <div className="flex items-center gap-1">
+                <input
+                  type="date"
+                  value={d.dueDate ? d.dueDate.slice(0, 10) : ''}
+                  onChange={(e) => updateMutation.mutate({ dueDate: e.target.value ? `${e.target.value}T00:00:00.000Z` : null })}
+                  className="rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  autoFocus
+                />
+                {d.dueDate && (
+                  <button
+                    onClick={() => updateMutation.mutate({ dueDate: null })}
+                    className="text-gray-400 hover:text-gray-600 text-sm px-1"
+                  >
+                    ✕
+                  </button>
                 )}
+              </div>
+            </InlineField>
+
+            <div className="flex items-start gap-2 py-1.5">
+              <span className="w-20 shrink-0 pt-0.5 text-xs font-medium text-gray-400">Labels</span>
+              <div className="flex flex-1 flex-wrap gap-1">
+                {(projectLabels || []).map((label) => {
+                  const isSelected = labels.some((l) => l.label.id === label.id)
+                  return (
+                    <button
+                      key={label.id}
+                      onClick={() => {
+                        const currentIds = labels.map((l) => l.label.id)
+                        const nextIds = isSelected
+                          ? currentIds.filter((id) => id !== label.id)
+                          : [...currentIds, label.id]
+                        updateMutation.mutate({ labelIds: nextIds })
+                      }}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium border transition-colors ${
+                        isSelected ? 'ring-1 ring-offset-1' : 'opacity-30 hover:opacity-70'
+                      }`}
+                      style={{
+                        backgroundColor: label.color + (isSelected ? '20' : '10'),
+                        color: label.color,
+                        borderColor: label.color + '40',
+                      }}
+                    >
+                      {label.name}
+                    </button>
+                  )
+                })}
+                {(!projectLabels || projectLabels.length === 0) && (
+                  <span className="text-xs text-gray-400 italic">No labels</span>
+                )}
+              </div>
+            </div>
+
+            {projectComponents && projectComponents.length > 0 && (
+              <div className="flex items-start gap-2 py-1.5">
+                <span className="w-20 shrink-0 pt-0.5 text-xs font-medium text-gray-400">Components</span>
+                <div className="flex flex-1 flex-wrap gap-1">
+                  {projectComponents.map((comp) => {
+                    const isSelected = components.some((ic) => ic.component.id === comp.id)
+                    return (
+                      <button
+                        key={comp.id}
+                        onClick={() => {
+                          const currentIds = components.map((ic) => ic.component.id)
+                          const nextIds = isSelected
+                            ? currentIds.filter((id) => id !== comp.id)
+                            : [...currentIds, comp.id]
+                          updateMutation.mutate({ componentIds: nextIds })
+                        }}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium border transition-colors ${
+                          isSelected
+                            ? 'bg-blue-100 text-blue-700 border-blue-400 ring-1 ring-blue-400 ring-offset-1'
+                            : 'bg-gray-100 text-gray-500 border-transparent opacity-30 hover:opacity-70'
+                        }`}
+                      >
+                        {comp.name}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>
 
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Assignee</span>
-            <select
-              value={d.assigneeId || ''}
-              onChange={(e) => updateMutation.mutate({ assigneeId: e.target.value || null })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">Unassigned</option>
-              {members?.map((m) => (
-                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Creator</span>
-            <span className="text-sm text-gray-700">{d.creator?.name}</span>
-          </div>
-
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Due Date</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="date"
-                value={d.dueDate ? d.dueDate.slice(0, 10) : ''}
-                onChange={(e) => updateMutation.mutate({ dueDate: e.target.value || null })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-              />
-              {d.dueDate && (
-                <button
-                  onClick={() => updateMutation.mutate({ dueDate: null })}
-                  className="text-gray-400 hover:text-gray-600 text-sm px-1"
-                  title="Clear due date"
+            {/* Description */}
+            <div>
+              <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
+              {editingDescription ? (
+                <div>
+                  <MarkdownEditor
+                    value={draftDescription}
+                    onChange={setDraftDescription}
+                    placeholder="Add description..."
+                    minRows={6}
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateMutation.mutate({ description: draftDescription })
+                        setEditingDescription(false)
+                      }}
+                      className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingDescription(false)}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => {
+                    setDraftDescription(d.description || '')
+                    setEditingDescription(true)
+                  }}
+                  className="group cursor-pointer rounded-lg border border-transparent p-2 -m-2 hover:border-gray-200 hover:bg-gray-50"
                 >
-                  ✕
+                  {d.description ? (
+                    <MarkdownViewer content={d.description} />
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Add description...</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Sub-tasks */}
+            <div>
+              <span className="block text-xs font-medium text-gray-500 mb-1">
+                Sub-tasks {detail && detail.children.length > 0 ? `(${detail.children.length})` : ''}
+              </span>
+              {detail && detail.children.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {detail.children.map((child) => (
+                    <button
+                      key={child.id}
+                      onClick={() => {
+                        issueApi.get(projectId, child.id).then(
+                          (fullIssue) => onNavigate(fullIssue),
+                          (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+                        )
+                      }}
+                      className="flex w-full items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <span className="font-mono text-xs text-gray-400">#{child.number}</span>
+                      <span className="flex-1 truncate">{child.title}</span>
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px]">{child.status}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showSubtaskInput ? (
+                <div className="flex gap-1.5">
+                  <input
+                    value={subtaskTitle}
+                    onChange={(e) => setSubtaskTitle(e.target.value)}
+                    placeholder="Sub-task title"
+                    className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && subtaskTitle.trim()) {
+                        createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id })
+                      }
+                      if (e.key === 'Escape') { setShowSubtaskInput(false); setSubtaskTitle('') }
+                    }}
+                  />
+                  <button
+                    onClick={() => createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id })}
+                    disabled={!subtaskTitle.trim() || createSubtaskMutation.isPending}
+                    className="rounded bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {createSubtaskMutation.isPending ? '...' : 'Add'}
+                  </button>
+                  <button
+                    onClick={() => { setShowSubtaskInput(false); setSubtaskTitle('') }}
+                    className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSubtaskInput(true)}
+                  className="text-xs text-gray-400 hover:text-primary-600"
+                >
+                  + Add sub-task
                 </button>
               )}
             </div>
-          </div>
 
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Labels</span>
-            <div className="flex flex-wrap gap-1">
-              {(projectLabels || []).map((label) => {
-                const isSelected = labels.some((l) => l.label.id === label.id)
-                return (
-                  <button
-                    key={label.id}
-                    onClick={() => {
-                      const currentIds = labels.map((l) => l.label.id)
-                      const nextIds = isSelected
-                        ? currentIds.filter((id) => id !== label.id)
-                        : [...currentIds, label.id]
-                      updateMutation.mutate({ labelIds: nextIds })
-                    }}
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium border transition-colors ${
-                      isSelected ? 'ring-1 ring-offset-1' : 'opacity-40 hover:opacity-70'
-                    }`}
-                    style={{
-                      backgroundColor: label.color + (isSelected ? '20' : '10'),
-                      color: label.color,
-                      borderColor: label.color + '40',
-                      ...(isSelected ? { ringColor: label.color } : {}),
-                    }}
-                  >
-                    {label.name}
-                  </button>
-                )
-              })}
-              {(!projectLabels || projectLabels.length === 0) && (
-                <span className="text-xs text-gray-400">No labels</span>
-              )}
-            </div>
-          </div>
-
-          {projectComponents && projectComponents.length > 0 && (
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">Components</span>
-            <div className="flex flex-wrap gap-1">
-              {projectComponents.map((comp) => {
-                const isSelected = components.some((ic) => ic.component.id === comp.id)
-                return (
-                  <button
-                    key={comp.id}
-                    onClick={() => {
-                      const currentIds = components.map((ic) => ic.component.id)
-                      const nextIds = isSelected
-                        ? currentIds.filter((id) => id !== comp.id)
-                        : [...currentIds, comp.id]
-                      updateMutation.mutate({ componentIds: nextIds })
-                    }}
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium border transition-colors ${
-                      isSelected
-                        ? 'bg-blue-100 text-blue-700 border-blue-400 ring-1 ring-blue-400 ring-offset-1'
-                        : 'bg-gray-100 text-gray-500 border-transparent opacity-40 hover:opacity-70'
-                    }`}
-                  >
-                    {comp.name}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          )}
-
-          {detail && detail.children.length > 0 && (
+            {/* Attachments */}
             <div>
               <span className="block text-xs font-medium text-gray-500 mb-1">
-                Sub-tasks ({detail.children.length})
+                Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
               </span>
-              <div className="space-y-1">
-                {detail.children.map((child) => (
-                  <button
-                    key={child.id}
-                    onClick={() => {
-                      issueApi.get(projectId, child.id).then(
-                        (fullIssue) => onNavigate(fullIssue),
-                        (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
-                      )
-                    }}
-                    className="flex w-full items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors text-left"
-                  >
-                    <span className="font-mono text-xs text-gray-400">#{child.number}</span>
-                    <span className="flex-1 truncate">{child.title}</span>
-                    <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px]">{child.status}</span>
-                  </button>
-                ))}
-              </div>
+              {detail?.attachments && detail.attachments.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {detail.attachments.map((att) => (
+                    <AttachmentItem key={att.id} attachment={att} onDelete={(id) => deleteAttachmentMutation.mutate(id)} />
+                  ))}
+                </div>
+              )}
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadMutation.mutate(file)
+                    e.target.value = ''
+                  }}
+                />
+                {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
+              </label>
             </div>
-          )}
 
-          <div>
-            <span className="block text-xs font-medium text-gray-500 mb-1">
-              Attachments {detail?.attachments?.length ? `(${detail.attachments.length})` : ''}
-            </span>
-            {detail?.attachments && detail.attachments.length > 0 && (
-              <div className="space-y-1 mb-2">
-                {detail.attachments.map((att) => (
-                  <AttachmentItem key={att.id} attachment={att} onDelete={(id) => deleteAttachmentMutation.mutate(id)} />
-                ))}
+            {/* Links (merged from Links tab) */}
+            {detail && (
+              <div>
+                <LinkedIssues
+                  projectId={projectId}
+                  issueId={issue.id}
+                  sourceLinks={detail.sourceLinks}
+                  targetLinks={detail.targetLinks}
+                  specLinks={detail.specLinks}
+                />
               </div>
             )}
-            <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) uploadMutation.mutate(file)
-                  e.target.value = ''
-                }}
-              />
-              {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
-            </label>
           </div>
+          )}
 
+          {activeTab === 'activity' && (
+          <ActivityTab projectId={projectId} issueId={issue.id} activities={detail?.activities || []} members={members || []} />
+          )}
         </div>
-        )}
-
-        {activeTab === 'links' && detail && (
-        <div className="p-6">
-          <LinkedIssues
-            projectId={projectId}
-            issueId={issue.id}
-            sourceLinks={detail.sourceLinks}
-            targetLinks={detail.targetLinks}
-            specLinks={detail.specLinks}
-          />
-        </div>
-        )}
-
-        {activeTab === 'activity' && (
-        <ActivityTab projectId={projectId} issueId={issue.id} activities={detail?.activities || []} members={members || []} />
-        )}
       </div>
     </div>
   )

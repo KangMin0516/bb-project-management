@@ -420,6 +420,14 @@ export class IssueService {
 
     const { labelIds, componentIds, ...data } = dto;
 
+    // Convert date strings to Date objects for Prisma
+    if (data.dueDate !== undefined) {
+      (data as Record<string, unknown>).dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+    if (data.focusDate !== undefined) {
+      (data as Record<string, unknown>).focusDate = data.focusDate ? new Date(data.focusDate) : null;
+    }
+
     // Validate hierarchy when type or parentId is being changed
     if (data.type !== undefined || data.parentId !== undefined) {
       const effectiveType = data.type ?? existing.type;
