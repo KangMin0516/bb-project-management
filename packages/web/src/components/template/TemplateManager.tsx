@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
 import { TYPE_ICONS } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
-import MarkdownEditor from '@/components/markdown/MarkdownEditor'
+import TipTapEditor from '@/components/editor/TipTapEditor'
 
 const TYPES = ['TASK', 'BUG', 'EPIC', 'SUB_TASK'] as const
 
@@ -137,11 +137,11 @@ export default function TemplateManager() {
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">Description Template</label>
-            <MarkdownEditor
-              value={description}
+            <TipTapEditor
+              content={description}
               onChange={setDescription}
-              placeholder="Template description (Markdown supported)"
-              minRows={4}
+              placeholder="Template description (supports rich text)"
+              minHeight="120px"
             />
           </div>
 

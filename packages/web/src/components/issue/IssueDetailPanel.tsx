@@ -10,7 +10,7 @@ import { getErrorMessage } from '@/lib/error'
 import { Trash2, Link2, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { copyIssueLink } from '@/components/issue/IssueActionMenu'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
-import MarkdownEditor from '@/components/markdown/MarkdownEditor'
+import TipTapEditor from '@/components/editor/TipTapEditor'
 import ActivityTab from '@/components/issue/ActivityTab'
 import AttachmentItem from '@/components/issue/AttachmentItem'
 import LinkedIssues from '@/components/issue/LinkedIssues'
@@ -408,11 +408,11 @@ export default function IssueDetailPanel({
               <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
               {editingDescription ? (
                 <div>
-                  <MarkdownEditor
-                    value={draftDescription}
+                  <TipTapEditor
+                    content={draftDescription}
                     onChange={setDraftDescription}
                     placeholder="Add description..."
-                    minRows={6}
+                    minHeight="150px"
                   />
                   <div className="mt-2 flex gap-2">
                     <button

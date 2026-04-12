@@ -41,6 +41,7 @@ model User {
   componentDefaultAssignees  Component[] @relation("ComponentDefaultAssignee")
   createdSpecs   Specification[] @relation("CreatedSpecs")
   specComments   SpecComment[]   @relation("SpecComments")
+  credentials    ProjectCredential[] @relation("UserCredentials")
 
   @@map("users")
 }
@@ -60,6 +61,7 @@ model Project {
   labels         Label[]
   components     Component[]
   specifications Specification[]
+  credentials    ProjectCredential[]
 
   @@map("projects")
 }
@@ -437,6 +439,28 @@ model SpecComment {
   @@index([userId])
   @@index([parentId])
   @@map("spec_comments")
+}
+
+// ─── Project Credential ───────────────────────────────────
+
+model ProjectCredential {
+  id          String   @id @default(uuid())
+  name        String
+  serviceType String   @map("service_type")
+  description String?
+  url         String?
+  entries     Json     // [{ key: "Access Key", value: "AKIA...", sensitive: true }]
+
+  projectId   String   @map("project_id")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("UserCredentials", fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("project_credentials")
 }
 
 // ─── Issue-Spec Link ───────────────────────────────────────

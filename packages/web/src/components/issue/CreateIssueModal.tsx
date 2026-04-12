@@ -5,7 +5,7 @@ import { templateApi } from '@/api/templates'
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
 import { X } from 'lucide-react'
-import MarkdownEditor from '@/components/markdown/MarkdownEditor'
+import TipTapEditor from '@/components/editor/TipTapEditor'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -133,11 +133,11 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
             required
           />
 
-          <MarkdownEditor
-            value={description}
+          <TipTapEditor
+            content={description}
             onChange={(v) => { setDescription(v); setDescriptionTouched(true) }}
             placeholder="Description (optional)"
-            minRows={3}
+            minHeight="100px"
           />
 
           <div className="grid grid-cols-2 gap-3">
