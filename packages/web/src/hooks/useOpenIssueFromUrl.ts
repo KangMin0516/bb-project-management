@@ -21,7 +21,7 @@ export function useOpenIssueFromUrl(
     if (issue) {
       onSelectRef.current(issue)
     } else if (options?.showNotFound) {
-      useToastStore.getState().addToast('Issue not found on this page', 'warning')
+      useToastStore.getState().addToast('Issue not found on this page', 'error')
     }
     setSearchParams((prev) => {
       prev.delete('open')

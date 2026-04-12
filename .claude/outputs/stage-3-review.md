@@ -1,54 +1,51 @@
-# Stage 3: 코드리뷰 결과 — Timeline, Dependency Graph, Metrics Dashboard
+# Stage 3: 코드리뷰 종합 결과
 
-## 리뷰 대상
-- Timeline/Roadmap 뷰 (TimelinePage.tsx)
-- Dependency Graph (DependencyGraph.tsx)
-- 프로젝트 메트릭 대시보드 (BurndownChart, WorkloadChart, OverdueAlert, DashboardPage)
-- 백엔드 서비스 (dashboard.service.ts, issue-link.service.ts)
+## 리뷰 결과 요약: 모든 Critical/Warning 수정 완료
 
 ---
 
-## Critical Issues (수정 완료)
+## 수정된 Critical 이슈 (4건)
 
-### C1: getBurndownData O(30×N) 성능 문제
-- **위치**: `packages/api/src/dashboard/dashboard.service.ts` getBurndownData()
-- **문제**: 30일 × N개 이슈를 매번 순회하는 O(30*N) 루프
-- **수정**: 정렬된 이슈 + 이벤트 기반 sweep 알고리즘으로 O(N log N) 최적화
+### C1: CommentInput 멘션 시스템 HTML 비호환 → 수정 완료
+- `CommentInput.tsx`의 `@` 감지를 `htmlToPlainText()` 유틸로 HTML→plain text 변환 후 수행하도록 변경
+- `insertMention`에서 HTML 문자열 직접 슬라이싱 제거
 
-### C2: Burndown reopen 버그
-- **위치**: `packages/api/src/dashboard/dashboard.service.ts` getBurndownData()
-- **문제**: `earliest` DONE 활동만 기록하여 이슈가 재오픈된 경우에도 닫힌 것으로 처리
-- **수정**: 전체 status 활동을 추적하여 reopen 시 closedDateMap에서 제거
+### C2: 이미지 업로드 실패 시 Object URL fallback → 수정 완료
+- `TipTapEditor.tsx:213-216`의 `URL.createObjectURL` fallback 제거
+- 에러 시 toast 메시지로 사용자에게 알림
 
----
+### C3: 에디터 submit 후 초기화 안 됨 → 수정 완료
+- `TipTapEditor.tsx:189-197`의 useEffect에 `content === ''` 시 `editor.commands.clearContent()` 호출 추가
 
-## Warning Issues (수정 완료)
-
-### W1: 중복 STATUS_BAR_COLORS 상수
-- **위치**: WorkloadChart.tsx, TimelinePage.tsx
-- **수정**: `@/lib/constants`에 통합 export, 두 파일에서 import로 변경
-
-### W2: 중복 formatDate/formatWeek 함수
-- **위치**: TimelinePage.tsx
-- **문제**: formatDate와 formatWeek가 동일한 구현
-- **수정**: formatWeek 제거, formatDate만 사용
-
-### W3: findProjectDependencies 단방향 쿼리
-- **위치**: `packages/api/src/issue-link/issue-link.service.ts`
-- **문제**: sourceIssue.projectId만 검색하여 target이 프로젝트에 속하는 경우 누락
-- **수정**: OR 조건으로 sourceIssue.projectId 또는 targetIssue.projectId 모두 검색
+### C4: markdownToHtml 이미지/링크 regex 순서 버그 → 수정 완료
+- 이미지 패턴(`![alt](url)`)을 링크 패턴(`[text](url)`)보다 먼저 배치
 
 ---
 
-## 추가 개선 (수정 완료)
+## 수정된 Warning 이슈 (4건)
 
-### Timeline 메뉴 숨김
-- 사이드바 네비게이션에서 Timeline 항목 제거 (라우트는 유지)
-- GanttChart 미사용 import 제거
+### W1-W2: DTO entries 검증 부족 → 수정 완료
+- `CredentialEntryDto.key`에 `@MaxLength(200)` 추가
+- `CredentialEntryDto.value`에 `@MaxLength(5000)` 추가
+- `CreateCredentialDto.entries`에 `@ArrayMaxSize(50)` 추가
+- `description`에 `@MaxLength(1000)`, `url`에 `@MaxLength(2000)` 추가
 
-### 대시보드 툴팁 추가
-- 번다운 차트, 워크로드 분포, 의존성 그래프, 완료율, 오늘의 포커스, 마감초과 이슈
+### W3: `@tiptap/extension-mention` 데드 의존성 → 제거 완료
+
+### W4: `credential.service.ts`의 `as any` 캐스팅 → 수정 완료
+- `dto.entries as any` → `dto.entries as unknown as Prisma.InputJsonValue`
 
 ---
 
-## 전체 결과: **수정 완료 — `/4-test` 진행 가능**
+## 남은 Info 사항 (수정 불필요, 향후 개선)
+
+- CredentialManager에 role 기반 UI 분기 없음 (서버 403으로 보호됨)
+- TipTap CSS에 하드코딩 색상 (다크모드 미지원 상태이므로 무관)
+- `window.prompt()` 사용 for Link 삽입 (향후 커스텀 인라인 입력 교체 권장)
+- MarkdownViewer HTML 감지 로직 (향후 format 메타데이터 필드 추가 가능)
+
+---
+
+## 빌드 검증
+- API: tsc --noEmit 통과
+- Web: tsc -b && vite build 통과

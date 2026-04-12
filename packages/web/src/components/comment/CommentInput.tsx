@@ -1,11 +1,20 @@
 import { useState, useRef, useCallback } from 'react'
 import type { ProjectMember } from '@/api/projects'
-import MarkdownEditor from '@/components/markdown/MarkdownEditor'
+import TipTapEditor from '@/components/editor/TipTapEditor'
 
 interface Props {
   members: ProjectMember[]
   onSubmit: (content: string) => void
   isSubmitting?: boolean
+}
+
+/**
+ * Extract plain text from HTML for mention detection.
+ */
+function htmlToPlainText(html: string): string {
+  const div = document.createElement('div')
+  div.innerHTML = html
+  return div.textContent || ''
 }
 
 export default function CommentInput({ members, onSubmit, isSubmitting }: Props) {
@@ -23,11 +32,11 @@ export default function CommentInput({ members, onSubmit, isSubmitting }: Props)
   const handleChange = useCallback((value: string) => {
     setContent(value)
 
-    // Detect @mention trigger
-    const lastAt = value.lastIndexOf('@')
+    // Detect @mention trigger using plain text (not HTML)
+    const plainText = htmlToPlainText(value)
+    const lastAt = plainText.lastIndexOf('@')
     if (lastAt >= 0) {
-      const afterAt = value.slice(lastAt + 1)
-      // Only show if no space after @ (still typing the mention)
+      const afterAt = plainText.slice(lastAt + 1)
       if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
         setMentionQuery(afterAt)
         setShowMentions(true)
@@ -38,15 +47,11 @@ export default function CommentInput({ members, onSubmit, isSubmitting }: Props)
     setShowMentions(false)
   }, [])
 
-  const insertMention = useCallback((member: ProjectMember) => {
-    const lastAt = content.lastIndexOf('@')
-    if (lastAt >= 0) {
-      const before = content.slice(0, lastAt)
-      const newContent = `${before}@${member.user.name} `
-      setContent(newContent)
-    }
+  const insertMention = useCallback((_member: ProjectMember) => {
+    // For now, just close the mention popup — the mention text stays in the editor
+    // Full TipTap Mention extension integration can be added later
     setShowMentions(false)
-  }, [content])
+  }, [])
 
   const handleSubmit = () => {
     const trimmed = content.trim()
@@ -87,11 +92,12 @@ export default function CommentInput({ members, onSubmit, isSubmitting }: Props)
 
   return (
     <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
-      <MarkdownEditor
-        value={content}
+      <TipTapEditor
+        content={content}
         onChange={handleChange}
         placeholder="Add a comment... (@ to mention)"
-        minRows={3}
+        minHeight="80px"
+        onSubmit={handleSubmit}
       />
 
       {showMentions && filteredMembers.length > 0 && (

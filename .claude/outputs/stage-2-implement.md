@@ -1,39 +1,66 @@
-# 구현 완료 보고: 스펙 섹션 강화
+# Stage 2: 구현 완료 보고
 
-## 변경 파일 목록
+## Feature A: 프로젝트 Credential 관리
 
-- `packages/web/src/components/spec/SpecContent.tsx` — forwardRef 전환, issueLinks prop, 섹션별 이슈 뱃지, scrollToSection 노출
-- `packages/web/src/components/spec/SpecCommentPanel.tsx` — 필터 칩 UI, filterSectionTitle/onClearFilter/onScrollToSection props
-- `packages/web/src/pages/SpecificationsPage.tsx` — URL params(specId/section), SpecContent ref, 네비게이션 핸들러
-- `packages/web/src/components/issue/LinkedIssues.tsx` — LinkSpecModal 2단계 UI, SpecLinkItem 클릭 네비게이션, sectionSlug 표시
+### 신규 파일
+- `packages/api/prisma/migrations/20260412022528_add_project_credentials/` — DB 마이그레이션
+- `packages/api/src/credential/credential.module.ts` — NestJS 모듈
+- `packages/api/src/credential/credential.service.ts` — CRUD + sensitive 값 마스킹 서비스
+- `packages/api/src/credential/credential.controller.ts` — REST 엔드포인트 (ProjectMemberGuard + Roles)
+- `packages/api/src/credential/dto/create-credential.dto.ts` — 생성 DTO
+- `packages/api/src/credential/dto/update-credential.dto.ts` — 수정 DTO
+- `packages/api/src/credential/dto/index.ts` — DTO barrel export
+- `packages/web/src/api/credentials.ts` — API 클라이언트
+- `packages/web/src/components/settings/CredentialManager.tsx` — 카드 UI + 상세 + 모달
 
-## 주요 변경사항
+### 수정 파일
+- `packages/api/prisma/schema.prisma` — ProjectCredential 모델 + Project/User 역관계 추가
+- `packages/api/src/app.module.ts` — CredentialModule 등록
+- `packages/web/src/pages/SettingsPage.tsx` — Credentials 섹션 추가
 
-### 1. 댓글 필터 시각화 + 스크롤
-- 댓글 패널 헤더에 필터 칩(chip) 표시: 섹션명 + X 해제 버튼
-- 댓글의 섹션 뱃지 클릭 → 필터 적용 + 본문 해당 섹션으로 스크롤
-- SpecContent를 forwardRef로 전환, scrollToSection을 imperative handle로 노출
+### API 엔드포인트
+| Method | Endpoint | 권한 |
+|--------|----------|------|
+| GET | `/projects/:projectId/credentials` | MEMBER |
+| GET | `/projects/:projectId/credentials/:id` | MEMBER |
+| GET | `/projects/:projectId/credentials/:id/reveal` | ADMIN/PM |
+| POST | `/projects/:projectId/credentials` | ADMIN/PM |
+| PATCH | `/projects/:projectId/credentials/:id` | ADMIN/PM |
+| DELETE | `/projects/:projectId/credentials/:id` | ADMIN/PM |
 
-### 2. 이슈↔스펙 섹션 레벨 연결
-- LinkSpecModal: Step 1(스펙 선택) → Step 2(섹션 선택) 2단계 UI
-- "Entire specification" 옵션 + 개별 섹션 목록 (레벨별 들여쓰기)
-- createSpecLink 호출 시 sectionSlug 전달
+---
 
-### 3. 스펙 본문 섹션에 연결 이슈 표시
-- issueLinks를 sectionSlug별 그룹핑
-- 각 헤딩 옆에 이슈 뱃지(#번호 + 상태 dot) 표시
-- 뱃지 클릭 → 이슈 페이지로 이동
+## Feature B: TipTap WYSIWYG 에디터
 
-### 4. 양방향 클릭 네비게이션
-- SpecLinkItem 클릭 → `/projects/:id/specs?specId=xxx&section=yyy`
-- 이슈 뱃지 클릭 → `/projects/:id/issues?issue=xxx`
-- URL params에서 specId/section 파싱 → 자동 선택 + 스크롤
+### 신규 패키지
+`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`, `@tiptap/extension-image`, `@tiptap/extension-table`, `@tiptap/extension-mention`, `@tiptap/extension-code-block-lowlight`, `lowlight`, `dompurify`, `@types/dompurify`
+
+### 신규 파일
+- `packages/web/src/components/editor/TipTapEditor.tsx` — WYSIWYG 에디터 (StarterKit + Link/Image/Table/CodeBlock 확장)
+- `packages/web/src/components/editor/TipTapToolbar.tsx` — 툴바 (Bold, Italic, Strike, Code, H1-H3, Lists, Blockquote, CodeBlock, Link, Image, Table, Undo/Redo)
+- `packages/web/src/components/editor/editor.css` — 에디터 스타일
+
+### 수정 파일
+- `packages/web/src/components/markdown/MarkdownViewer.tsx` — HTML 콘텐츠 감지 + DOMPurify 렌더링 추가
+- `packages/web/src/components/issue/CreateIssueModal.tsx` — MarkdownEditor → TipTapEditor
+- `packages/web/src/components/issue/IssueDetailPanel.tsx` — MarkdownEditor → TipTapEditor
+- `packages/web/src/components/comment/CommentInput.tsx` — MarkdownEditor → TipTapEditor + onSubmit
+- `packages/web/src/components/template/TemplateManager.tsx` — MarkdownEditor → TipTapEditor
+
+### 호환성
+- 기존 Markdown 콘텐츠: MarkdownViewer가 자동 감지하여 ReactMarkdown으로 렌더링
+- 새 콘텐츠: HTML로 저장, MarkdownViewer가 DOMPurify로 안전하게 렌더링
+- 기존 MarkdownEditor.tsx 보존 (백업)
+
+---
+
+## 기타 수정
+- `packages/web/src/hooks/useOpenIssueFromUrl.ts` — toast 타입 'warning' → 'error' (기존 빌드 에러 수정)
 
 ## 자체 점검
-
-- [x] 타입 오류 없음 (Web 통과)
+- [x] 타입 오류 없음 (tsc --noEmit 통과)
+- [x] 빌드 성공 (npm run build 통과)
 - [x] import 경로 정확
 - [x] 기존 코드 패턴과 일관성
 - [x] 기획서의 모든 항목 구현 완료
 - [x] 불필요한 변경 없음
-- [x] API 변경 없음 (기존 API만 활용)

@@ -22,6 +22,7 @@ import { IssueLinkModule } from './issue-link/issue-link.module.js';
 import { IssueSpecLinkModule } from './issue-spec-link/issue-spec-link.module.js';
 import { ComponentModule } from './component/component.module.js';
 import { SpecificationModule } from './specification/specification.module.js';
+import { CredentialModule } from './credential/credential.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -52,6 +53,7 @@ import { AppController } from './app.controller.js';
     IssueSpecLinkModule,
     ComponentModule,
     SpecificationModule,
+    CredentialModule,
   ],
   controllers: [AppController],
   providers: [
