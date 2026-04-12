@@ -11,6 +11,7 @@ import BoardPage from '@/pages/BoardPage'
 import IssuesPage from '@/pages/IssuesPage'
 import DashboardPage from '@/pages/DashboardPage'
 import SettingsPage from '@/pages/SettingsPage'
+import CredentialsPage from '@/pages/CredentialsPage'
 import SpecificationsPage from '@/pages/SpecificationsPage'
 import TimelinePage from '@/pages/TimelinePage'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -60,6 +61,7 @@ export default function App() {
                 <Route path="/projects/:projectId/issues" element={<IssuesPage />} />
                 <Route path="/projects/:projectId/specs" element={<SpecificationsPage />} />
                 <Route path="/projects/:projectId/timeline" element={<TimelinePage />} />
+                <Route path="/projects/:projectId/credentials" element={<CredentialsPage />} />
                 <Route path="/projects/:projectId/settings" element={<SettingsPage />} />
               </Route>
             </Route>

@@ -8,7 +8,6 @@ import { Trash2, UserPlus, Check, X, Pencil } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
-import CredentialManager from '@/components/settings/CredentialManager'
 
 export default function SettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -554,11 +553,6 @@ export default function SettingsPage() {
           )}
         </section>
       )}
-
-      {/* Credentials */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <CredentialManager />
-      </section>
 
       {/* Danger zone */}
       <section className="rounded-xl border border-red-200 bg-white p-5">
