@@ -1,4 +1,6 @@
-import { Search } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Search, ChevronDown, Users, Tag, Layers, Zap, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { STATUSES } from '@/lib/constants'
 
 // Shared filter state interface
@@ -28,7 +30,61 @@ export function hasActiveFilters(f: FilterState): boolean {
   return f.assignees.size > 0 || f.labels.size > 0 || f.components.size > 0 || !!f.epicId || !!f.status || !!f.priority || !!f.type || !!f.search
 }
 
-// Assignee avatar toggle (shared between Board & List)
+// Generic filter dropdown with checkboxes
+function FilterDropdown({
+  label,
+  icon: Icon,
+  selectedCount,
+  children,
+}: {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  selectedCount: number
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+          selectedCount > 0
+            ? 'border-primary-300 bg-primary-50 text-primary-700'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+        {selectedCount > 0 && (
+          <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
+            {selectedCount}
+          </span>
+        )}
+        <ChevronDown className={cn('h-3 w-3 transition', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Assignee filter dropdown
 export function AssigneeAvatars({
   members,
   selected,
@@ -40,30 +96,29 @@ export function AssigneeAvatars({
 }) {
   if (members.length === 0) return null
   return (
-    <div className="flex items-center gap-1">
-      {members.map((member) => {
-        const isSelected = selected.has(member.id)
-        return (
-          <button
-            key={member.id}
-            type="button"
-            onClick={() => onToggle(member.id)}
-            title={member.name}
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
-              isSelected
-                ? 'ring-2 ring-primary-600 ring-offset-1 bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
+    <FilterDropdown label="Assignee" icon={Users} selectedCount={selected.size}>
+      {members.map((member) => (
+        <label
+          key={member.id}
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+        >
+          <input
+            type="checkbox"
+            checked={selected.has(member.id)}
+            onChange={() => onToggle(member.id)}
+            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
             {member.name.charAt(0).toUpperCase()}
-          </button>
-        )
-      })}
-    </div>
+          </div>
+          <span className="truncate text-xs text-gray-700">{member.name}</span>
+        </label>
+      ))}
+    </FilterDropdown>
   )
 }
 
-// Label chip toggle (shared between Board & List)
+// Label filter dropdown
 export function LabelChips({
   labels,
   selected,
@@ -75,35 +130,30 @@ export function LabelChips({
 }) {
   if (labels.length === 0) return null
   return (
-    <div className="flex items-center gap-1">
-      {labels.map((label) => {
-        const isSelected = selected.has(label.id)
-        return (
-          <button
-            key={label.id}
-            type="button"
-            onClick={() => onToggle(label.id)}
-            title={label.name}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-              isSelected
-                ? 'ring-2 ring-offset-1'
-                : 'opacity-70 hover:opacity-100'
-            }`}
-            style={{
-              backgroundColor: label.color + '20',
-              color: label.color,
-              ...(isSelected ? { ringColor: label.color } : {}),
-            }}
-          >
-            {label.name}
-          </button>
-        )
-      })}
-    </div>
+    <FilterDropdown label="Label" icon={Tag} selectedCount={selected.size}>
+      {labels.map((label) => (
+        <label
+          key={label.id}
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+        >
+          <input
+            type="checkbox"
+            checked={selected.has(label.id)}
+            onChange={() => onToggle(label.id)}
+            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <div
+            className="h-3 w-3 rounded-full"
+            style={{ backgroundColor: label.color }}
+          />
+          <span className="truncate text-xs text-gray-700">{label.name}</span>
+        </label>
+      ))}
+    </FilterDropdown>
   )
 }
 
-// Component chip toggle
+// Component filter dropdown
 export function ComponentChips({
   components,
   selected,
@@ -115,30 +165,26 @@ export function ComponentChips({
 }) {
   if (components.length === 0) return null
   return (
-    <div className="flex items-center gap-1">
-      {components.map((comp) => {
-        const isSelected = selected.has(comp.id)
-        return (
-          <button
-            key={comp.id}
-            type="button"
-            onClick={() => onToggle(comp.id)}
-            title={comp.name}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-              isSelected
-                ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500 ring-offset-1'
-                : 'bg-blue-50 text-blue-600 opacity-70 hover:opacity-100'
-            }`}
-          >
-            {comp.name}
-          </button>
-        )
-      })}
-    </div>
+    <FilterDropdown label="Component" icon={Layers} selectedCount={selected.size}>
+      {components.map((comp) => (
+        <label
+          key={comp.id}
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+        >
+          <input
+            type="checkbox"
+            checked={selected.has(comp.id)}
+            onChange={() => onToggle(comp.id)}
+            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="truncate text-xs text-gray-700">{comp.name}</span>
+        </label>
+      ))}
+    </FilterDropdown>
   )
 }
 
-// Epic chip toggle
+// Epic filter dropdown
 export function EpicChips({
   epics,
   selectedId,
@@ -150,26 +196,22 @@ export function EpicChips({
 }) {
   if (epics.length === 0) return null
   return (
-    <div className="flex items-center gap-1">
-      {epics.map((epic) => {
-        const isSelected = selectedId === epic.id
-        return (
-          <button
-            key={epic.id}
-            type="button"
-            onClick={() => onSelect(isSelected ? null : epic.id)}
-            title={epic.title}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-              isSelected
-                ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-500 ring-offset-1'
-                : 'bg-purple-50 text-purple-600 opacity-70 hover:opacity-100'
-            }`}
-          >
-            ⚡ {epic.title}
-          </button>
-        )
-      })}
-    </div>
+    <FilterDropdown label="Epic" icon={Zap} selectedCount={selectedId ? 1 : 0}>
+      {epics.map((epic) => (
+        <label
+          key={epic.id}
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+        >
+          <input
+            type="checkbox"
+            checked={selectedId === epic.id}
+            onChange={() => onSelect(selectedId === epic.id ? null : epic.id)}
+            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="truncate text-xs text-gray-700">{epic.title}</span>
+        </label>
+      ))}
+    </FilterDropdown>
   )
 }
 
@@ -184,9 +226,10 @@ export function ClearFiltersButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded px-2 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+      className="flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
       title="Clear all filters"
     >
+      <X className="h-3 w-3" />
       Clear
     </button>
   )
