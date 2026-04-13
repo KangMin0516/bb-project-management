@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
+import type { ChildIssue } from '@/components/board/types'
 import BoardColumn from '@/components/board/BoardColumn'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
@@ -25,6 +26,7 @@ export default function BoardPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
@@ -50,6 +52,57 @@ export default function BoardPage() {
     },
   })
 
+  const updateIssueMutation = useMutation({
+    mutationFn: (args: { issueId: string; data: { status?: string } }) =>
+      issueApi.update(projectId!, args.issueId, args.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+    },
+  })
+
+  // Build id->Issue map for O(1) lookups
+  const allIssuesById = useMemo(() => {
+    const map = new Map<string, Issue>()
+    if (!board) return map
+    for (const issues of Object.values(board)) {
+      for (const issue of issues) map.set(issue.id, issue)
+    }
+    return map
+  }, [board])
+
+  // Build children map: parentId -> child issues (from all statuses)
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, ChildIssue[]>()
+    if (!board) return map
+    for (const issues of Object.values(board)) {
+      for (const issue of issues) {
+        if (issue.parentId) {
+          const existing = map.get(issue.parentId) || []
+          existing.push({
+            id: issue.id,
+            number: issue.number,
+            title: issue.title,
+            status: issue.status,
+            priority: issue.priority,
+            assignee: issue.assignee ? { id: issue.assignee.id, name: issue.assignee.name, avatar: issue.assignee.avatar } : null,
+          })
+          map.set(issue.parentId, existing)
+        }
+      }
+    }
+    return map
+  }, [board])
+
+  // Filter board: only show parent-level issues (no parentId)
+  const parentOnlyBoard = useMemo(() => {
+    if (!board) return board
+    const filtered: Record<string, Issue[]> = {}
+    for (const [status, issues] of Object.entries(board)) {
+      filtered[status] = issues.filter((issue) => !issue.parentId)
+    }
+    return filtered
+  }, [board])
+
   // Open issue detail from share link (?open= query param)
   const allBoardIssues = useMemo(() => board ? Object.values(board).flat() : undefined, [board])
   useOpenIssueFromUrl(allBoardIssues, setSelectedIssue, { showNotFound: true })
@@ -64,14 +117,12 @@ export default function BoardPage() {
     if (destination.droppableId === source.droppableId && destination.index === source.index) return
 
     const destStatus = destination.droppableId
-    const rawIssues = board?.[destStatus] || []
+    const rawIssues = (parentOnlyBoard?.[destStatus] || [])
 
-    // If same column, remove the dragged item to get correct index calculation
     const destIssues = destination.droppableId === source.droppableId
       ? rawIssues.filter(issue => issue.id !== draggableId)
       : rawIssues
 
-    // Calculate new order
     let newOrder: number
     if (destIssues.length === 0) {
       newOrder = ORDER_GAP
@@ -87,6 +138,25 @@ export default function BoardPage() {
 
     reorderMutation.mutate({ issueId: draggableId, status: destStatus, order: newOrder })
   }
+
+  const handleToggleExpand = useCallback((issueId: string) => {
+    setExpandedIssues((prev) => {
+      const next = new Set(prev)
+      if (next.has(issueId)) next.delete(issueId)
+      else next.add(issueId)
+      return next
+    })
+  }, [])
+
+  const handleChildClick = useCallback((child: ChildIssue) => {
+    const found = allIssuesById.get(child.id)
+    if (found) setSelectedIssue(found)
+  }, [allIssuesById])
+
+  const handleChildStatusToggle = useCallback((child: ChildIssue) => {
+    const newStatus = child.status === 'DONE' ? 'TODO' : 'DONE'
+    updateIssueMutation.mutate({ issueId: child.id, data: { status: newStatus } })
+  }, [updateIssueMutation.mutate])
 
   const assignedMembers = useMemo(() => {
     const memberMap = new Map<string, { id: string; name: string; avatar: string | null }>()
@@ -122,10 +192,10 @@ export default function BoardPage() {
 
   const filteredBoard = useMemo(() => {
     const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType
-    if (!hasFilters) return board
+    if (!hasFilters) return parentOnlyBoard
     const searchLower = search.toLowerCase()
-    const filtered: typeof board = {}
-    for (const [status, issues] of Object.entries(board || {})) {
+    const filtered: typeof parentOnlyBoard = {}
+    for (const [status, issues] of Object.entries(parentOnlyBoard || {})) {
       const matching = issues.filter((issue) => {
         const matchAssignee = selectedAssignees.size === 0 || (issue.assigneeId && selectedAssignees.has(issue.assigneeId))
         const matchLabel = selectedLabels.size === 0 || issue.labels.some((il) => selectedLabels.has(il.label.id))
@@ -140,7 +210,7 @@ export default function BoardPage() {
       if (matching.length > 0) filtered[status] = matching
     }
     return filtered
-  }, [board, selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
+  }, [parentOnlyBoard, selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
 
   const toggleAssignee = useCallback((id: string) => {
     setSelectedAssignees((prev) => toggleSet(prev, id))
@@ -201,6 +271,11 @@ export default function BoardPage() {
                 projectKey={project?.key || ''}
                 onIssueClick={setSelectedIssue}
                 onAddClick={handleAddClick}
+                childrenMap={childrenMap}
+                expandedIssues={expandedIssues}
+                onToggleExpand={handleToggleExpand}
+                onChildClick={handleChildClick}
+                onChildStatusToggle={handleChildStatusToggle}
               />
             ))}
           </div>
