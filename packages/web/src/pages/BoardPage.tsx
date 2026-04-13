@@ -243,11 +243,8 @@ export default function BoardPage() {
           />
           <FilterDivider />
           <AssigneeAvatars members={assignedMembers} selected={selectedAssignees} onToggle={toggleAssignee} />
-          {assignedMembers.length > 0 && boardLabels.length > 0 && <FilterDivider />}
           <LabelChips labels={boardLabels} selected={selectedLabels} onToggle={toggleLabel} />
-          {boardComponents.length > 0 && <FilterDivider />}
           <ComponentChips components={boardComponents} selected={selectedComponents} onToggle={toggleComponent} />
-          {boardLabels.length > 0 && boardEpics.length > 0 && <FilterDivider />}
           <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
           {(selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType) && (
             <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(''); setFilterPriority(''); setFilterType('') }} />
