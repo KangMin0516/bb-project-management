@@ -30,6 +30,11 @@ export interface UserProfile {
   createdAt: string
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
 export const authApi = {
   login: (data: LoginPayload) =>
     api.post<{ data: AuthResponse }>('/auth/login', data).then((r) => r.data.data),
@@ -39,4 +44,6 @@ export const authApi = {
     api.post<{ data: AuthResponse }>('/auth/refresh', { refreshToken }).then((r) => r.data.data),
   getProfile: () =>
     api.get<{ data: UserProfile }>('/auth/me').then((r) => r.data.data),
+  changePassword: (data: ChangePasswordPayload) =>
+    api.patch<{ data: { message: string } }>('/auth/change-password', data).then((r) => r.data.data),
 }

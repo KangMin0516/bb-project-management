@@ -1,51 +1,70 @@
 # Stage 3: 코드리뷰 종합 결과
 
-## 리뷰 결과 요약: 모든 Critical/Warning 수정 완료
+## 대상: Kanban Board - Parent/Child Issue Display Improvement
+
+### 전체 결과: **승인 (수정 반영 완료)**
+- Critical: 0건
+- Warning: 5건 (모두 수정 완료)
+- Info: 3건
 
 ---
 
-## 수정된 Critical 이슈 (4건)
+## Step 1: 기능 리뷰 (Code Reviewer)
 
-### C1: CommentInput 멘션 시스템 HTML 비호환 → 수정 완료
-- `CommentInput.tsx`의 `@` 감지를 `htmlToPlainText()` 유틸로 HTML→plain text 변환 후 수행하도록 변경
-- `insertMention`에서 HTML 문자열 직접 슬라이싱 제거
+### Warnings (수정 완료)
+1. **`children` prop 이름 충돌** → `childIssues`로 변경 완료
+2. **ChildIssue 인터페이스 중복** → `board/types.ts`로 추출 완료
+3. **handleChildClick O(n) 검색** → `allIssuesById` Map으로 O(1) 접근 변경
+4. **handleChildStatusToggle 의존성** → `updateIssueMutation.mutate` 직접 참조
+5. **IN_PROGRESS 상태 체크박스 동작** → 의도된 동작 (체크=DONE, 해제=TODO)
 
-### C2: 이미지 업로드 실패 시 Object URL fallback → 수정 완료
-- `TipTapEditor.tsx:213-216`의 `URL.createObjectURL` fallback 제거
-- 에러 시 toast 메시지로 사용자에게 알림
-
-### C3: 에디터 submit 후 초기화 안 됨 → 수정 완료
-- `TipTapEditor.tsx:189-197`의 useEffect에 `content === ''` 시 `editor.commands.clearContent()` 호출 추가
-
-### C4: markdownToHtml 이미지/링크 regex 순서 버그 → 수정 완료
-- 이미지 패턴(`![alt](url)`)을 링크 패턴(`[text](url)`)보다 먼저 배치
+### Info (참고)
+- childrenMap useMemo 성능: 현 규모에서 허용 가능
+- hasChildren 판별: childList.length 기반으로 수정하여 엣지 케이스 해소
+- filteredBoard 빈 배열 제외: 기존 동작과 일관성 유지
 
 ---
 
-## 수정된 Warning 이슈 (4건)
+## Step 2: CTO 리뷰
 
-### W1-W2: DTO entries 검증 부족 → 수정 완료
-- `CredentialEntryDto.key`에 `@MaxLength(200)` 추가
-- `CredentialEntryDto.value`에 `@MaxLength(5000)` 추가
-- `CreateCredentialDto.entries`에 `@ArrayMaxSize(50)` 추가
-- `description`에 `@MaxLength(1000)`, `url`에 `@MaxLength(2000)` 추가
+### 유지보수성 점수: 8/10 (수정 후)
+- 가독성: 8/10
+- 일관성: 9/10
+- 확장성: 7/10
+- 테스트 용이성: 7/10
 
-### W3: `@tiptap/extension-mention` 데드 의존성 → 제거 완료
+### Refactoring (수정 완료)
+1. **ChildIssue 타입 3곳 중복** → `board/types.ts` 단일 소스로 추출
+2. **children prop 예약어 충돌** → `childIssues`로 rename
+3. **handleChildClick O(n)** → `allIssuesById` Map으로 O(1)
 
-### W4: `credential.service.ts`의 `as any` 캐스팅 → 수정 완료
-- `dto.entries as any` → `dto.entries as unknown as Prisma.InputJsonValue`
+### 향후 개선 권장 (non-blocking)
+- BoardPage 커스텀 훅 분리 (useBoardChildren, useExpandState)
+- Optimistic update 추가 (체크박스 토글 시 즉각 반영)
+
+### Good Points
+- memo 적절한 사용
+- 이벤트 전파 차단 적절
+- 접근성 기본 처리 (role, tabIndex, onKeyDown)
+- parentOnlyBoard 필터링 접근 깔끔
+- 기존 코드 패턴 준수
 
 ---
 
-## 남은 Info 사항 (수정 불필요, 향후 개선)
+## 수정된 파일
 
-- CredentialManager에 role 기반 UI 분기 없음 (서버 403으로 보호됨)
-- TipTap CSS에 하드코딩 색상 (다크모드 미지원 상태이므로 무관)
-- `window.prompt()` 사용 for Link 삽입 (향후 커스텀 인라인 입력 교체 권장)
-- MarkdownViewer HTML 감지 로직 (향후 format 메타데이터 필드 추가 가능)
+| 파일 | 변경 |
+|------|------|
+| `components/board/types.ts` | 신규 - ChildIssue 공통 타입 |
+| `components/board/IssueCard.tsx` | children→childIssues, hasChildren 로직 수정 |
+| `components/board/BoardColumn.tsx` | 타입 import 변경, prop명 수정 |
+| `pages/BoardPage.tsx` | allIssuesById 추가, 타입 import, 의존성 수정 |
 
 ---
 
 ## 빌드 검증
-- API: tsc --noEmit 통과
-- Web: tsc -b && vite build 통과
+- Web: tsc --noEmit 통과
+- Web: vite build 통과
+
+## 다음 단계
+→ `/4-test` 진행 가능

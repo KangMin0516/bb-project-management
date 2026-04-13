@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 import type { Issue } from '@/api/issues'
+import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
@@ -11,9 +12,25 @@ interface Props {
   projectKey: string
   onIssueClick: (issue: Issue) => void
   onAddClick: (status: string) => void
+  childrenMap?: Map<string, ChildIssue[]>
+  expandedIssues?: Set<string>
+  onToggleExpand?: (issueId: string) => void
+  onChildClick?: (child: ChildIssue) => void
+  onChildStatusToggle?: (child: ChildIssue) => void
 }
 
-export default memo(function BoardColumn({ status, issues, projectKey, onIssueClick, onAddClick }: Props) {
+export default memo(function BoardColumn({
+  status,
+  issues,
+  projectKey,
+  onIssueClick,
+  onAddClick,
+  childrenMap,
+  expandedIssues,
+  onToggleExpand,
+  onChildClick,
+  onChildStatusToggle,
+}: Props) {
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
       <div className="flex items-center gap-2 px-3 py-2.5">
@@ -48,6 +65,11 @@ export default memo(function BoardColumn({ status, issues, projectKey, onIssueCl
                       issue={issue}
                       projectKey={projectKey}
                       onClick={() => onIssueClick(issue)}
+                      childIssues={childrenMap?.get(issue.id)}
+                      isExpanded={expandedIssues?.has(issue.id)}
+                      onToggleExpand={onToggleExpand}
+                      onChildClick={onChildClick}
+                      onChildStatusToggle={onChildStatusToggle}
                     />
                   </div>
                 )}
