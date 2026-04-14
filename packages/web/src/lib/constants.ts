@@ -65,3 +65,37 @@ export const STATUS_BAR_COLORS: Record<string, string> = {
 }
 
 export const ORDER_GAP = 1000
+
+export const STATUS_BADGE_COLORS: Record<string, string> = {
+  BACKLOG: 'bg-gray-100 text-gray-700',
+  TODO: 'bg-blue-100 text-blue-700',
+  IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
+  REVIEW_QA: 'bg-purple-100 text-purple-700',
+  DONE: 'bg-green-100 text-green-700',
+  CANCELED: 'bg-red-100 text-red-700',
+  RECHECK: 'bg-orange-100 text-orange-700',
+}
+
+export const EPIC_STATUS_ORDER: Record<string, number> = {
+  IN_PROGRESS: 0,
+  TODO: 1,
+  BACKLOG: 2,
+  REVIEW_QA: 3,
+  RECHECK: 4,
+  DONE: 5,
+  CANCELED: 6,
+}
+
+export function calculateDropOrder(
+  destIssues: { order?: number }[],
+  destIndex: number,
+): number {
+  if (destIssues.length === 0) return ORDER_GAP
+  if (destIndex === 0) return (destIssues[0]?.order ?? ORDER_GAP) / 2
+  if (destIndex >= destIssues.length) {
+    return (destIssues[destIssues.length - 1]?.order ?? 0) + ORDER_GAP
+  }
+  const before = destIssues[destIndex - 1]?.order ?? 0
+  const after = destIssues[destIndex]?.order ?? before + ORDER_GAP * 2
+  return (before + after) / 2
+}
