@@ -303,8 +303,12 @@ export default function SettingsPage() {
         <div className="space-y-2">
           {members?.map((m) => (
             <div key={m.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700">
-                {m.user.name.charAt(0).toUpperCase()}
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden">
+                {m.user.avatar ? (
+                  <img src={m.user.avatar} alt={m.user.name} className="h-full w-full object-cover" />
+                ) : (
+                  m.user.name.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="flex-1">
                 <div className="text-sm font-medium text-gray-900">{m.user.name}</div>

@@ -115,10 +115,14 @@ export default memo(function IssueCard({
           </div>
           {issue.assignee && (
             <div
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden"
               title={issue.assignee.name}
             >
-              {issue.assignee.name.charAt(0).toUpperCase()}
+              {issue.assignee.avatar ? (
+                <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
+              ) : (
+                issue.assignee.name.charAt(0).toUpperCase()
+              )}
             </div>
           )}
         </div>
@@ -171,10 +175,14 @@ export default memo(function IssueCard({
               />
               {child.assignee && (
                 <div
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9px] font-medium text-primary-700"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9px] font-medium text-primary-700 overflow-hidden"
                   title={child.assignee.name}
                 >
-                  {child.assignee.name.charAt(0).toUpperCase()}
+                  {child.assignee.avatar ? (
+                    <img src={child.assignee.avatar} alt={child.assignee.name} className="h-full w-full object-cover" />
+                  ) : (
+                    child.assignee.name.charAt(0).toUpperCase()
+                  )}
                 </div>
               )}
             </div>

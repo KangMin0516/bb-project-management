@@ -9,6 +9,7 @@ interface AuthState {
   register: (email: string, name: string, password: string) => Promise<string>
   loadUser: () => Promise<void>
   setTokens: (accessToken: string, refreshToken: string) => void
+  uploadAvatar: (file: File) => Promise<void>
   logout: () => void
 }
 
@@ -44,6 +45,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('token', accessToken)
     localStorage.setItem('refreshToken', refreshToken)
     set({ token: accessToken })
+  },
+
+  uploadAvatar: async (file: File) => {
+    await authApi.uploadAvatar(file)
+    const user = await authApi.getProfile()
+    set({ user })
   },
 
   logout: () => {

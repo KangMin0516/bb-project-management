@@ -62,6 +62,8 @@ export default function IssueDetailPanel({
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
   const [editingDescription, setEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState('')
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState('')
   const [showSubtaskInput, setShowSubtaskInput] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
 
@@ -71,7 +73,9 @@ export default function IssueDetailPanel({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (editingDescription) {
+        if (editingTitle) {
+          setEditingTitle(false)
+        } else if (editingDescription) {
           setEditingDescription(false)
         } else {
           onCloseRef.current()
@@ -80,7 +84,7 @@ export default function IssueDetailPanel({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [editingDescription])
+  }, [editingTitle, editingDescription])
 
   const { data: detail } = useQuery({
     queryKey: ['issue', projectId, issue.id],
@@ -228,7 +232,40 @@ export default function IssueDetailPanel({
               <span>#{d.number} {d.title}</span>
             </p>
           )}
-          <h2 className="mt-1 text-xl font-bold text-gray-900">{d.title}</h2>
+          {editingTitle ? (
+            <input
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onBlur={() => {
+                const trimmed = draftTitle.trim()
+                if (trimmed && trimmed !== d.title) {
+                  updateMutation.mutate({ title: trimmed })
+                }
+                setEditingTitle(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                }
+                if (e.key === 'Escape') {
+                  e.stopPropagation()
+                  setEditingTitle(false)
+                }
+              }}
+              className="mt-1 w-full rounded border border-primary-300 px-1 text-xl font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              autoFocus
+            />
+          ) : (
+            <h2
+              className="mt-1 cursor-pointer rounded px-1 -mx-1 text-xl font-bold text-gray-900 hover:bg-gray-50 transition"
+              onClick={() => {
+                setDraftTitle(d.title)
+                setEditingTitle(true)
+              }}
+            >
+              {d.title}
+            </h2>
+          )}
         </div>
 
         {/* Scrollable body */}
@@ -512,13 +549,13 @@ export default function IssueDetailPanel({
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && subtaskTitle.trim()) {
-                        createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id })
+                        createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id, status: d.status })
                       }
                       if (e.key === 'Escape') { setShowSubtaskInput(false); setSubtaskTitle('') }
                     }}
                   />
                   <button
-                    onClick={() => createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id })}
+                    onClick={() => createSubtaskMutation.mutate({ title: subtaskTitle, type: 'SUB_TASK', parentId: issue.id, status: d.status })}
                     disabled={!subtaskTitle.trim() || createSubtaskMutation.isPending}
                     className="rounded bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
                   >
