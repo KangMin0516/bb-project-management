@@ -15,6 +15,7 @@ interface Props {
   onToggleExpand?: (issueId: string) => void
   onChildClick?: (child: ChildIssue) => void
   onChildStatusToggle?: (child: ChildIssue) => void
+  compact?: boolean
 }
 
 export default memo(function IssueCard({
@@ -26,6 +27,7 @@ export default memo(function IssueCard({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
+  compact,
 }: Props) {
   const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
   const overdue = isIssueOverdue(issue)
@@ -42,7 +44,8 @@ export default memo(function IssueCard({
         role="button"
         tabIndex={0}
         className={cn(
-          'cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition hover:shadow-md',
+          'cursor-pointer rounded-lg border bg-white shadow-sm transition hover:shadow-md',
+          compact ? 'p-2' : 'p-3',
           overdue ? 'border-red-300 border-l-4 border-l-red-500' : 'border-gray-200',
           isExpanded && hasChildren && 'rounded-b-none border-b-0',
         )}
@@ -58,7 +61,7 @@ export default memo(function IssueCard({
             </span>
           )}
         </div>
-        <p className="mb-2 text-sm font-medium leading-snug text-gray-900">{issue.title}</p>
+        <p className={cn('font-medium leading-snug text-gray-900', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
 
         {/* Progress bar for parent issues */}
         {hasChildren && (

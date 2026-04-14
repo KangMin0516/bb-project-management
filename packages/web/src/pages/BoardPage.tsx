@@ -2,17 +2,58 @@ import { useState, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
+import { Rows3 } from 'lucide-react'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import type { ChildIssue } from '@/components/board/types'
 import BoardColumn from '@/components/board/BoardColumn'
+import SwimlaneBoardView from '@/components/board/SwimlaneBoardView'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters, toggleSet } from '@/components/filter/FilterBar'
 import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
-import { STATUSES, ORDER_GAP } from '@/lib/constants'
+import { STATUSES, calculateDropOrder } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
+import { cn } from '@/lib/utils'
+
+// Shared filter predicate for both flat and swimlane modes
+function matchesFilters(
+  issue: Issue,
+  filters: {
+    assignees: Set<string>; labels: Set<string>; components: Set<string>
+    epicId: string | null; search: string; status: string; priority: string; type: string
+  },
+  options?: { keepEpics?: boolean },
+): boolean {
+  if (options?.keepEpics && issue.type === 'EPIC') return true
+  const { assignees, labels, components, epicId, search, status, priority, type } = filters
+  const searchLower = search.toLowerCase()
+  return (
+    (assignees.size === 0 || (!!issue.assigneeId && assignees.has(issue.assigneeId))) &&
+    (labels.size === 0 || issue.labels.some((il) => labels.has(il.label.id))) &&
+    (components.size === 0 || issue.components?.some((ic) => components.has(ic.component.id))) &&
+    (!epicId || issue.id === epicId || issue.parentId === epicId) &&
+    (!search || issue.title.toLowerCase().includes(searchLower) || String(issue.number).includes(search)) &&
+    (!status || issue.status === status) &&
+    (!priority || issue.priority === priority) &&
+    (!type || issue.type === type)
+  )
+}
+
+function filterBoard(
+  source: Record<string, Issue[]> | undefined,
+  filters: Parameters<typeof matchesFilters>[1],
+  options?: { keepEpics?: boolean },
+): Record<string, Issue[]> {
+  if (!source) return {}
+  const filtered: Record<string, Issue[]> = {}
+  for (const [status, issues] of Object.entries(source)) {
+    const matching = issues.filter((issue) => matchesFilters(issue, filters, options))
+    if (matching.length > 0) filtered[status] = matching
+  }
+  return filtered
+}
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -27,6 +68,7 @@ export default function BoardPage() {
   const [filterPriority, setFilterPriority] = useState('')
   const [filterType, setFilterType] = useState('')
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
+  const [groupByEpic, setGroupByEpic] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
@@ -111,6 +153,14 @@ export default function BoardPage() {
     setCreateModal(status)
   }, [])
 
+  // Shared filter config
+  const filters = useMemo(() => ({
+    assignees: selectedAssignees, labels: selectedLabels, components: selectedComponents,
+    epicId: selectedEpicId, search, status: filterStatus, priority: filterPriority, type: filterType,
+  }), [selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
+
+  const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || !!selectedEpicId || !!search || !!filterStatus || !!filterPriority || !!filterType
+
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
     if (!destination) return
@@ -123,19 +173,7 @@ export default function BoardPage() {
       ? rawIssues.filter(issue => issue.id !== draggableId)
       : rawIssues
 
-    let newOrder: number
-    if (destIssues.length === 0) {
-      newOrder = ORDER_GAP
-    } else if (destination.index === 0) {
-      newOrder = (destIssues[0]?.order || ORDER_GAP) / 2
-    } else if (destination.index >= destIssues.length) {
-      newOrder = (destIssues[destIssues.length - 1]?.order || 0) + ORDER_GAP
-    } else {
-      const before = destIssues[destination.index - 1]?.order || 0
-      const after = destIssues[destination.index]?.order || before + ORDER_GAP * 2
-      newOrder = (before + after) / 2
-    }
-
+    const newOrder = calculateDropOrder(destIssues, destination.index)
     reorderMutation.mutate({ issueId: draggableId, status: destStatus, order: newOrder })
   }
 
@@ -191,26 +229,19 @@ export default function BoardPage() {
   }, [board])
 
   const filteredBoard = useMemo(() => {
-    const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType
     if (!hasFilters) return parentOnlyBoard
-    const searchLower = search.toLowerCase()
-    const filtered: typeof parentOnlyBoard = {}
-    for (const [status, issues] of Object.entries(parentOnlyBoard || {})) {
-      const matching = issues.filter((issue) => {
-        const matchAssignee = selectedAssignees.size === 0 || (issue.assigneeId && selectedAssignees.has(issue.assigneeId))
-        const matchLabel = selectedLabels.size === 0 || issue.labels.some((il) => selectedLabels.has(il.label.id))
-        const matchComponent = selectedComponents.size === 0 || issue.components?.some((ic) => selectedComponents.has(ic.component.id))
-        const matchEpic = !selectedEpicId || issue.id === selectedEpicId || issue.parentId === selectedEpicId
-        const matchSearch = !search || issue.title.toLowerCase().includes(searchLower) || String(issue.number).includes(search)
-        const matchStatus = !filterStatus || issue.status === filterStatus
-        const matchPriority = !filterPriority || issue.priority === filterPriority
-        const matchType = !filterType || issue.type === filterType
-        return matchAssignee && matchLabel && matchComponent && matchEpic && matchSearch && matchStatus && matchPriority && matchType
-      })
-      if (matching.length > 0) filtered[status] = matching
-    }
-    return filtered
-  }, [parentOnlyBoard, selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
+    return filterBoard(parentOnlyBoard, filters)
+  }, [parentOnlyBoard, hasFilters, filters])
+
+  const filteredBoardForSwimlane = useMemo(() => {
+    if (!groupByEpic) return null
+    if (!hasFilters) return board
+    return filterBoard(board, filters, { keepEpics: true })
+  }, [groupByEpic, board, hasFilters, filters])
+
+  const handleSwimlaneReorder = useCallback((issueId: string, status: string, order: number) => {
+    reorderMutation.mutate({ issueId, status, order })
+  }, [reorderMutation.mutate])
 
   const toggleAssignee = useCallback((id: string) => {
     setSelectedAssignees((prev) => toggleSet(prev, id))
@@ -246,17 +277,43 @@ export default function BoardPage() {
           <LabelChips labels={boardLabels} selected={selectedLabels} onToggle={toggleLabel} />
           <ComponentChips components={boardComponents} selected={selectedComponents} onToggle={toggleComponent} />
           <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
-          {(selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || selectedEpicId || search || filterStatus || filterPriority || filterType) && (
+          {hasFilters && (
             <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(''); setFilterPriority(''); setFilterType('') }} />
           )}
+          <FilterDivider />
+          <button
+            type="button"
+            onClick={() => setGroupByEpic(!groupByEpic)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+              groupByEpic
+                ? 'border-primary-300 bg-primary-50 text-primary-700'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            <Rows3 className="h-3.5 w-3.5" />
+            Group: Epic
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto p-4">
+      <div className="flex-1 overflow-auto p-4">
         {isBoardLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
+        ) : groupByEpic ? (
+          <SwimlaneBoardView
+            board={filteredBoardForSwimlane || {}}
+            projectKey={project?.key || ''}
+            onIssueClick={setSelectedIssue}
+            onReorder={handleSwimlaneReorder}
+            childrenMap={childrenMap}
+            expandedIssues={expandedIssues}
+            onToggleExpand={handleToggleExpand}
+            onChildClick={handleChildClick}
+            onChildStatusToggle={handleChildStatusToggle}
+          />
         ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4">
