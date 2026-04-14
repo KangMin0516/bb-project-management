@@ -35,6 +35,11 @@ export interface ChangePasswordPayload {
   newPassword: string
 }
 
+export interface UpdateProfilePayload {
+  name?: string
+  avatar?: string
+}
+
 export const authApi = {
   login: (data: LoginPayload) =>
     api.post<{ data: AuthResponse }>('/auth/login', data).then((r) => r.data.data),
@@ -46,4 +51,13 @@ export const authApi = {
     api.get<{ data: UserProfile }>('/auth/me').then((r) => r.data.data),
   changePassword: (data: ChangePasswordPayload) =>
     api.patch<{ data: { message: string } }>('/auth/change-password', data).then((r) => r.data.data),
+  updateProfile: (data: UpdateProfilePayload) =>
+    api.patch<{ data: UserProfile }>('/auth/profile', data).then((r) => r.data.data),
+  uploadAvatar: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post<{ data: { url: string } }>('/upload/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data.data)
+  },
 }

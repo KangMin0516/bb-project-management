@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
+import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -109,6 +110,27 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const data: Record<string, string> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.avatar !== undefined) data.avatar = dto.avatar;
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        isSuperuser: true,
+        createdAt: true,
+      },
+    });
+
+    return user;
   }
 
   async getProfile(userId: string) {

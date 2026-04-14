@@ -19,6 +19,21 @@ import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 export class UploadController {
   constructor(private uploadService: UploadService) {}
 
+  @Post('avatar')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.uploadService.uploadAvatar(file, user.sub);
+  }
+
   @Post()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(

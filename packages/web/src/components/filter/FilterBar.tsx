@@ -108,8 +108,12 @@ export function AssigneeAvatars({
             onChange={() => onToggle(member.id)}
             className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
-            {member.name.charAt(0).toUpperCase()}
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden">
+            {member.avatar ? (
+              <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+            ) : (
+              member.name.charAt(0).toUpperCase()
+            )}
           </div>
           <span className="truncate text-xs text-gray-700">{member.name}</span>
         </label>

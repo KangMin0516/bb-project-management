@@ -1,6 +1,9 @@
 import { Outlet, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { useQuery } from '@tanstack/react-query'
+import { useRef } from 'react'
+import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 import { projectApi, type Project } from '@/api/projects'
 import {
   LayoutDashboard,
@@ -21,12 +24,25 @@ import CommandPalette from '@/components/search/CommandPalette'
 import NotificationBell from '@/components/notification/NotificationBell'
 
 export default function AppLayout() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, uploadAvatar } = useAuthStore()
   const { projectId } = useParams()
   const navigate = useNavigate()
   const [showProjects, setShowProjects] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true')
   const location = useLocation()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      await uploadAvatar(file)
+      useToastStore.getState().addToast('Avatar updated successfully')
+    } catch (err) {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload avatar'))
+    }
+    e.target.value = ''
+  }
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],
@@ -168,10 +184,22 @@ export default function AppLayout() {
                   <kbd className="ml-1 rounded bg-gray-200 px-1 text-[10px] font-medium">⌘K</kbd>
                 </button>
               </div>
+              <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} />
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </div>
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden"
+                  title="Change avatar"
+                >
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0).toUpperCase()
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </div>
+                </button>
                 <div className="flex-1 truncate">
                   <div className="truncate text-sm font-medium text-gray-900">{user?.name}</div>
                   <div className="truncate text-xs text-gray-500">{user?.email}</div>
@@ -184,8 +212,12 @@ export default function AppLayout() {
           ) : (
             <div className="flex flex-col items-center gap-2">
               <NotificationBell />
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700" title={user?.name}>
-                {user?.name?.charAt(0).toUpperCase()}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden" title={user?.name}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                ) : (
+                  user?.name?.charAt(0).toUpperCase()
+                )}
               </div>
               <button onClick={handleLogout} className="text-gray-400 hover:text-gray-600" title="Logout">
                 <LogOut className="h-4 w-4" />
