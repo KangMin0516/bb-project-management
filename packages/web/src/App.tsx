@@ -10,6 +10,7 @@ import NewProjectPage from '@/pages/NewProjectPage'
 import BoardPage from '@/pages/BoardPage'
 import IssuesPage from '@/pages/IssuesPage'
 import DashboardPage from '@/pages/DashboardPage'
+import GlobalDashboardPage from '@/pages/GlobalDashboardPage'
 import SettingsPage from '@/pages/SettingsPage'
 import CredentialsPage from '@/pages/CredentialsPage'
 import SpecificationsPage from '@/pages/SpecificationsPage'
@@ -54,7 +55,8 @@ export default function App() {
 
             <Route element={<AuthGuard />}>
               <Route element={<AppLayout />}>
-                <Route path="/" element={<ProjectsPage />} />
+                <Route path="/" element={<GlobalDashboardPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/new" element={<NewProjectPage />} />
                 <Route path="/projects/:projectId" element={<DashboardPage />} />
                 <Route path="/projects/:projectId/board" element={<BoardPage />} />
