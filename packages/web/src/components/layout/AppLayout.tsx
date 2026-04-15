@@ -6,6 +6,7 @@ import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 import { projectApi, type Project } from '@/api/projects'
 import {
+  Home,
   LayoutDashboard,
   FolderKanban,
   List,
@@ -63,7 +64,11 @@ export default function AppLayout() {
     navigate('/login')
   }
 
-  const navItems = projectId
+  const globalNavItems = [
+    { to: '/', icon: Home, label: 'Home' },
+  ]
+
+  const projectNavItems = projectId
     ? [
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
@@ -150,7 +155,7 @@ export default function AppLayout() {
 
         {/* Nav */}
         <nav className="flex-1 space-y-0.5 p-2">
-          {navItems.map((item) => (
+          {globalNavItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
@@ -167,6 +172,28 @@ export default function AppLayout() {
               {!collapsed && item.label}
             </Link>
           ))}
+          {projectNavItems.length > 0 && (
+            <>
+              <div className="my-1 border-t border-gray-100" />
+              {projectNavItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  title={collapsed ? item.label : undefined}
+                  className={cn(
+                    'flex items-center rounded-lg text-sm font-medium',
+                    collapsed ? 'justify-center px-2 py-2' : 'gap-2 px-3 py-2',
+                    location.pathname === item.to
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-50',
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && item.label}
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* User */}

@@ -48,7 +48,33 @@ export interface DashboardStats {
   myFocusIssues: Issue[]
 }
 
+export interface GlobalOverdueIssue extends OverdueIssue {
+  project: { id: string; name: string; key: string }
+}
+
+export interface GlobalIssue extends Issue {
+  project: { id: string; name: string; key: string }
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  key: string
+  totalIssues: number
+  doneIssues: number
+  myIssueCount: number
+}
+
+export interface GlobalDashboard {
+  projects: ProjectSummary[]
+  focusIssues: GlobalIssue[]
+  myIssues: GlobalIssue[]
+  overdueIssues: GlobalOverdueIssue[]
+}
+
 export const dashboardApi = {
   getStats: (projectId: string) =>
     api.get<{ data: DashboardStats }>(`/projects/${projectId}/dashboard`).then((r) => r.data.data),
+  getMyDashboard: () =>
+    api.get<{ data: GlobalDashboard }>('/dashboard/my').then((r) => r.data.data),
 }

@@ -361,6 +361,112 @@ export class DashboardService {
     return result;
   }
 
+  async getMyGlobalDashboard(userId: string) {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    // Get all projects user is a member of
+    const memberships = await this.prisma.projectMember.findMany({
+      where: { userId },
+      include: {
+        project: {
+          select: { id: true, name: true, key: true },
+        },
+      },
+    });
+    const projectIds = memberships.map((m) => m.project.id);
+
+    if (projectIds.length === 0) {
+      return { projects: [], focusIssues: [], myIssues: [], overdueIssues: [] };
+    }
+
+    const issueInclude = {
+      assignee: { select: USER_SELECT },
+      creator: { select: USER_SELECT },
+      labels: { include: { label: true } },
+      parent: { select: { id: true, number: true, title: true } },
+      project: { select: { id: true, name: true, key: true } },
+      _count: { select: { children: true } },
+    };
+
+    const [allMyIssues, overdueIssues, projectStats] = await Promise.all([
+      this.prisma.issue.findMany({
+        where: {
+          projectId: { in: projectIds },
+          assigneeId: userId,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        include: issueInclude,
+        orderBy: [
+          { dueDate: { sort: 'asc', nulls: 'last' } },
+          { priority: 'asc' },
+          { createdAt: 'desc' },
+        ],
+        take: DashboardService.MAX_MY_ISSUES,
+      }),
+      this.prisma.issue.findMany({
+        where: {
+          projectId: { in: projectIds },
+          assigneeId: userId,
+          dueDate: { lt: todayStart },
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+          assignee: { select: { id: true, name: true, avatar: true } },
+          project: { select: { id: true, name: true, key: true } },
+        },
+        orderBy: { dueDate: 'asc' },
+        take: 20,
+      }),
+      Promise.all(
+        memberships.map(async (m) => {
+          const [totalIssues, doneIssues, myIssueCount] = await Promise.all([
+            this.prisma.issue.count({ where: { projectId: m.project.id } }),
+            this.prisma.issue.count({
+              where: { projectId: m.project.id, status: IssueStatus.DONE },
+            }),
+            this.prisma.issue.count({
+              where: {
+                projectId: m.project.id,
+                assigneeId: userId,
+                status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+              },
+            }),
+          ]);
+          return {
+            ...m.project,
+            totalIssues,
+            doneIssues,
+            myIssueCount,
+          };
+        }),
+      ),
+    ]);
+
+    const focusIssues = allMyIssues.filter(
+      (i) =>
+        i.focusDate && i.focusDate >= todayStart && i.focusDate <= todayEnd,
+    );
+    const myIssues = allMyIssues.filter(
+      (i) => !i.focusDate || i.focusDate < todayStart || i.focusDate > todayEnd,
+    );
+
+    return {
+      projects: projectStats,
+      focusIssues,
+      myIssues,
+      overdueIssues,
+    };
+  }
+
   private async getOverdueIssues(projectId: string) {
     const now = new Date();
     now.setUTCHours(0, 0, 0, 0);
