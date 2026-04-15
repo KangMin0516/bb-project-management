@@ -6,6 +6,9 @@ import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
 import { componentApi, type Component } from '@/api/components'
 import { Trash2, UserPlus, Check, X, Pencil } from 'lucide-react'
+import { slackApi } from '@/api/slack'
+import SlackIntegration from '@/components/settings/SlackIntegration'
+import DailyReportSettings from '@/components/settings/DailyReportSettings'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
@@ -19,6 +22,11 @@ export default function SettingsPage() {
     queryKey: ['project', projectId],
     queryFn: () => projectApi.get(projectId!),
     enabled: !!projectId,
+  })
+
+  const { data: slackStatus } = useQuery({
+    queryKey: ['slack-status'],
+    queryFn: slackApi.getStatus,
   })
 
   const { data: members } = useQuery({
@@ -635,6 +643,16 @@ export default function SettingsPage() {
           </button>
         </div>
       </section>
+
+      {/* Slack Integration */}
+      <SlackIntegration />
+
+      {/* Daily Reports */}
+      <DailyReportSettings
+        projectId={projectId!}
+        integrationId={slackStatus?.integrationId}
+        slackConnected={slackStatus?.connected ?? false}
+      />
 
       {/* Danger zone */}
       <section className="rounded-xl border border-red-200 bg-white p-5">

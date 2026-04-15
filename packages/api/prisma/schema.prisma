@@ -42,6 +42,7 @@ model User {
   createdSpecs   Specification[] @relation("CreatedSpecs")
   specComments   SpecComment[]   @relation("SpecComments")
   credentials    ProjectCredential[] @relation("UserCredentials")
+  slackInstallations SlackIntegration[]
 
   @@map("users")
 }
@@ -62,6 +63,7 @@ model Project {
   components     Component[]
   specifications Specification[]
   credentials    ProjectCredential[]
+  reportConfig   DailyReportConfig?
 
   @@map("projects")
 }
@@ -481,4 +483,59 @@ model IssueSpecLink {
   @@index([issueId])
   @@index([specId])
   @@map("issue_spec_links")
+}
+
+// ─── Slack Integration ────────────────────────────────────
+
+model SlackIntegration {
+  id            String   @id @default(uuid())
+  teamId        String   @map("team_id")
+  teamName      String   @map("team_name")
+  botToken      String   @map("bot_token")
+  installedBy   User     @relation(fields: [installedById], references: [id])
+  installedById String   @map("installed_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  reportConfigs DailyReportConfig[]
+
+  @@unique([teamId])
+  @@map("slack_integrations")
+}
+
+// ─── Daily Report Config ──────────────────────────────────
+
+model DailyReportConfig {
+  id                 String    @id @default(uuid())
+  enabled            Boolean   @default(false)
+  timezone           String    @default("Asia/Seoul")
+
+  morningTime        String    @default("09:00") @map("morning_time")
+  morningChannelId   String?   @map("morning_channel_id")
+  morningChannelName String?   @map("morning_channel_name")
+
+  lunchTime          String    @default("13:00") @map("lunch_time")
+  lunchChannelId     String?   @map("lunch_channel_id")
+  lunchChannelName   String?   @map("lunch_channel_name")
+
+  eveningTime        String    @default("18:00") @map("evening_time")
+  eveningChannelId   String?   @map("evening_channel_id")
+  eveningChannelName String?   @map("evening_channel_name")
+
+  skipWeekends       Boolean   @default(true) @map("skip_weekends")
+
+  morningLastSent    DateTime? @map("morning_last_sent")
+  lunchLastSent      DateTime? @map("lunch_last_sent")
+  eveningLastSent    DateTime? @map("evening_last_sent")
+
+  project            Project   @relation(fields: [projectId], references: [id])
+  projectId          String    @unique @map("project_id")
+
+  slackIntegration   SlackIntegration @relation(fields: [slackIntegrationId], references: [id])
+  slackIntegrationId String    @map("slack_integration_id")
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("daily_report_configs")
 }

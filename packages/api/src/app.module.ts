@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/index.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
@@ -23,6 +24,8 @@ import { IssueSpecLinkModule } from './issue-spec-link/issue-spec-link.module.js
 import { ComponentModule } from './component/component.module.js';
 import { SpecificationModule } from './specification/specification.module.js';
 import { CredentialModule } from './credential/credential.module.js';
+import { SlackModule } from './slack/slack.module.js';
+import { ReportModule } from './report/report.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -32,6 +35,7 @@ import { AppController } from './app.controller.js';
       isGlobal: true,
       envFilePath: '../../.env',
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UserModule,
@@ -54,6 +58,8 @@ import { AppController } from './app.controller.js';
     ComponentModule,
     SpecificationModule,
     CredentialModule,
+    SlackModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [
