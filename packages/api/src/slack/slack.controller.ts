@@ -60,6 +60,9 @@ export class SlackController {
   @Get('channels')
   @ApiBearerAuth()
   async getChannels(@Query('integrationId') integrationId: string) {
+    if (!integrationId) {
+      return { channels: [] };
+    }
     const channels = await this.slackService.getChannels(integrationId);
     return { channels };
   }

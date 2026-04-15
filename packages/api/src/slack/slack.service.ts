@@ -240,6 +240,19 @@ export class SlackService {
   // ─── Disconnect ──────────────────────────────────────────
 
   async disconnect(integrationId: string): Promise<void> {
+    if (!integrationId) {
+      throw new NotFoundException('No Slack integration to disconnect');
+    }
+
+    // Verify integration exists before deleting
+    const integration = await this.prisma.slackIntegration.findUnique({
+      where: { id: integrationId },
+    });
+
+    if (!integration) {
+      throw new NotFoundException('Slack integration not found');
+    }
+
     // Delete related configs first
     await this.prisma.dailyReportConfig.deleteMany({
       where: { slackIntegrationId: integrationId },
