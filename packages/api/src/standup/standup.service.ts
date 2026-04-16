@@ -556,8 +556,32 @@ export class StandupService {
 
     const client = this.getClient(report.config.slackIntegration.botToken);
 
+    // Fetch user profile for avatar and display name
+    let iconUrl: string | undefined;
+    let displayName = report.username ?? report.slackUserId;
+    try {
+      const userInfo = await client.users.info({
+        user: report.slackUserId,
+      });
+      if (userInfo.user?.profile) {
+        iconUrl =
+          userInfo.user.profile.image_72 ??
+          userInfo.user.profile.image_48 ??
+          undefined;
+        displayName =
+          userInfo.user.real_name ??
+          userInfo.user.name ??
+          displayName;
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Could not fetch user profile for ${report.slackUserId}`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+
     const { attachments, text } = formatStandupReport({
-      username: report.username ?? report.slackUserId,
+      username: displayName,
       configName: report.config.name,
       answers: report.answers,
       status: report.status,
@@ -567,6 +591,8 @@ export class StandupService {
       channel: report.config.channelId,
       text,
       attachments: attachments as never[],
+      username: displayName,
+      icon_url: iconUrl,
     });
   }
 
