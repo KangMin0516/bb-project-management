@@ -55,10 +55,24 @@ export default function StandupSettingsPage() {
   }
 
   if (!slackStatus?.connected) {
+    const handleConnect = async () => {
+      try {
+        const { url } = await slackApi.getInstallUrl()
+        window.location.href = url
+      } catch {
+        // ignore
+      }
+    }
     return (
       <div className="mx-auto max-w-3xl p-6">
         <h1 className="mb-4 text-xl font-bold text-gray-900">Standup Bot</h1>
-        <p className="text-sm text-gray-500">Connect Slack first in project Settings to use the Standup Bot.</p>
+        <p className="mb-4 text-sm text-gray-500">Connect Slack to use the Standup Bot.</p>
+        <button
+          onClick={handleConnect}
+          className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+        >
+          Connect Slack
+        </button>
       </div>
     )
   }
