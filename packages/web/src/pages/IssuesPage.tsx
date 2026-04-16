@@ -68,11 +68,13 @@ export default function IssuesPage() {
   }, [])
 
   // Build query params — bulk load all issues (no pagination)
+  // Server only supports single enum values, so only send single-select to server;
+  // multi-select is filtered client-side below.
   const params: Record<string, string> = { limit: '200' }
   if (deferredSearch) params.search = deferredSearch
-  if (filters.status) params.status = filters.status
-  if (filters.priority) params.priority = filters.priority
-  if (filters.type) params.type = filters.type
+  if (filters.status.size === 1) params.status = [...filters.status][0]
+  if (filters.priority.size === 1) params.priority = [...filters.priority][0]
+  if (filters.type.size === 1) params.type = [...filters.type][0]
   // Server only supports single assigneeId — send first selected
   const firstAssignee = [...filters.assignees][0]
   if (firstAssignee) params.assigneeId = firstAssignee
@@ -165,7 +167,7 @@ export default function IssuesPage() {
 
   const memberList = members?.map((m) => m.user) || []
 
-  // Client-side label & component filter (server doesn't support these)
+  // Client-side filters for fields the server can't handle as multi-select
   const displayItems = useMemo(() => {
     if (!data?.items) return []
     let items = data.items
@@ -179,8 +181,18 @@ export default function IssuesPage() {
         issue.components?.some((ic) => filters.components.has(ic.component.id))
       )
     }
+    // Multi-select status/priority/type (server only handles single values)
+    if (filters.status.size > 1) {
+      items = items.filter((issue) => filters.status.has(issue.status))
+    }
+    if (filters.priority.size > 1) {
+      items = items.filter((issue) => filters.priority.has(issue.priority))
+    }
+    if (filters.type.size > 1) {
+      items = items.filter((issue) => filters.type.has(issue.type))
+    }
     return items
-  }, [data?.items, filters.labels, filters.components])
+  }, [data?.items, filters.labels, filters.components, filters.status, filters.priority, filters.type])
 
   const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {

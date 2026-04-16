@@ -22,7 +22,7 @@ function matchesFilters(
   issue: Issue,
   filters: {
     assignees: Set<string>; labels: Set<string>; components: Set<string>
-    epicId: string | null; search: string; status: string; priority: string; type: string
+    epicId: string | null; search: string; status: Set<string>; priority: Set<string>; type: Set<string>
   },
   options?: { keepEpics?: boolean },
 ): boolean {
@@ -35,9 +35,9 @@ function matchesFilters(
     (components.size === 0 || issue.components?.some((ic) => components.has(ic.component.id))) &&
     (!epicId || issue.id === epicId || issue.parentId === epicId) &&
     (!search || issue.title.toLowerCase().includes(searchLower) || String(issue.number).includes(search)) &&
-    (!status || issue.status === status) &&
-    (!priority || issue.priority === priority) &&
-    (!type || issue.type === type)
+    (status.size === 0 || status.has(issue.status)) &&
+    (priority.size === 0 || priority.has(issue.priority)) &&
+    (type.size === 0 || type.has(issue.type))
   )
 }
 
@@ -64,9 +64,9 @@ export default function BoardPage() {
   const [selectedComponents, setSelectedComponents] = useState<Set<string>>(new Set())
   const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterPriority, setFilterPriority] = useState('')
-  const [filterType, setFilterType] = useState('')
+  const [filterStatus, setFilterStatus] = useState<Set<string>>(new Set())
+  const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
+  const [filterType, setFilterType] = useState<Set<string>>(new Set())
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
   const [groupByEpic, setGroupByEpic] = useState(false)
   const queryClient = useQueryClient()
@@ -159,7 +159,7 @@ export default function BoardPage() {
     epicId: selectedEpicId, search, status: filterStatus, priority: filterPriority, type: filterType,
   }), [selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
 
-  const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || !!selectedEpicId || !!search || !!filterStatus || !!filterPriority || !!filterType
+  const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || !!selectedEpicId || !!search || filterStatus.size > 0 || filterPriority.size > 0 || filterType.size > 0
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -282,7 +282,7 @@ export default function BoardPage() {
           <ComponentChips components={boardComponents} selected={selectedComponents} onToggle={toggleComponent} />
           <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
           {hasFilters && (
-            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(''); setFilterPriority(''); setFilterType('') }} />
+            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(new Set()); setFilterPriority(new Set()); setFilterType(new Set()) }} />
           )}
           <FilterDivider />
           <button

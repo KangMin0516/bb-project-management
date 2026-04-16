@@ -31,9 +31,9 @@ export default function TimelinePage() {
 
   // Filters
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterPriority, setFilterPriority] = useState('')
-  const [filterType, setFilterType] = useState('')
+  const [filterStatus, setFilterStatus] = useState<Set<string>>(new Set())
+  const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
+  const [filterType, setFilterType] = useState<Set<string>>(new Set())
   const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set())
 
   const { data: project } = useQuery({
@@ -63,9 +63,9 @@ export default function TimelinePage() {
   const filteredIssues = useMemo(() => {
     const searchLower = search.toLowerCase()
     return allIssues.filter((issue) => {
-      if (filterStatus && issue.status !== filterStatus) return false
-      if (filterPriority && issue.priority !== filterPriority) return false
-      if (filterType && issue.type !== filterType) return false
+      if (filterStatus.size > 0 && !filterStatus.has(issue.status)) return false
+      if (filterPriority.size > 0 && !filterPriority.has(issue.priority)) return false
+      if (filterType.size > 0 && !filterType.has(issue.type)) return false
       if (selectedAssignees.size > 0 && (!issue.assigneeId || !selectedAssignees.has(issue.assigneeId))) return false
       if (search && !issue.title.toLowerCase().includes(searchLower) && !String(issue.number).includes(search)) return false
       return true
@@ -191,7 +191,7 @@ export default function TimelinePage() {
     setSelectedAssignees((prev) => toggleSet(prev, id))
   }, [])
 
-  const hasFilters = search || filterStatus || filterPriority || filterType || selectedAssignees.size > 0
+  const hasFilters = search || filterStatus.size > 0 || filterPriority.size > 0 || filterType.size > 0 || selectedAssignees.size > 0
 
   const hoveredIssueData = useMemo(() => {
     if (!hoveredIssue) return null
@@ -250,9 +250,9 @@ export default function TimelinePage() {
             <ClearFiltersButton
               onClick={() => {
                 setSearch('')
-                setFilterStatus('')
-                setFilterPriority('')
-                setFilterType('')
+                setFilterStatus(new Set())
+                setFilterPriority(new Set())
+                setFilterType(new Set())
                 setSelectedAssignees(new Set())
               }}
             />

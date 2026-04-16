@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Users, Tag, Layers, Zap, X } from 'lucide-react'
+import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { STATUSES } from '@/lib/constants'
+import { STATUSES, STATUS_COLORS } from '@/lib/constants'
 
 // Shared filter state interface
 export interface FilterState {
@@ -9,9 +9,9 @@ export interface FilterState {
   labels: Set<string>
   components: Set<string>
   epicId: string | null
-  status: string
-  priority: string
-  type: string
+  status: Set<string>
+  priority: Set<string>
+  type: Set<string>
   search: string
 }
 
@@ -20,14 +20,14 @@ export const INITIAL_FILTER: FilterState = {
   labels: new Set(),
   components: new Set(),
   epicId: null,
-  status: '',
-  priority: '',
-  type: '',
+  status: new Set(),
+  priority: new Set(),
+  type: new Set(),
   search: '',
 }
 
 export function hasActiveFilters(f: FilterState): boolean {
-  return f.assignees.size > 0 || f.labels.size > 0 || f.components.size > 0 || !!f.epicId || !!f.status || !!f.priority || !!f.type || !!f.search
+  return f.assignees.size > 0 || f.labels.size > 0 || f.components.size > 0 || !!f.epicId || f.status.size > 0 || f.priority.size > 0 || f.type.size > 0 || !!f.search
 }
 
 // Generic filter dropdown with checkboxes
@@ -239,7 +239,22 @@ export function ClearFiltersButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-// Dropdown filters (status, priority, type) for List view
+// Priority color dots for the filter dropdown
+const PRIORITY_DOT_COLORS: Record<string, string> = {
+  HIGH: 'bg-red-500',
+  MEDIUM: 'bg-yellow-500',
+  LOW: 'bg-green-500',
+}
+
+// Type icons for the filter dropdown
+const TYPE_EMOJI: Record<string, string> = {
+  EPIC: '\u26A1',
+  TASK: '\u2705',
+  BUG: '\uD83D\uDC1B',
+  SUB_TASK: '\uD83D\uDCCE',
+}
+
+// Multi-select dropdown filters (status, priority, type)
 export function DropdownFilters({
   status,
   priority,
@@ -248,45 +263,66 @@ export function DropdownFilters({
   onPriorityChange,
   onTypeChange,
 }: {
-  status: string
-  priority: string
-  type: string
-  onStatusChange: (v: string) => void
-  onPriorityChange: (v: string) => void
-  onTypeChange: (v: string) => void
+  status: Set<string>
+  priority: Set<string>
+  type: Set<string>
+  onStatusChange: (v: Set<string>) => void
+  onPriorityChange: (v: Set<string>) => void
+  onTypeChange: (v: Set<string>) => void
 }) {
   return (
     <>
-      <select
-        value={status}
-        onChange={(e) => onStatusChange(e.target.value)}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
-      >
-        <option value="">All Status</option>
+      <FilterDropdown label="Status" icon={CircleDot} selectedCount={status.size}>
         {STATUSES.map((s) => (
-          <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+          <label
+            key={s}
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+          >
+            <input
+              type="checkbox"
+              checked={status.has(s)}
+              onChange={() => onStatusChange(toggleSet(status, s))}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[s])} />
+            <span className="truncate text-xs text-gray-700">{s.replace(/_/g, ' ')}</span>
+          </label>
         ))}
-      </select>
-      <select
-        value={priority}
-        onChange={(e) => onPriorityChange(e.target.value)}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
-      >
-        <option value="">All Priority</option>
+      </FilterDropdown>
+      <FilterDropdown label="Priority" icon={Signal} selectedCount={priority.size}>
         {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
-          <option key={p} value={p}>{p}</option>
+          <label
+            key={p}
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+          >
+            <input
+              type="checkbox"
+              checked={priority.has(p)}
+              onChange={() => onPriorityChange(toggleSet(priority, p))}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div className={cn('h-2.5 w-2.5 rounded-full', PRIORITY_DOT_COLORS[p])} />
+            <span className="truncate text-xs text-gray-700">{p}</span>
+          </label>
         ))}
-      </select>
-      <select
-        value={type}
-        onChange={(e) => onTypeChange(e.target.value)}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
-      >
-        <option value="">All Type</option>
+      </FilterDropdown>
+      <FilterDropdown label="Type" icon={Shapes} selectedCount={type.size}>
         {['EPIC', 'TASK', 'BUG', 'SUB_TASK'].map((t) => (
-          <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+          <label
+            key={t}
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50"
+          >
+            <input
+              type="checkbox"
+              checked={type.has(t)}
+              onChange={() => onTypeChange(toggleSet(type, t))}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-xs">{TYPE_EMOJI[t] || ''}</span>
+            <span className="truncate text-xs text-gray-700">{t.replace(/_/g, ' ')}</span>
+          </label>
         ))}
-      </select>
+      </FilterDropdown>
     </>
   )
 }
