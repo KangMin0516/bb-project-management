@@ -14,7 +14,7 @@ interface ChannelCache {
   expiresAt: number;
 }
 
-interface SlackUser {
+export interface SlackUser {
   id: string;
   name: string;
   realName: string;
