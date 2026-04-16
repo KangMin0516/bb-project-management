@@ -122,6 +122,21 @@ export default function IssuesPage() {
   // Open issue detail from share link (?open= query param)
   useOpenIssueFromUrl(data?.items, setSelectedIssue)
 
+  const epicChangeMutation = useMutation({
+    mutationFn: ({ issueId, parentId }: { issueId: string; parentId: string | null }) =>
+      issueApi.update(projectId!, issueId, { parentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change epic'))
+    },
+  })
+
+  const handleEpicChange = useCallback((issueId: string, newParentId: string | null) => {
+    epicChangeMutation.mutate({ issueId, parentId: newParentId })
+  }, [epicChangeMutation])
+
   const deleteMutation = useMutation({
     mutationFn: (issueId: string) => issueApi.delete(projectId!, issueId),
     onSuccess: () => {
@@ -245,6 +260,7 @@ export default function IssuesPage() {
             issues={displayItems}
             projectKey={project?.key || ''}
             onIssueClick={setSelectedIssue}
+            onEpicChange={handleEpicChange}
           />
         ) : (
           <table className="w-full text-sm">
