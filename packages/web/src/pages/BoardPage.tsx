@@ -112,13 +112,13 @@ export default function BoardPage() {
     return map
   }, [board])
 
-  // Build children map: parentId -> child issues (from all statuses)
+  // Build children map: parentId -> SUB_TASK children only (shown inline on parent cards)
   const childrenMap = useMemo(() => {
     const map = new Map<string, ChildIssue[]>()
     if (!board) return map
     for (const issues of Object.values(board)) {
       for (const issue of issues) {
-        if (issue.parentId) {
+        if (issue.parentId && issue.type === 'SUB_TASK') {
           const existing = map.get(issue.parentId) || []
           existing.push({
             id: issue.id,
@@ -135,12 +135,12 @@ export default function BoardPage() {
     return map
   }, [board])
 
-  // Filter board: only show parent-level issues (no parentId)
+  // Filter board: hide SUB_TASKs (shown inline on parent cards), keep TASK/BUG even if under an epic
   const parentOnlyBoard = useMemo(() => {
     if (!board) return board
     const filtered: Record<string, Issue[]> = {}
     for (const [status, issues] of Object.entries(board)) {
-      filtered[status] = issues.filter((issue) => !issue.parentId)
+      filtered[status] = issues.filter((issue) => issue.type !== 'SUB_TASK')
     }
     return filtered
   }, [board])
