@@ -28,7 +28,7 @@ type ViewMode = 'list' | 'grouped'
 
 const VIEW_OPTIONS: ViewOption<ViewMode>[] = [
   { value: 'list', label: 'List', icon: <List className="h-3.5 w-3.5" /> },
-  { value: 'grouped', label: 'Grouped', icon: <GitBranch className="h-3.5 w-3.5" /> },
+  { value: 'grouped', label: 'Lists', icon: <GitBranch className="h-3.5 w-3.5" /> },
 ]
 
 export default function IssuesPage() {

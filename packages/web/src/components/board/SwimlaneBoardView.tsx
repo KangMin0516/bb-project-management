@@ -15,6 +15,7 @@ interface Props {
   projectKey: string
   onIssueClick: (issue: Issue) => void
   onReorder: (issueId: string, status: string, order: number) => void
+  onEpicChange?: (issueId: string, newParentId: string | null) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void
@@ -27,6 +28,7 @@ export default function SwimlaneBoardView({
   projectKey,
   onIssueClick,
   onReorder,
+  onEpicChange,
   childrenMap,
   expandedIssues,
   onToggleExpand,
@@ -115,8 +117,11 @@ export default function SwimlaneBoardView({
     const destEpicPrefix = destParts.join(':')
     const sourceEpicPrefix = source.droppableId.split(':').slice(0, -1).join(':')
 
-    // Block cross-epic DnD — only allow within same swimlane
-    if (destEpicPrefix !== sourceEpicPrefix) return
+    // Cross-epic drag: update parentId
+    if (destEpicPrefix !== sourceEpicPrefix && onEpicChange) {
+      const newParentId = destEpicPrefix === '__no_epic__' ? null : destEpicPrefix
+      onEpicChange(draggableId, newParentId)
+    }
 
     // Get issues in destination column from the correct swimlane
     const targetLane = swimlanes.find((lane) => {
@@ -131,7 +136,7 @@ export default function SwimlaneBoardView({
 
     const newOrder = calculateDropOrder(destIssues, destination.index)
     onReorder(draggableId, destStatus, newOrder)
-  }, [swimlanes, onReorder])
+  }, [swimlanes, onReorder, onEpicChange])
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>

@@ -95,7 +95,7 @@ export default function BoardPage() {
   })
 
   const updateIssueMutation = useMutation({
-    mutationFn: (args: { issueId: string; data: { status?: string } }) =>
+    mutationFn: (args: { issueId: string; data: { status?: string; parentId?: string | null } }) =>
       issueApi.update(projectId!, args.issueId, args.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
@@ -243,6 +243,10 @@ export default function BoardPage() {
     reorderMutation.mutate({ issueId, status, order })
   }, [reorderMutation.mutate])
 
+  const handleSwimlaneEpicChange = useCallback((issueId: string, newParentId: string | null) => {
+    updateIssueMutation.mutate({ issueId, data: { parentId: newParentId } })
+  }, [updateIssueMutation.mutate])
+
   const toggleAssignee = useCallback((id: string) => {
     setSelectedAssignees((prev) => toggleSet(prev, id))
   }, [])
@@ -308,6 +312,7 @@ export default function BoardPage() {
             projectKey={project?.key || ''}
             onIssueClick={setSelectedIssue}
             onReorder={handleSwimlaneReorder}
+            onEpicChange={handleSwimlaneEpicChange}
             childrenMap={childrenMap}
             expandedIssues={expandedIssues}
             onToggleExpand={handleToggleExpand}
