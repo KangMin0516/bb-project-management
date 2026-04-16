@@ -10,6 +10,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
@@ -89,15 +90,65 @@ export class UploadService {
       }),
     );
 
-    const url = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+    const proxyUrl = `/api/upload/avatar/${userId}`;
 
     // Update user avatar in DB
     await this.prisma.user.update({
       where: { id: userId },
-      data: { avatar: url },
+      data: { avatar: proxyUrl },
     });
 
-    return { url };
+    return { url: proxyUrl };
+  }
+
+  async getAvatar(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatar: true },
+    });
+
+    if (!user?.avatar) return null;
+
+    // Resolve S3 key from avatar field
+    let s3Key: string;
+    if (user.avatar.startsWith('http')) {
+      // Legacy: full S3 URL stored in DB
+      const urlObj = new URL(user.avatar);
+      s3Key = urlObj.pathname.slice(1);
+    } else {
+      // New proxy URL format — need to find the actual S3 key
+      // List isn't needed; we stored the key as avatars/{userId}{ext}
+      // Try common extensions
+      for (const ext of ['.jpeg', '.jpg', '.png', '.webp']) {
+        const tryKey = `avatars/${userId}${ext}`;
+        try {
+          const result = await this.s3.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: tryKey }),
+          );
+          return {
+            stream: result.Body,
+            contentType: result.ContentType || 'image/jpeg',
+          };
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    try {
+      const result = await this.s3.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: s3Key }),
+      );
+      return {
+        stream: result.Body,
+        contentType: result.ContentType || 'image/jpeg',
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Failed to get avatar from S3: ${message}`);
+      return null;
+    }
   }
 
   async upload(
