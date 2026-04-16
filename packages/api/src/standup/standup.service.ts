@@ -295,10 +295,6 @@ export class StandupService {
                   text: { type: 'plain_text', text: 'Cancel' },
                   value: `cancel_${report.id}`,
                 },
-                {
-                  text: { type: 'plain_text', text: 'Away' },
-                  value: `away_${report.id}`,
-                },
               ],
             },
           ],
@@ -468,13 +464,8 @@ export class StandupService {
 
     if (!report || report.status !== 'ACTIVE') return;
 
-    const newStatus =
-      actionType === 'cancel'
-        ? 'CANCELED'
-        : actionType === 'away'
-          ? 'AWAY'
-          : null;
-    if (!newStatus) return;
+    if (actionType !== 'cancel') return;
+    const newStatus = 'CANCELED';
 
     await this.prisma.standupReport.update({
       where: { id: reportId },
@@ -594,6 +585,56 @@ export class StandupService {
       username: displayName,
       icon_url: iconUrl,
     });
+  }
+
+  // ─── Remind Unanswered ───────────────────────────────────
+
+  async remindUnanswered() {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    // Find ACTIVE reports created more than 30 min ago that haven't been reminded
+    const reports = await this.prisma.standupReport.findMany({
+      where: {
+        status: 'ACTIVE',
+        remindedAt: null,
+        createdAt: { lt: thirtyMinAgo },
+      },
+      include: {
+        config: { include: { slackIntegration: true } },
+      },
+    });
+
+    for (const report of reports) {
+      try {
+        const client = this.getClient(
+          report.config.slackIntegration.botToken,
+        );
+
+        const dm = await client.conversations.open({
+          users: report.slackUserId,
+        });
+        const dmChannelId = dm.channel?.id;
+        if (!dmChannelId) continue;
+
+        const name = report.username ?? report.slackUserId;
+        await client.chat.postMessage({
+          channel: dmChannelId,
+          text: `:bell: Reminder: *${name}*, please complete your *${report.config.name}* standup!`,
+        });
+
+        await this.prisma.standupReport.update({
+          where: { id: report.id },
+          data: { remindedAt: new Date() },
+        });
+
+        this.logger.log(`Sent reminder to ${name} for ${report.config.name}`);
+      } catch (err) {
+        this.logger.error(
+          `Failed to remind ${report.slackUserId}`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
+    }
   }
 
   // ─── Helpers ──────────────────────────────────────────────

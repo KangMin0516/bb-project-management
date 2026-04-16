@@ -12,6 +12,18 @@ export class StandupScheduler {
     private standupService: StandupService,
   ) {}
 
+  @Cron('0 */5 * * * *') // Every 5 minutes — check for overdue reminders
+  async checkReminders() {
+    try {
+      await this.standupService.remindUnanswered();
+    } catch (err) {
+      this.logger.error(
+        'Failed to check reminders',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
   @Cron('0 * * * * *') // Every minute at :00
   async checkAndTriggerStandups() {
     const configs = await this.prisma.standupConfig.findMany({

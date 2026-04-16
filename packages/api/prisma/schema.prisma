@@ -625,9 +625,10 @@ model StandupReport {
   configId String        @map("config_id")
   config   StandupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-  answers   StandupAnswer[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  answers    StandupAnswer[]
+  remindedAt DateTime? @map("reminded_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   @@index([configId, createdAt])
   @@index([slackUserId, status])
