@@ -263,10 +263,13 @@ export class StandupService {
       return;
     }
 
-    // Send greeting
+    // Send greeting — support both {{var}} and ${var} formats
+    const name = member.username ?? member.slackUserId;
     const greetingText = config.greeting
-      .replace(/\{\{username\}\}/g, member.username ?? member.slackUserId)
-      .replace(/\{\{config_name\}\}/g, config.name);
+      .replace(/\{\{username\}\}/g, name)
+      .replace(/\$\{username\}/g, name)
+      .replace(/\{\{config_name\}\}/g, config.name)
+      .replace(/\$\{config_name\}/g, config.name);
 
     await client.chat.postMessage({
       channel: dmChannelId,
@@ -402,10 +405,15 @@ export class StandupService {
         data: { status: 'ANSWERED' },
       });
 
-      // Send goodbye
+      // Send goodbye — support both {{var}} and ${var} formats
+      const goodbyeText = report.config.goodbye
+        .replace(/\{\{username\}\}/g, report.username ?? report.slackUserId)
+        .replace(/\$\{username\}/g, report.username ?? report.slackUserId)
+        .replace(/\{\{config_name\}\}/g, report.config.name)
+        .replace(/\$\{config_name\}/g, report.config.name);
       await client.chat.postMessage({
         channel: event.channel,
-        text: report.config.goodbye,
+        text: goodbyeText,
       });
 
       // Post report to channel
