@@ -110,7 +110,7 @@ export default function IssueDetailPanel({
     queryKey: ['issues', projectId, 'epics'],
     queryFn: () => issueApi.list(projectId, { type: 'EPIC', limit: '200' }),
     select: (data) => data.items,
-    enabled: d.type !== 'EPIC',
+    enabled: issue.type !== 'EPIC',
   })
 
   const queryClient = useQueryClient()
