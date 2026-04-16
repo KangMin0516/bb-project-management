@@ -24,13 +24,23 @@ function matchesFilters(
     assignees: Set<string>; labels: Set<string>; components: Set<string>
     epicId: string | null; search: string; status: Set<string>; priority: Set<string>; type: Set<string>
   },
-  options?: { keepEpics?: boolean },
+  options?: { keepEpics?: boolean; childrenMap?: Map<string, ChildIssue[]> },
 ): boolean {
   if (options?.keepEpics && issue.type === 'EPIC') return true
   const { assignees, labels, components, epicId, search, status, priority, type } = filters
   const searchLower = search.toLowerCase()
+
+  // Assignee check: also match if any sub-task is assigned to a selected assignee
+  let assigneeMatch = assignees.size === 0 || (!!issue.assigneeId && assignees.has(issue.assigneeId))
+  if (!assigneeMatch && assignees.size > 0 && options?.childrenMap) {
+    const children = options.childrenMap.get(issue.id)
+    if (children) {
+      assigneeMatch = children.some((c) => c.assignee && assignees.has(c.assignee.id))
+    }
+  }
+
   return (
-    (assignees.size === 0 || (!!issue.assigneeId && assignees.has(issue.assigneeId))) &&
+    assigneeMatch &&
     (labels.size === 0 || issue.labels.some((il) => labels.has(il.label.id))) &&
     (components.size === 0 || issue.components?.some((ic) => components.has(ic.component.id))) &&
     (!epicId || issue.id === epicId || issue.parentId === epicId) &&
@@ -44,7 +54,7 @@ function matchesFilters(
 function filterBoard(
   source: Record<string, Issue[]> | undefined,
   filters: Parameters<typeof matchesFilters>[1],
-  options?: { keepEpics?: boolean },
+  options?: { keepEpics?: boolean; childrenMap?: Map<string, ChildIssue[]> },
 ): Record<string, Issue[]> {
   if (!source) return {}
   const filtered: Record<string, Issue[]> = {}
@@ -230,14 +240,14 @@ export default function BoardPage() {
 
   const filteredBoard = useMemo(() => {
     if (!hasFilters) return parentOnlyBoard
-    return filterBoard(parentOnlyBoard, filters)
-  }, [parentOnlyBoard, hasFilters, filters])
+    return filterBoard(parentOnlyBoard, filters, { childrenMap })
+  }, [parentOnlyBoard, hasFilters, filters, childrenMap])
 
   const filteredBoardForSwimlane = useMemo(() => {
     if (!groupByEpic) return null
     if (!hasFilters) return board
-    return filterBoard(board, filters, { keepEpics: true })
-  }, [groupByEpic, board, hasFilters, filters])
+    return filterBoard(board, filters, { keepEpics: true, childrenMap })
+  }, [groupByEpic, board, hasFilters, filters, childrenMap])
 
   const handleSwimlaneReorder = useCallback((issueId: string, status: string, order: number) => {
     reorderMutation.mutate({ issueId, status, order })
