@@ -14,10 +14,23 @@ interface ChannelCache {
   expiresAt: number;
 }
 
+interface SlackUser {
+  id: string;
+  name: string;
+  realName: string;
+  avatar: string;
+}
+
+interface UserCache {
+  users: SlackUser[];
+  expiresAt: number;
+}
+
 @Injectable()
 export class SlackService {
   private readonly logger = new Logger(SlackService.name);
   private readonly channelCache = new Map<string, ChannelCache>();
+  private readonly userCache = new Map<string, UserCache>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(
@@ -65,7 +78,7 @@ export class SlackService {
     const state = this.encrypt(JSON.stringify({ userId, exp: expiry }));
     const encodedState = encodeURIComponent(state);
 
-    const scopes = 'chat:write,channels:read,groups:read';
+    const scopes = 'chat:write,channels:read,groups:read,users:read,im:write,im:history';
     return (
       `https://slack.com/oauth/v2/authorize` +
       `?client_id=${clientId}` +
@@ -188,6 +201,66 @@ export class SlackService {
     return channels;
   }
 
+  // ─── User List ──────────────────────────────────────────
+
+  async getUsers(integrationId: string): Promise<SlackUser[]> {
+    // Check cache
+    const cached = this.userCache.get(integrationId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.users;
+    }
+
+    const integration = await this.prisma.slackIntegration.findUnique({
+      where: { id: integrationId },
+    });
+
+    if (!integration) {
+      throw new NotFoundException('Slack integration not found');
+    }
+
+    const token = this.decrypt(integration.botToken);
+    const client = new WebClient(token);
+
+    const users: SlackUser[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const result = await client.users.list({
+        limit: 200,
+        cursor,
+      });
+
+      for (const member of result.members ?? []) {
+        if (
+          member.id &&
+          !member.is_bot &&
+          !member.deleted &&
+          member.id !== 'USLACKBOT'
+        ) {
+          users.push({
+            id: member.id,
+            name: member.name ?? member.id,
+            realName: member.real_name ?? member.name ?? member.id,
+            avatar: member.profile?.image_48 ?? '',
+          });
+        }
+      }
+
+      cursor = result.response_metadata?.next_cursor || undefined;
+    } while (cursor);
+
+    // Sort by realName
+    users.sort((a, b) => a.realName.localeCompare(b.realName));
+
+    // Cache
+    this.userCache.set(integrationId, {
+      users,
+      expiresAt: Date.now() + this.CACHE_TTL,
+    });
+
+    return users;
+  }
+
   // ─── Send Message ────────────────────────────────────────
 
   async sendMessage(
@@ -220,10 +293,7 @@ export class SlackService {
         return;
       } catch (err: unknown) {
         const error = err as { data?: { error?: string }; retryAfter?: number };
-        if (
-          error.data?.error === 'ratelimited' &&
-          retries < maxRetries
-        ) {
+        if (error.data?.error === 'ratelimited' && retries < maxRetries) {
           const delay = (error.retryAfter ?? Math.pow(2, retries)) * 1000;
           this.logger.warn(
             `Slack rate limited, retrying in ${delay}ms (attempt ${retries + 1})`,
@@ -264,6 +334,7 @@ export class SlackService {
 
     // Clear cache
     this.channelCache.delete(integrationId);
+    this.userCache.delete(integrationId);
   }
 
   // ─── Status ──────────────────────────────────────────────

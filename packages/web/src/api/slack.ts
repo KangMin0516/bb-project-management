@@ -11,6 +11,13 @@ export interface SlackChannel {
   name: string
 }
 
+export interface SlackUser {
+  id: string
+  name: string
+  realName: string
+  avatar: string
+}
+
 export const slackApi = {
   getInstallUrl: () =>
     api.get<{ data: { url: string } }>('/slack/install').then((r) => r.data.data),
@@ -18,6 +25,8 @@ export const slackApi = {
     api.get<{ data: SlackStatus }>('/slack/status').then((r) => r.data.data),
   getChannels: (integrationId: string) =>
     api.get<{ data: { channels: SlackChannel[] } }>(`/slack/channels?integrationId=${integrationId}`).then((r) => r.data.data.channels),
+  getUsers: (integrationId: string) =>
+    api.get<{ data: { users: SlackUser[] } }>(`/slack/users?integrationId=${integrationId}`).then((r) => r.data.data.users),
   disconnect: (integrationId: string) =>
     api.delete(`/slack/disconnect?integrationId=${integrationId}`),
 }

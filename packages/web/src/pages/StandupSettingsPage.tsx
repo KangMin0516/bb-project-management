@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { standupApi, type StandupConfig, type StandupQuestion } from '@/api/standup'
-import { slackApi, type SlackChannel } from '@/api/slack'
+import { slackApi, type SlackChannel, type SlackUser } from '@/api/slack'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
@@ -46,6 +46,12 @@ export default function StandupSettingsPage() {
     enabled: !!slackStatus?.integrationId,
   })
 
+  const { data: slackUsers } = useQuery({
+    queryKey: ['slack-users', slackStatus?.integrationId],
+    queryFn: () => slackApi.getUsers(slackStatus!.integrationId!),
+    enabled: !!slackStatus?.integrationId,
+  })
+
   if (!currentUser?.isSuperuser) {
     return (
       <div className="mx-auto max-w-3xl p-6">
@@ -87,6 +93,7 @@ export default function StandupSettingsPage() {
         configs={configs ?? []}
         questions={questions ?? []}
         channels={channels ?? []}
+        slackUsers={slackUsers ?? []}
         integrationId={slackStatus.integrationId!}
       />
     </div>
@@ -159,11 +166,13 @@ function ConfigsSection({
   configs,
   questions,
   channels,
+  slackUsers,
   integrationId,
 }: {
   configs: StandupConfig[]
   questions: StandupQuestion[]
   channels: SlackChannel[]
+  slackUsers: SlackUser[]
   integrationId: string
 }) {
   const queryClient = useQueryClient()
@@ -187,6 +196,7 @@ function ConfigsSection({
         <ConfigForm
           questions={questions}
           channels={channels}
+          slackUsers={slackUsers}
           integrationId={integrationId}
           onDone={() => {
             setShowNew(false)
@@ -202,6 +212,7 @@ function ConfigsSection({
             config={config}
             questions={questions}
             channels={channels}
+            slackUsers={slackUsers}
             expanded={expandedId === config.id}
             onToggle={() => setExpandedId(expandedId === config.id ? null : config.id)}
           />
@@ -220,12 +231,14 @@ function ConfigRow({
   config,
   questions,
   channels,
+  slackUsers,
   expanded,
   onToggle,
 }: {
   config: StandupConfig
   questions: StandupQuestion[]
   channels: SlackChannel[]
+  slackUsers: SlackUser[]
   expanded: boolean
   onToggle: () => void
 }) {
@@ -290,9 +303,92 @@ function ConfigRow({
 
       {expanded && (
         <div className="border-t border-gray-100 px-3 py-3">
-          <ConfigEditForm config={config} questions={questions} channels={channels} />
+          <ConfigEditForm config={config} questions={questions} channels={channels} slackUsers={slackUsers} />
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Member Selector ────────────────────────────────────────
+
+function MemberSelector({
+  slackUsers,
+  selectedIds,
+  onChange,
+  search,
+  onSearchChange,
+}: {
+  slackUsers: SlackUser[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+  search: string
+  onSearchChange: (s: string) => void
+}) {
+  const filtered = slackUsers.filter(
+    (u) =>
+      u.realName.toLowerCase().includes(search.toLowerCase()) ||
+      u.name.toLowerCase().includes(search.toLowerCase()),
+  )
+  const selectedUsers = slackUsers.filter((u) => selectedIds.includes(u.id))
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        Members ({selectedIds.length} selected)
+      </label>
+      {selectedUsers.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {selectedUsers.map((u) => (
+            <span
+              key={u.id}
+              className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs text-primary-700"
+            >
+              {u.avatar && <img src={u.avatar} alt="" className="h-4 w-4 rounded-full" />}
+              {u.realName}
+              <button
+                onClick={() => onChange(selectedIds.filter((id) => id !== u.id))}
+                className="ml-0.5 text-primary-400 hover:text-primary-600"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder="Search users..."
+        className="mb-1 w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+      />
+      <div className="max-h-40 overflow-y-auto rounded border border-gray-200 bg-white">
+        {filtered.map((u) => (
+          <label
+            key={u.id}
+            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-gray-50"
+          >
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(u.id)}
+              onChange={(e) => {
+                onChange(
+                  e.target.checked
+                    ? [...selectedIds, u.id]
+                    : selectedIds.filter((id) => id !== u.id),
+                )
+              }}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+            />
+            {u.avatar && <img src={u.avatar} alt="" className="h-5 w-5 rounded-full" />}
+            <span>{u.realName}</span>
+            <span className="text-xs text-gray-400">@{u.name}</span>
+          </label>
+        ))}
+        {filtered.length === 0 && (
+          <p className="px-2 py-2 text-xs text-gray-400">No users found</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -302,11 +398,13 @@ function ConfigRow({
 function ConfigForm({
   questions,
   channels,
+  slackUsers,
   integrationId,
   onDone,
 }: {
   questions: StandupQuestion[]
   channels: SlackChannel[]
+  slackUsers: SlackUser[]
   integrationId: string
   onDone: () => void
 }) {
@@ -318,8 +416,9 @@ function ConfigForm({
     cronDayOfWeek: '1-5',
     timezone: 'Asia/Seoul',
     selectedQuestionIds: [] as string[],
-    members: '' as string, // comma-separated Slack user IDs
+    selectedMemberIds: [] as string[],
   })
+  const [memberSearch, setMemberSearch] = useState('')
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -336,11 +435,10 @@ function ConfigForm({
           questionId: qId,
           order: i,
         })),
-        members: form.members
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((slackUserId) => ({ slackUserId })),
+        members: form.selectedMemberIds.map((id) => ({
+          slackUserId: id,
+          username: slackUsers.find((u) => u.id === id)?.realName,
+        })),
       }),
     onSuccess: () => {
       useToastStore.getState().addToast('Config created')
@@ -437,15 +535,13 @@ function ConfigForm({
           ))}
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Members (Slack User IDs, comma-separated)</label>
-        <input
-          value={form.members}
-          onChange={(e) => setForm({ ...form, members: e.target.value })}
-          placeholder="U01ABCDEF, U02GHIJKL"
-          className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-        />
-      </div>
+      <MemberSelector
+        slackUsers={slackUsers}
+        selectedIds={form.selectedMemberIds}
+        onChange={(ids) => setForm({ ...form, selectedMemberIds: ids })}
+        search={memberSearch}
+        onSearchChange={setMemberSearch}
+      />
       <div className="flex gap-2">
         <button
           onClick={() => createMutation.mutate()}
@@ -471,10 +567,12 @@ function ConfigEditForm({
   config,
   questions,
   channels,
+  slackUsers,
 }: {
   config: StandupConfig
   questions: StandupQuestion[]
   channels: SlackChannel[]
+  slackUsers: SlackUser[]
 }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState({
@@ -487,8 +585,9 @@ function ConfigEditForm({
     greeting: config.greeting,
     goodbye: config.goodbye,
     selectedQuestionIds: config.questions.map((q) => q.questionId),
-    members: config.members.map((m) => m.slackUserId).join(', '),
+    selectedMemberIds: config.members.map((m) => m.slackUserId),
   })
+  const [memberSearch, setMemberSearch] = useState('')
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -506,11 +605,10 @@ function ConfigEditForm({
           questionId: qId,
           order: i,
         })),
-        members: form.members
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((slackUserId) => ({ slackUserId })),
+        members: form.selectedMemberIds.map((id) => ({
+          slackUserId: id,
+          username: slackUsers.find((u) => u.id === id)?.realName,
+        })),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['standup-configs'] })
@@ -619,14 +717,13 @@ function ConfigEditForm({
           ))}
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Members (Slack User IDs)</label>
-        <input
-          value={form.members}
-          onChange={(e) => setForm({ ...form, members: e.target.value })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
-        />
-      </div>
+      <MemberSelector
+        slackUsers={slackUsers}
+        selectedIds={form.selectedMemberIds}
+        onChange={(ids) => setForm({ ...form, selectedMemberIds: ids })}
+        search={memberSearch}
+        onSearchChange={setMemberSearch}
+      />
       <button
         onClick={() => updateMutation.mutate()}
         disabled={updateMutation.isPending}
