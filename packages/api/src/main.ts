@@ -7,7 +7,7 @@ import { GlobalExceptionFilter } from './common/filters/index.js';
 import { TransformInterceptor } from './common/interceptors/index.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   // Global prefix

@@ -497,7 +497,8 @@ model SlackIntegration {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  reportConfigs DailyReportConfig[]
+  reportConfigs  DailyReportConfig[]
+  standupConfigs StandupConfig[]
 
   @@unique([teamId])
   @@map("slack_integrations")
@@ -538,4 +539,113 @@ model DailyReportConfig {
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   @@map("daily_report_configs")
+}
+
+// ─── Standup Bot ─────────────────────────────────────────
+
+enum StandupReportStatus {
+  ACTIVE
+  ANSWERED
+  AWAY
+  CANCELED
+  UNANSWERED
+}
+
+model StandupQuestion {
+  id         String   @id @default(uuid())
+  text       String   @db.VarChar(500)
+  ignoreText String   @default("nothing nope none no -") @map("ignore_text")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  configs StandupConfigQuestion[]
+  answers StandupAnswer[]
+
+  @@map("standup_questions")
+}
+
+model StandupConfig {
+  id          String  @id @default(uuid())
+  name        String  @db.VarChar(255)
+  greeting    String  @default("Hello *{{username}}*, it's time for your *{{config_name}}*") @db.Text
+  goodbye     String  @default("Thank you for your report.") @db.Text
+  channelId   String  @map("channel_id")
+  channelName String? @map("channel_name")
+
+  cronHour      String @default("9") @map("cron_hour")
+  cronMinute    String @default("0") @map("cron_minute")
+  cronDayOfWeek String @default("1-5") @map("cron_day_of_week")
+
+  timezone String  @default("Asia/Seoul")
+  enabled  Boolean @default(true)
+
+  slackIntegrationId String           @map("slack_integration_id")
+  slackIntegration   SlackIntegration @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
+
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  questions StandupConfigQuestion[]
+  members   StandupConfigMember[]
+  reports   StandupReport[]
+
+  @@map("standup_configs")
+}
+
+model StandupConfigQuestion {
+  configId   String          @map("config_id")
+  questionId String          @map("question_id")
+  order      Int
+  config     StandupConfig   @relation(fields: [configId], references: [id], onDelete: Cascade)
+  question   StandupQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([configId, questionId])
+  @@map("standup_config_questions")
+}
+
+model StandupConfigMember {
+  configId    String        @map("config_id")
+  slackUserId String        @map("slack_user_id")
+  username    String?
+  isAway      Boolean       @default(false) @map("is_away")
+  config      StandupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@id([configId, slackUserId])
+  @@map("standup_config_members")
+}
+
+model StandupReport {
+  id                   String              @id @default(uuid())
+  status               StandupReportStatus @default(ACTIVE)
+  slackUserId          String              @map("slack_user_id")
+  username             String?
+  currentQuestionOrder Int?                @map("current_question_order")
+
+  configId String        @map("config_id")
+  config   StandupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  answers   StandupAnswer[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([configId, createdAt])
+  @@index([slackUserId, status])
+  @@map("standup_reports")
+}
+
+model StandupAnswer {
+  id        String  @id @default(uuid())
+  answer    String? @db.Text
+  messageTs String? @map("message_ts")
+  order     Int
+
+  reportId   String          @map("report_id")
+  report     StandupReport   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  questionId String          @map("question_id")
+  question   StandupQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, questionId])
+  @@map("standup_answers")
 }
