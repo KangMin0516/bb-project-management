@@ -26,6 +26,7 @@ import { SpecificationModule } from './specification/specification.module.js';
 import { CredentialModule } from './credential/credential.module.js';
 import { SlackModule } from './slack/slack.module.js';
 import { ReportModule } from './report/report.module.js';
+import { StandupModule } from './standup/standup.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -60,6 +61,7 @@ import { AppController } from './app.controller.js';
     CredentialModule,
     SlackModule,
     ReportModule,
+    StandupModule,
   ],
   controllers: [AppController],
   providers: [

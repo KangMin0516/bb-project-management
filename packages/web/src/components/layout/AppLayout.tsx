@@ -18,6 +18,7 @@ import {
   Search,
   PanelLeftClose,
   PanelLeftOpen,
+  MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -66,6 +67,7 @@ export default function AppLayout() {
 
   const globalNavItems = [
     { to: '/', icon: Home, label: 'Home' },
+    { to: '/standup', icon: MessageCircle, label: 'Standup' },
   ]
 
   const projectNavItems = projectId
