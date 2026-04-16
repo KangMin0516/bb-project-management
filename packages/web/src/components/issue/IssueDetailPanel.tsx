@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
-import { STATUSES, STATUS_LABELS, PRIORITY_COLORS } from '@/lib/constants'
+import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
@@ -534,7 +534,7 @@ export default function IssueDetailPanel({
                     >
                       <span className="font-mono text-xs text-gray-400">#{child.number}</span>
                       <span className="flex-1 truncate">{child.title}</span>
-                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px]">{child.status}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_BADGE_COLORS[child.status] || 'bg-gray-200 text-gray-700'}`}>{STATUS_LABELS[child.status] || child.status}</span>
                     </button>
                   ))}
                 </div>
