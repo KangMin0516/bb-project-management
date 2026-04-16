@@ -55,7 +55,7 @@ export default function CommandPalette() {
 
   const handleSelect = useCallback((result: SearchResult) => {
     setOpen(false)
-    navigate(`/projects/${result.project.key}/issues`, { state: { selectedIssueId: result.id } })
+    navigate(`/projects/${result.project.key}/lists`, { state: { selectedIssueId: result.id } })
   }, [navigate])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

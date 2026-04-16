@@ -204,7 +204,7 @@ export default function IssuesPage() {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-        <h1 className="text-lg font-bold text-gray-900">{project?.key} Issues</h1>
+        <h1 className="text-lg font-bold text-gray-900">{project?.key} Lists</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"

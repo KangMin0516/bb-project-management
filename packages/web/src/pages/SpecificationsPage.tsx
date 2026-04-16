@@ -114,7 +114,7 @@ export default function SpecificationsPage() {
   }, [])
 
   const handleIssueClick = useCallback((issueId: string) => {
-    navigate(`/projects/${projectId}/issues?issue=${issueId}`)
+    navigate(`/projects/${projectId}/lists?issue=${issueId}`)
   }, [navigate, projectId])
 
   const handleCreateIssue = useCallback((sectionSlug: string) => {

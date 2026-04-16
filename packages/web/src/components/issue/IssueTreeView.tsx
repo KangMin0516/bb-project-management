@@ -167,7 +167,7 @@ export default function IssueTreeView({
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                className="flex w-full items-center gap-2 bg-gray-100/80 px-6 py-2.5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-200"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -209,8 +209,8 @@ export default function IssueTreeView({
                                 {...dragProvided.dragHandleProps}
                                 onClick={() => onIssueClick(issue)}
                                 className={cn(
-                                  'grid cursor-pointer items-center gap-x-2 py-2 pr-6 hover:bg-gray-50 transition-colors',
-                                  dragSnapshot.isDragging && 'bg-white shadow-lg rounded ring-1 ring-primary-300',
+                                  'grid cursor-pointer items-center gap-x-2 py-2.5 pr-6 border-b border-gray-100 hover:bg-gray-50 transition-colors',
+                                  dragSnapshot.isDragging && 'bg-white shadow-lg rounded ring-1 ring-primary-300 border-transparent',
                                   isEpicSelf && 'opacity-50',
                                 )}
                                 style={{

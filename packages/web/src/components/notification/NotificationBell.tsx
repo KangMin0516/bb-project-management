@@ -63,7 +63,7 @@ export default function NotificationBell() {
       markReadMutation.mutate(notification.id)
     }
     if (notification.projectId && notification.issueId) {
-      navigate(`/projects/${notification.projectId}/issues`, { state: { selectedIssueId: notification.issueId } })
+      navigate(`/projects/${notification.projectId}/lists`, { state: { selectedIssueId: notification.issueId } })
     } else if (notification.projectId) {
       navigate(`/projects/${notification.projectId}/board`)
     }
