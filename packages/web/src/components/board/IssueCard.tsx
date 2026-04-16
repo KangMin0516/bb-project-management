@@ -113,18 +113,45 @@ export default memo(function IssueCard({
               </span>
             ))}
           </div>
-          {issue.assignee && (
-            <div
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden"
-              title={issue.assignee.name}
-            >
-              {issue.assignee.avatar ? (
-                <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
-              ) : (
-                issue.assignee.name.charAt(0).toUpperCase()
-              )}
-            </div>
-          )}
+          {(issue.assignee || childList.length > 0) && (() => {
+            // Collect unique sub-task assignees that differ from the task assignee
+            const subAssignees = new Map<string, { name: string; avatar: string | null }>()
+            for (const child of childList) {
+              if (child.assignee && child.assignee.id !== issue.assigneeId) {
+                subAssignees.set(child.assignee.id, child.assignee)
+              }
+            }
+            const extras = [...subAssignees.values()]
+            return (
+              <div className="flex items-center -space-x-1.5">
+                {extras.map((a) => (
+                  <div
+                    key={a.name}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-500 overflow-hidden ring-1 ring-white opacity-50"
+                    title={a.name}
+                  >
+                    {a.avatar ? (
+                      <img src={a.avatar} alt={a.name} className="h-full w-full object-cover" />
+                    ) : (
+                      a.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                ))}
+                {issue.assignee && (
+                  <div
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden ring-1 ring-white z-10"
+                    title={issue.assignee.name}
+                  >
+                    {issue.assignee.avatar ? (
+                      <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
+                    ) : (
+                      issue.assignee.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
