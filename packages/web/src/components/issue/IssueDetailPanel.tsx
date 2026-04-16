@@ -106,6 +106,13 @@ export default function IssueDetailPanel({
     queryFn: () => componentApi.list(projectId),
   })
 
+  const { data: epics } = useQuery({
+    queryKey: ['issues', projectId, 'epics'],
+    queryFn: () => issueApi.list(projectId, { type: 'EPIC', limit: '200' }),
+    select: (data) => data.items,
+    enabled: d.type !== 'EPIC',
+  })
+
   const queryClient = useQueryClient()
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['board', projectId] })
@@ -351,6 +358,29 @@ export default function IssueDetailPanel({
                 )}
               </div>
             </InlineField>
+
+            {d.type !== 'EPIC' && (
+            <InlineField
+              label="Epic"
+              display={
+                d.parent
+                  ? <span className="text-gray-700">⚡ #{d.parent.number} {d.parent.title}</span>
+                  : <span className="text-gray-400 italic">No epic</span>
+              }
+            >
+              <select
+                value={d.parentId || ''}
+                onChange={(e) => updateMutation.mutate({ parentId: e.target.value || null })}
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                autoFocus
+              >
+                <option value="">No epic</option>
+                {(epics || []).filter((ep) => ep.id !== issue.id).map((ep) => (
+                  <option key={ep.id} value={ep.id}>⚡ #{ep.number} {ep.title}</option>
+                ))}
+              </select>
+            </InlineField>
+            )}
 
             <div className="flex items-start gap-2 py-1.5">
               <span className="w-20 shrink-0 pt-0.5 text-xs font-medium text-gray-400">Labels</span>
