@@ -81,9 +81,25 @@ export interface TeamMember {
   recentActivityCount: number
 }
 
+export interface StandupReportEntry {
+  slackUsername: string
+  status: 'ANSWERED' | 'ACTIVE' | 'UNANSWERED' | 'AWAY' | 'CANCELED'
+  configName: string
+  completedAt: string | null
+  answers: { question: string; answer: string }[]
+}
+
+export interface TeamStandup {
+  total: number
+  answered: number
+  unanswered: number
+  reports: StandupReportEntry[]
+}
+
 export interface TeamDashboard {
   summary: { activeMembers: number; completedToday: number; overdueTotal: number; unassignedTotal: number }
   members: TeamMember[]
+  standup: TeamStandup
   heatmap: {
     projects: { id: string; name: string; key: string }[]
     rows: { userId: string; userName: string; cells: { projectId: string; activeCount: number }[] }[]

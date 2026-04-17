@@ -219,7 +219,8 @@ export class DashboardService {
     for (const row of raw) {
       if (!row.assigneeId) continue;
       const entry = map.get(row.assigneeId) || { statuses: {}, total: 0 };
-      entry.statuses[row.status] = (entry.statuses[row.status] || 0) + row._count;
+      entry.statuses[row.status] =
+        (entry.statuses[row.status] || 0) + row._count;
       entry.total += row._count;
       map.set(row.assigneeId, entry);
     }
@@ -270,12 +271,21 @@ export class DashboardService {
     // Build a map: issueId -> latest closed date (only if currently closed)
     // Use current status to exclude reopened issues
     const closedDateMap = new Map<string, Date>();
-    const closedStatuses = new Set<IssueStatus>([IssueStatus.DONE, IssueStatus.CANCELED]);
+    const closedStatuses = new Set<IssueStatus>([
+      IssueStatus.DONE,
+      IssueStatus.CANCELED,
+    ]);
 
     // Track latest status transition per issue
-    const latestStatusByIssue = new Map<string, { status: string; date: Date }>();
+    const latestStatusByIssue = new Map<
+      string,
+      { status: string; date: Date }
+    >();
     for (const act of statusActivities) {
-      latestStatusByIssue.set(act.issueId, { status: act.newValue!, date: act.createdAt });
+      latestStatusByIssue.set(act.issueId, {
+        status: act.newValue!,
+        date: act.createdAt,
+      });
       if (closedStatuses.has(act.newValue as IssueStatus)) {
         closedDateMap.set(act.issueId, act.createdAt);
       } else {
@@ -315,8 +325,7 @@ export class DashboardService {
       if (issue.createdAt <= thirtyDaysAgo) {
         const closedDate = closedDateMap.get(issue.id);
         // Check if it was closed before the window started
-        const closedBefore =
-          closedDate && closedDate < thirtyDaysAgo;
+        const closedBefore = closedDate && closedDate < thirtyDaysAgo;
         // Also check updatedAt for issues closed before window with no activity
         if (!closedBefore) baseOpen++;
       }
@@ -339,7 +348,10 @@ export class DashboardService {
       dayEnd.setUTCHours(23, 59, 59, 999);
 
       // Add newly created issues up to dayEnd
-      while (issueIdx < sortedIssues.length && sortedIssues[issueIdx].createdAt <= dayEnd) {
+      while (
+        issueIdx < sortedIssues.length &&
+        sortedIssues[issueIdx].createdAt <= dayEnd
+      ) {
         if (sortedIssues[issueIdx].createdAt > thirtyDaysAgo) {
           openCount++;
         }
@@ -380,6 +392,7 @@ export class DashboardService {
       activity24h,
       unassignedCount,
       heatmapGrouped,
+      todayReports,
     ] = await Promise.all([
       // 1. Active users + memberships
       this.prisma.user.findMany({
@@ -483,34 +496,72 @@ export class DashboardService {
         },
         _count: true,
       }),
+      // 11. Standup reports for today
+      this.prisma.standupReport.findMany({
+        where: {
+          createdAt: { gte: todayStart, lte: todayEnd },
+        },
+        include: {
+          answers: {
+            include: { question: true },
+            orderBy: { order: 'asc' },
+          },
+          config: {
+            select: { name: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
     ]);
 
     // Build lookup maps
-    const focusMap = new Map(focusGrouped.map((r) => [r.assigneeId!, r._count]));
-    const inProgressMap = new Map(inProgressGrouped.map((r) => [r.assigneeId!, r._count]));
+    const focusMap = new Map(
+      focusGrouped.map((r) => [r.assigneeId!, r._count]),
+    );
+    const inProgressMap = new Map(
+      inProgressGrouped.map((r) => [r.assigneeId!, r._count]),
+    );
     const todoMap = new Map(todoGrouped.map((r) => [r.assigneeId!, r._count]));
-    const completedMap = new Map(completedToday.map((r) => [r.userId, r._count._all]));
-    const overdueMap = new Map(overdueGrouped.map((r) => [r.assigneeId!, r._count]));
-    const activeMap = new Map(activeIssuesGrouped.map((r) => [r.assigneeId!, r._count]));
-    const activityMap = new Map(activity24h.map((r) => [r.userId, r._count._all]));
+    const completedMap = new Map(
+      completedToday.map((r) => [r.userId, r._count._all]),
+    );
+    const overdueMap = new Map(
+      overdueGrouped.map((r) => [r.assigneeId!, r._count]),
+    );
+    const activeMap = new Map(
+      activeIssuesGrouped.map((r) => [r.assigneeId!, r._count]),
+    );
+    const activityMap = new Map(
+      activity24h.map((r) => [r.userId, r._count._all]),
+    );
 
     // Historical: total & done per user
     const historicalTotalMap = new Map<string, number>();
     const historicalDoneMap = new Map<string, number>();
     for (const row of historicalGrouped) {
       if (!row.assigneeId) continue;
-      historicalTotalMap.set(row.assigneeId, (historicalTotalMap.get(row.assigneeId) ?? 0) + row._count);
+      historicalTotalMap.set(
+        row.assigneeId,
+        (historicalTotalMap.get(row.assigneeId) ?? 0) + row._count,
+      );
       if (row.status === IssueStatus.DONE) {
-        historicalDoneMap.set(row.assigneeId, (historicalDoneMap.get(row.assigneeId) ?? 0) + row._count);
+        historicalDoneMap.set(
+          row.assigneeId,
+          (historicalDoneMap.get(row.assigneeId) ?? 0) + row._count,
+        );
       }
     }
 
     // Heatmap data
     const heatmapByUser = new Map<string, Map<string, number>>();
-    const projectSet = new Map<string, { id: string; name: string; key: string }>();
+    const projectSet = new Map<
+      string,
+      { id: string; name: string; key: string }
+    >();
     for (const row of heatmapGrouped) {
       if (!row.assigneeId) continue;
-      if (!heatmapByUser.has(row.assigneeId)) heatmapByUser.set(row.assigneeId, new Map());
+      if (!heatmapByUser.has(row.assigneeId))
+        heatmapByUser.set(row.assigneeId, new Map());
       heatmapByUser.get(row.assigneeId)!.set(row.projectId, row._count);
     }
 
@@ -522,7 +573,9 @@ export class DashboardService {
         }
       }
     }
-    const allProjects = [...projectSet.values()].sort((a, b) => a.key.localeCompare(b.key));
+    const allProjects = [...projectSet.values()].sort((a, b) =>
+      a.key.localeCompare(b.key),
+    );
 
     // Build members array
     const members = activeUsers.map((u) => ({
@@ -549,8 +602,36 @@ export class DashboardService {
     }));
 
     // Summary
-    const totalCompletedToday = completedToday.reduce((sum, r) => sum + r._count._all, 0);
+    const totalCompletedToday = completedToday.reduce(
+      (sum, r) => sum + r._count._all,
+      0,
+    );
     const totalOverdue = overdueGrouped.reduce((sum, r) => sum + r._count, 0);
+
+    // Standup summary
+    const standupAnswered = todayReports.filter(
+      (r) => r.status === 'ANSWERED',
+    ).length;
+    const standupUnanswered = todayReports.filter(
+      (r) => r.status === 'UNANSWERED',
+    ).length;
+    const standup = {
+      total: todayReports.length,
+      answered: standupAnswered,
+      unanswered: standupUnanswered,
+      reports: todayReports.map((r) => ({
+        slackUsername: r.username ?? r.slackUserId,
+        status: r.status,
+        configName: r.config.name,
+        completedAt: r.updatedAt?.toISOString() ?? null,
+        answers: r.answers
+          .filter((a) => a.answer)
+          .map((a) => ({
+            question: a.question.text,
+            answer: a.answer!,
+          })),
+      })),
+    };
 
     return {
       summary: {
@@ -560,6 +641,7 @@ export class DashboardService {
         unassignedTotal: unassignedCount,
       },
       members,
+      standup,
       heatmap: {
         projects: allProjects,
         rows: activeUsers.map((u) => ({

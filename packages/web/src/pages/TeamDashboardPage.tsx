@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, type TeamMember, type StandupReportEntry, type TeamStandup } from '@/api/dashboard'
+import { dashboardApi, type TeamMember, type TeamStandup } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { Navigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -50,8 +50,6 @@ export default function TeamDashboardPage() {
     enabled: !!currentUser?.isSuperuser,
   })
 
-  if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
-
   const members = useMemo(() => {
     if (!data) return []
     let list = data.members
@@ -78,6 +76,8 @@ export default function TeamDashboardPage() {
       }
     })
   }, [data, search, sortKey])
+
+  if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
 
   if (isLoading || !data) {
     return (
