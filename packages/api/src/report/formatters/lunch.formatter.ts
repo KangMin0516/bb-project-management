@@ -38,13 +38,18 @@ export function formatLunchReport(
     return { blocks, text: `[${projectName}] Midday Update -- ${dateStr}` };
   }
 
+  // Filter to only status transitions and issue creation
+  const relevant = activities.filter(
+    (a) => a.field === 'status' || a.field === 'created',
+  );
+
   // Format activities
   const lines: string[] = [];
   let started = 0;
   let completed = 0;
   let created = 0;
 
-  for (const a of activities) {
+  for (const a of relevant) {
     const key = `${a.issue.project.key}-${a.issue.number}`;
     const link = `<${baseUrl}/projects/${a.issue.projectId}/issues|${key}>`;
     const actor = a.user?.name ?? 'Unknown';
@@ -54,27 +59,15 @@ export function formatLunchReport(
       lines.push(line);
       if (a.newValue === 'DONE') completed++;
       if (a.newValue === 'IN_PROGRESS') started++;
-    } else if (a.field === 'assignee') {
-      lines.push(
-        `  ${link}  ${a.issue.title}      Assigned -> ${a.newValue ?? '?'}`,
-      );
-    } else if (a.field === 'priority') {
-      lines.push(
-        `  ${link}  ${a.issue.title}      Priority: ${a.oldValue ?? '?'} -> ${a.newValue ?? '?'}`,
-      );
     } else if (a.field === 'created') {
       lines.push(
         `  ${link}  ${a.issue.title}      :sparkles: Created               :bust_in_silhouette: ${actor}`,
       );
       created++;
-    } else {
-      lines.push(
-        `  ${link}  ${a.issue.title}      ${a.field}: ${a.oldValue ?? ''} -> ${a.newValue ?? ''}     :bust_in_silhouette: ${actor}`,
-      );
     }
   }
 
-  pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Changes Today (${activities.length})*`, lines);
+  pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Changes Today (${relevant.length})*`, lines);
 
   // Summary line
   blocks.push({ type: 'divider' });

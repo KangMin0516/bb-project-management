@@ -21,6 +21,7 @@ import {
   MessageCircle,
   Users,
   User,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -70,7 +71,10 @@ export default function AppLayout() {
   const globalNavItems = [
     { to: '/', icon: Home, label: 'Home' },
     { to: '/standup', icon: MessageCircle, label: 'Standup' },
-    ...(user?.isSuperuser ? [{ to: '/admin', icon: Users, label: 'Admin' }] : []),
+    ...(user?.isSuperuser ? [
+      { to: '/admin', icon: Users, label: 'Admin' },
+      { to: '/admin/dashboard', icon: BarChart3, label: 'Team' },
+    ] : []),
     { to: '/profile', icon: User, label: 'Profile' },
   ]
 

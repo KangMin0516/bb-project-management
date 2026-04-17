@@ -17,6 +17,7 @@ import SpecificationsPage from '@/pages/SpecificationsPage'
 import TimelinePage from '@/pages/TimelinePage'
 import StandupSettingsPage from '@/pages/StandupSettingsPage'
 import AdminPage from '@/pages/AdminPage'
+import TeamDashboardPage from '@/pages/TeamDashboardPage'
 import ProfilePage from '@/pages/ProfilePage'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/ToastContainer'
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="/" element={<GlobalDashboardPage />} />
                 <Route path="/standup" element={<StandupSettingsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/dashboard" element={<TeamDashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/new" element={<NewProjectPage />} />
