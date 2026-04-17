@@ -11,6 +11,7 @@ export interface Issue {
   order: number
   dueDate: string | null
   focusDate: string | null
+  archivedAt: string | null
   createdAt: string
   updatedAt: string
   projectId: string
@@ -140,8 +141,8 @@ export interface DependencyLink {
 export const issueApi = {
   list: (projectId: string, params?: Record<string, string>) =>
     api.get<{ data: PaginatedIssues }>(`/projects/${projectId}/issues`, { params }).then((r) => r.data.data),
-  board: (projectId: string) =>
-    api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`).then((r) => r.data.data),
+  board: (projectId: string, params?: { includeArchived?: boolean }) =>
+    api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`, { params }).then((r) => r.data.data),
   dependencies: (projectId: string) =>
     api.get<{ data: DependencyLink[] }>(`/projects/${projectId}/issues/dependencies`).then((r) => r.data.data),
   get: (projectId: string, issueId: string) =>

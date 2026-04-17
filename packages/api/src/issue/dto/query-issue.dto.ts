@@ -5,6 +5,7 @@ import {
   IsString,
   IsInt,
   IsIn,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
@@ -14,7 +15,7 @@ import {
   IssuePriority,
   IssueType,
 } from '../../../generated/prisma/enums.js';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class QueryIssueDto {
   @ApiPropertyOptional({ enum: IssueStatus })
@@ -68,4 +69,10 @@ export class QueryIssueDto {
   @Min(1)
   @Max(200)
   limit?: number = 50;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  includeArchived?: boolean = false;
 }

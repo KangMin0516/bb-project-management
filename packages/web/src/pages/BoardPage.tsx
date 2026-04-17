@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
-import { Rows3 } from 'lucide-react'
+import { Rows3, Archive } from 'lucide-react'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import type { ChildIssue } from '@/components/board/types'
@@ -79,6 +79,7 @@ export default function BoardPage() {
   const [filterType, setFilterType] = useState<Set<string>>(new Set())
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
   const [groupByEpic, setGroupByEpic] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
@@ -88,8 +89,8 @@ export default function BoardPage() {
   })
 
   const { data: board, isLoading: isBoardLoading } = useQuery({
-    queryKey: ['board', projectId],
-    queryFn: () => issueApi.board(projectId!),
+    queryKey: ['board', projectId, showArchived],
+    queryFn: () => issueApi.board(projectId!, showArchived ? { includeArchived: true } : undefined),
     enabled: !!projectId,
   })
 
@@ -295,6 +296,19 @@ export default function BoardPage() {
             <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(new Set()); setFilterPriority(new Set()); setFilterType(new Set()) }} />
           )}
           <FilterDivider />
+          <button
+            type="button"
+            onClick={() => setShowArchived(!showArchived)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+              showArchived
+                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            Archived
+          </button>
           <button
             type="button"
             onClick={() => setGroupByEpic(!groupByEpic)}

@@ -19,7 +19,7 @@ import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import BulkActionBar from '@/components/issue/BulkActionBar'
 import IssueActionMenu from '@/components/issue/IssueActionMenu'
 import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
-import { Plus, ChevronUp, ChevronDown, List, GitBranch } from 'lucide-react'
+import { Plus, ChevronUp, ChevronDown, List, GitBranch, Archive } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
@@ -41,6 +41,7 @@ export default function IssuesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     (localStorage.getItem('issues-view-mode') as ViewMode) || 'list'
   )
+  const [showArchived, setShowArchived] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -71,6 +72,7 @@ export default function IssuesPage() {
   // Server only supports single enum values, so only send single-select to server;
   // multi-select is filtered client-side below.
   const params: Record<string, string> = { limit: '200' }
+  if (showArchived) params.includeArchived = 'true'
   if (deferredSearch) params.search = deferredSearch
   if (filters.status.size === 1) params.status = [...filters.status][0]
   if (filters.priority.size === 1) params.priority = [...filters.priority][0]
@@ -239,6 +241,19 @@ export default function IssuesPage() {
       ) : (
       <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-6 py-2">
         <ViewToggle options={VIEW_OPTIONS} value={viewMode} onChange={handleViewChange} />
+        <button
+          type="button"
+          onClick={() => setShowArchived(!showArchived)}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+            showArchived
+              ? 'border-amber-300 bg-amber-50 text-amber-700'
+              : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+          )}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          Archived
+        </button>
         <FilterDivider />
         <SearchInput value={filters.search} onChange={(v) => updateFilter({ search: v })} />
         <DropdownFilters
@@ -319,6 +334,7 @@ export default function IssuesPage() {
                       'cursor-pointer hover:bg-gray-50',
                       overdue && 'bg-red-50/50',
                       selectedIds.has(issue.id) && 'bg-primary-50',
+                      issue.archivedAt && 'opacity-50',
                     )}
                   >
                     <td className="w-8 px-3 py-2" onClick={(e) => e.stopPropagation()}>

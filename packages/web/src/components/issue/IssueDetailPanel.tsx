@@ -621,6 +621,15 @@ export default function IssueDetailPanel({
                     >
                       <span className="font-mono text-xs text-gray-400">#{child.number}</span>
                       <span className="flex-1 truncate">{child.title}</span>
+                      {child.assignee && (
+                        child.assignee.avatar ? (
+                          <img src={child.assignee.avatar} alt={child.assignee.name} className="h-5 w-5 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
+                            {child.assignee.name.charAt(0).toUpperCase()}
+                          </span>
+                        )
+                      )}
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_BADGE_COLORS[child.status] || 'bg-gray-200 text-gray-700'}`}>{STATUS_LABELS[child.status] || child.status}</span>
                     </button>
                   ))}

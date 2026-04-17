@@ -49,8 +49,14 @@ export class IssueController {
   }
 
   @Get('board')
-  board(@Param('projectId') projectId: string) {
-    return this.issueService.findByStatus(projectId);
+  board(
+    @Param('projectId') projectId: string,
+    @Query('includeArchived') includeArchived?: string,
+  ) {
+    return this.issueService.findByStatus(
+      projectId,
+      includeArchived === 'true',
+    );
   }
 
   @Get('dependencies')
