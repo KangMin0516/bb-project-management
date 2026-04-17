@@ -467,13 +467,16 @@ export class IssueService {
         ? { archivedAt: null }
         : {};
 
-    // Reset isRecheck when status changes away from IN_PROGRESS
-    const recheckReset =
-      data.status &&
-      data.status !== existing.status &&
-      data.status !== 'IN_PROGRESS' &&
-      existing.isRecheck
-        ? { isRecheck: false }
+    // Auto-set isRecheck when moving back to IN_PROGRESS from a later stage
+    // Reset isRecheck when moving away from IN_PROGRESS
+    const LATER_STAGES = ['REVIEW_QA', 'DONE', 'CANCELED'];
+    const recheckUpdate =
+      data.status && data.status !== existing.status
+        ? data.status === 'IN_PROGRESS' && LATER_STAGES.includes(existing.status)
+          ? { isRecheck: true }
+          : data.status !== 'IN_PROGRESS' && existing.isRecheck
+            ? { isRecheck: false }
+            : {}
         : {};
 
     const issue = await this.prisma.issue.update({
@@ -481,7 +484,7 @@ export class IssueService {
       data: {
         ...data,
         ...archiveReset,
-        ...recheckReset,
+        ...recheckUpdate,
         ...(labelIds !== undefined && {
           labels: {
             deleteMany: {},
@@ -576,10 +579,15 @@ export class IssueService {
         ? { archivedAt: null }
         : {};
 
-    // Reset isRecheck when dragging to a non-IN_PROGRESS column
-    const recheckReset =
-      existing.isRecheck && targetStatus !== 'IN_PROGRESS'
-        ? { isRecheck: false }
+    // Auto-set isRecheck when dragging back to IN_PROGRESS from a later stage
+    const LATER_STAGES = ['REVIEW_QA', 'DONE', 'CANCELED'];
+    const recheckUpdate =
+      existing.status !== targetStatus
+        ? targetStatus === 'IN_PROGRESS' && LATER_STAGES.includes(existing.status)
+          ? { isRecheck: true }
+          : targetStatus !== 'IN_PROGRESS' && existing.isRecheck
+            ? { isRecheck: false }
+            : {}
         : {};
 
     return this.prisma.$transaction(async (tx) => {
@@ -589,7 +597,7 @@ export class IssueService {
           status: targetStatus as IssueStatus,
           order: targetOrder,
           ...archiveReset,
-          ...recheckReset,
+          ...recheckUpdate,
           ...(activities.length > 0 && {
             activities: {
               create: activities.map((a) => ({ ...a, userId })),

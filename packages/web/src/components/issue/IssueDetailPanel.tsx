@@ -326,9 +326,25 @@ export default function IssueDetailPanel({
             <InlineField
               label="Status"
               display={
-                <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium">
-                  {STATUS_LABELS[d.status] || d.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium">
+                    {STATUS_LABELS[d.status] || d.status}
+                  </span>
+                  {d.status === 'IN_PROGRESS' && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); updateMutation.mutate({ isRecheck: !d.isRecheck }) }}
+                      className={cn(
+                        'rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                        d.isRecheck
+                          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600',
+                      )}
+                    >
+                      Recheck {d.isRecheck ? '✓' : ''}
+                    </button>
+                  )}
+                </div>
               }
             >
               <select
@@ -340,25 +356,6 @@ export default function IssueDetailPanel({
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
               </select>
             </InlineField>
-
-            {d.status === 'IN_PROGRESS' && (
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-xs font-medium text-gray-500">Recheck</span>
-                <button
-                  type="button"
-                  onClick={() => updateMutation.mutate({ isRecheck: !d.isRecheck })}
-                  className={cn(
-                    'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                    d.isRecheck ? 'bg-orange-500' : 'bg-gray-300',
-                  )}
-                >
-                  <span className={cn(
-                    'inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform',
-                    d.isRecheck ? 'translate-x-4.5' : 'translate-x-0.5',
-                  )} />
-                </button>
-              </div>
-            )}
 
             <InlineField
               label="Priority"
