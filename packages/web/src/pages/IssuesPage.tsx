@@ -1,4 +1,4 @@
-import { useState, useCallback, useDeferredValue, useMemo, useEffect } from 'react'
+import { useState, useCallback, useDeferredValue, useMemo, useEffect, useRef } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
@@ -22,6 +22,7 @@ import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
 import { Plus, ChevronUp, ChevronDown, List, GitBranch, Archive } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
+import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
 
 type SortField = 'number' | 'status' | 'priority' | 'createdAt' | 'dueDate'
 type ViewMode = 'list' | 'grouped'
@@ -45,6 +46,8 @@ export default function IssuesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [focusedRowIndex, setFocusedRowIndex] = useState<number>(-1)
+  const tableRef = useRef<HTMLTableSectionElement>(null)
   const queryClient = useQueryClient()
 
   const handleViewChange = useCallback((mode: ViewMode) => {
@@ -212,6 +215,60 @@ export default function IssuesPage() {
     })
   }, [])
 
+  // Scroll focused row into view
+  useEffect(() => {
+    if (focusedRowIndex >= 0 && tableRef.current) {
+      const row = tableRef.current.children[focusedRowIndex] as HTMLElement
+      row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [focusedRowIndex])
+
+  const issuesShortcuts = useMemo(() => [
+    {
+      id: 'issues-next',
+      keys: 'j',
+      label: 'Next issue',
+      category: 'Issues' as const,
+      handler: () => {
+        setFocusedRowIndex((prev) => Math.min(prev + 1, displayItems.length - 1))
+      },
+    },
+    {
+      id: 'issues-prev',
+      keys: 'k',
+      label: 'Previous issue',
+      category: 'Issues' as const,
+      handler: () => {
+        setFocusedRowIndex((prev) => Math.max(prev <= 0 ? 0 : prev - 1, 0))
+      },
+    },
+    {
+      id: 'issues-open',
+      keys: 'enter',
+      label: 'Open issue detail',
+      category: 'Issues' as const,
+      handler: () => {
+        if (focusedRowIndex >= 0 && displayItems[focusedRowIndex]) {
+          setSelectedIssue(displayItems[focusedRowIndex])
+        }
+      },
+      when: () => !selectedIssue,
+    },
+    {
+      id: 'issues-toggle-select',
+      keys: 'x',
+      label: 'Toggle select',
+      category: 'Issues' as const,
+      handler: () => {
+        if (focusedRowIndex >= 0 && displayItems[focusedRowIndex]) {
+          toggleSelectOne(displayItems[focusedRowIndex].id)
+        }
+      },
+    },
+  ], [displayItems, focusedRowIndex, selectedIssue, toggleSelectOne])
+
+  useRegisterShortcuts('issues', issuesShortcuts)
+
   if (!projectId) return null
 
   return (
@@ -322,8 +379,8 @@ export default function IssuesPage() {
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {displayItems.map((issue) => {
+            <tbody ref={tableRef} className="divide-y divide-gray-100">
+              {displayItems.map((issue, rowIndex) => {
                 const badge = getDueBadge(issue.dueDate)
                 const overdue = isIssueOverdue(issue)
                 return (
@@ -335,6 +392,7 @@ export default function IssuesPage() {
                       overdue && 'bg-red-50/50',
                       selectedIds.has(issue.id) && 'bg-primary-50',
                       issue.archivedAt && 'opacity-50',
+                      rowIndex === focusedRowIndex && 'ring-2 ring-inset ring-primary-400 bg-primary-50/50',
                     )}
                   >
                     <td className="w-8 px-3 py-2" onClick={(e) => e.stopPropagation()}>

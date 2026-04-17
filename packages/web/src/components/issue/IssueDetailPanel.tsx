@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -10,6 +10,7 @@ import { useToastStore } from '@/stores/toast'
 import { useImagePreviewStore } from '@/stores/imagePreview'
 import { getErrorMessage } from '@/lib/error'
 import { Trash2, Link2, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
 import { copyIssueLink } from '@/components/issue/IssueActionMenu'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import TipTapEditor from '@/components/editor/TipTapEditor'
@@ -27,7 +28,7 @@ interface IssueDetailPanelProps {
 }
 
 /** Click-to-edit inline field */
-function InlineField({ label, display, children }: { label: string; display: React.ReactNode; children: React.ReactNode }) {
+function InlineField({ label, display, children, fieldId }: { label: string; display: React.ReactNode; children: React.ReactNode; fieldId?: string }) {
   const [editing, setEditing] = useState(false)
   const fieldRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +52,7 @@ function InlineField({ label, display, children }: { label: string; display: Rea
         </div>
       ) : (
         <button
+          data-field-trigger={fieldId}
           onClick={() => setEditing(true)}
           className="flex-1 rounded px-1.5 py-0.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition -mx-1.5"
         >
@@ -129,6 +131,42 @@ export default function IssueDetailPanel({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [editingTitle, editingDescription])
+
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const triggerField = useCallback((fieldId: string) => {
+    const btn = panelRef.current?.querySelector(`[data-field-trigger="${fieldId}"]`) as HTMLButtonElement
+    btn?.click()
+  }, [])
+
+  const detailShortcuts = useMemo(() => [
+    {
+      id: 'detail-assignee',
+      keys: 'a',
+      label: 'Edit assignee',
+      category: 'Issue Detail' as const,
+      handler: () => triggerField('assignee'),
+      when: () => !editingTitle && !editingDescription,
+    },
+    {
+      id: 'detail-status',
+      keys: 's',
+      label: 'Edit status',
+      category: 'Issue Detail' as const,
+      handler: () => triggerField('status'),
+      when: () => !editingTitle && !editingDescription,
+    },
+    {
+      id: 'detail-priority',
+      keys: 'p',
+      label: 'Edit priority',
+      category: 'Issue Detail' as const,
+      handler: () => triggerField('priority'),
+      when: () => !editingTitle && !editingDescription,
+    },
+  ], [triggerField, editingTitle, editingDescription])
+
+  useRegisterShortcuts('issue-detail', detailShortcuts)
 
   const { data: detail } = useQuery({
     queryKey: ['issue', projectId, issue.id],
@@ -220,6 +258,7 @@ export default function IssueDetailPanel({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
       <div
+        ref={panelRef}
         className={`flex h-full w-full flex-col bg-white shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -325,6 +364,7 @@ export default function IssueDetailPanel({
           <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/50 px-3 mx-6 mt-4">
             <InlineField
               label="Status"
+              fieldId="status"
               display={
                 <div className="flex items-center gap-2">
                   <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium">
@@ -359,6 +399,7 @@ export default function IssueDetailPanel({
 
             <InlineField
               label="Priority"
+              fieldId="priority"
               display={
                 <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[d.priority] || ''}`}>
                   {d.priority}
@@ -377,6 +418,7 @@ export default function IssueDetailPanel({
 
             <InlineField
               label="Assignee"
+              fieldId="assignee"
               display={
                 <span className={`flex items-center gap-2 ${d.assignee ? 'text-gray-700' : 'text-gray-400 italic'}`}>
                   {d.assignee ? (
