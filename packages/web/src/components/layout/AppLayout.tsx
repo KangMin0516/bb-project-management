@@ -1,7 +1,7 @@
 import { Outlet, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { useQuery } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 import { projectApi, type Project } from '@/api/projects'
@@ -27,6 +27,10 @@ import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import CommandPalette from '@/components/search/CommandPalette'
 import NotificationBell from '@/components/notification/NotificationBell'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
+import { useShortcutsStore } from '@/stores/shortcuts'
+import ShortcutsHelpModal from '@/components/shortcuts/ShortcutsHelpModal'
 
 export default function AppLayout() {
   const { user, logout, uploadAvatar } = useAuthStore()
@@ -34,8 +38,82 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const [showProjects, setShowProjects] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true')
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const location = useLocation()
   const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  // Global keyboard shortcut listener
+  useKeyboardShortcuts()
+
+  const globalShortcuts = useMemo(() => [
+    {
+      id: 'global-command-palette',
+      keys: 'mod+k',
+      label: 'Open command palette',
+      category: 'Global' as const,
+      handler: () => setCommandPaletteOpen((prev) => !prev),
+    },
+    {
+      id: 'global-help',
+      keys: '?',
+      label: 'Show keyboard shortcuts',
+      category: 'Global' as const,
+      handler: () => useShortcutsStore.getState().setHelpModalOpen(
+        !useShortcutsStore.getState().helpModalOpen
+      ),
+    },
+    {
+      id: 'global-escape',
+      keys: 'escape',
+      label: 'Close panel/modal',
+      category: 'Global' as const,
+      handler: () => {
+        const store = useShortcutsStore.getState()
+        if (store.helpModalOpen) {
+          store.setHelpModalOpen(false)
+        } else if (commandPaletteOpen) {
+          setCommandPaletteOpen(false)
+        }
+      },
+    },
+    {
+      id: 'nav-board',
+      keys: 'g b',
+      label: 'Go to Board',
+      category: 'Navigation' as const,
+      handler: () => { if (projectId) navigate(`/projects/${projectId}/board`) },
+    },
+    {
+      id: 'nav-issues',
+      keys: 'g i',
+      label: 'Go to Issues',
+      category: 'Navigation' as const,
+      handler: () => { if (projectId) navigate(`/projects/${projectId}/lists`) },
+    },
+    {
+      id: 'nav-dashboard',
+      keys: 'g d',
+      label: 'Go to Dashboard',
+      category: 'Navigation' as const,
+      handler: () => { if (projectId) navigate(`/projects/${projectId}`) },
+    },
+    {
+      id: 'nav-settings',
+      keys: 'g s',
+      label: 'Go to Settings',
+      category: 'Navigation' as const,
+      handler: () => { if (projectId) navigate(`/projects/${projectId}/settings`) },
+    },
+    {
+      id: 'nav-specs',
+      keys: 'g p',
+      label: 'Go to Specs',
+      category: 'Navigation' as const,
+      handler: () => { if (projectId) navigate(`/projects/${projectId}/specs`) },
+    },
+  ], [projectId, navigate, commandPaletteOpen])
+
+  useRegisterShortcuts('global', globalShortcuts)
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -213,7 +291,7 @@ export default function AppLayout() {
               <div className="mb-2 flex items-center justify-between">
                 <NotificationBell />
                 <button
-                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+                  onClick={() => setCommandPaletteOpen(true)}
                   className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-200"
                 >
                   <Search className="h-3 w-3" />
@@ -269,7 +347,8 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      <CommandPalette />
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      <ShortcutsHelpModal />
     </div>
   )
 }

@@ -16,6 +16,7 @@ import { STATUSES, calculateDropOrder } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 import { cn } from '@/lib/utils'
+import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
 
 // Shared filter predicate for both flat and swimlane modes
 function matchesFilters(
@@ -80,6 +81,7 @@ export default function BoardPage() {
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
   const [groupByEpic, setGroupByEpic] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [focusedIssueId, setFocusedIssueId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
@@ -250,6 +252,61 @@ export default function BoardPage() {
     return filterBoard(board, filters, { keepEpics: true, childrenMap })
   }, [groupByEpic, board, hasFilters, filters, childrenMap])
 
+  // All visible issues in a flat list for keyboard navigation
+  const flatBoardIssues = useMemo(() => {
+    if (!filteredBoard) return []
+    const issues: Issue[] = []
+    for (const status of STATUSES) {
+      if (filteredBoard[status]) issues.push(...filteredBoard[status])
+    }
+    return issues
+  }, [filteredBoard])
+
+  const boardShortcuts = useMemo(() => [
+    {
+      id: 'board-next',
+      keys: 'j',
+      label: 'Next issue',
+      category: 'Board' as const,
+      handler: () => {
+        setFocusedIssueId((prev) => {
+          if (!prev || flatBoardIssues.length === 0) return flatBoardIssues[0]?.id ?? null
+          const idx = flatBoardIssues.findIndex((i) => i.id === prev)
+          const next = Math.min(idx + 1, flatBoardIssues.length - 1)
+          return flatBoardIssues[next]?.id ?? null
+        })
+      },
+    },
+    {
+      id: 'board-prev',
+      keys: 'k',
+      label: 'Previous issue',
+      category: 'Board' as const,
+      handler: () => {
+        setFocusedIssueId((prev) => {
+          if (!prev || flatBoardIssues.length === 0) return flatBoardIssues[0]?.id ?? null
+          const idx = flatBoardIssues.findIndex((i) => i.id === prev)
+          const next = Math.max(idx - 1, 0)
+          return flatBoardIssues[next]?.id ?? null
+        })
+      },
+    },
+    {
+      id: 'board-open',
+      keys: 'enter',
+      label: 'Open issue detail',
+      category: 'Board' as const,
+      handler: () => {
+        if (!focusedIssueId) return
+        const issue = flatBoardIssues.find((i) => i.id === focusedIssueId)
+        if (issue) setSelectedIssue(issue)
+      },
+      when: () => !selectedIssue,
+    },
+  ], [flatBoardIssues, focusedIssueId, selectedIssue])
+
+  useRegisterShortcuts('board', boardShortcuts)
+
   const handleSwimlaneReorder = useCallback((issueId: string, status: string, order: number) => {
     reorderMutation.mutate({ issueId, status, order })
   }, [reorderMutation.mutate])
@@ -359,6 +416,7 @@ export default function BoardPage() {
                 onToggleExpand={handleToggleExpand}
                 onChildClick={handleChildClick}
                 onChildStatusToggle={handleChildStatusToggle}
+                focusedIssueId={focusedIssueId}
               />
             ))}
           </div>

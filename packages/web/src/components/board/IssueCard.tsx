@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useRef, useEffect } from 'react'
 import type { Issue } from '@/api/issues'
 import type { ChildIssue } from './types'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,7 @@ interface IssueCardProps {
   onChildClick?: (child: ChildIssue) => void
   onChildStatusToggle?: (child: ChildIssue) => void
   compact?: boolean
+  isFocused?: boolean
 }
 
 export default memo(function IssueCard({
@@ -29,7 +30,15 @@ export default memo(function IssueCard({
   onChildClick,
   onChildStatusToggle,
   compact,
+  isFocused,
 }: IssueCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isFocused && cardRef.current) {
+      cardRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [isFocused])
   const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
   const overdue = isIssueOverdue(issue)
   const childList = childIssues || []
@@ -38,7 +47,7 @@ export default memo(function IssueCard({
   const totalCount = childList.length
 
   return (
-    <div>
+    <div ref={cardRef}>
       <div
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
@@ -50,6 +59,7 @@ export default memo(function IssueCard({
           overdue ? 'border-red-300 border-l-4 border-l-red-500' : 'border-gray-200',
           isExpanded && hasChildren && 'rounded-b-none border-b-0',
           issue.archivedAt && 'opacity-50',
+          isFocused && 'ring-2 ring-primary-400 border-primary-300',
         )}
       >
         <div className="mb-1.5 flex items-center gap-1.5">

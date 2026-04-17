@@ -17,6 +17,7 @@ interface BoardColumnProps {
   onToggleExpand?: (issueId: string) => void
   onChildClick?: (child: ChildIssue) => void
   onChildStatusToggle?: (child: ChildIssue) => void
+  focusedIssueId?: string | null
 }
 
 export default memo(function BoardColumn({
@@ -30,6 +31,7 @@ export default memo(function BoardColumn({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
+  focusedIssueId,
 }: BoardColumnProps) {
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
@@ -70,6 +72,7 @@ export default memo(function BoardColumn({
                       onToggleExpand={onToggleExpand}
                       onChildClick={onChildClick}
                       onChildStatusToggle={onChildStatusToggle}
+                      isFocused={focusedIssueId === issue.id}
                     />
                   </div>
                 )}
