@@ -372,6 +372,7 @@ export class DashboardService {
       activeUsers,
       focusGrouped,
       inProgressGrouped,
+      todoGrouped,
       completedToday,
       overdueGrouped,
       activeIssuesGrouped,
@@ -413,6 +414,15 @@ export class DashboardService {
         where: {
           assigneeId: { not: null },
           status: IssueStatus.IN_PROGRESS,
+        },
+        _count: true,
+      }),
+      // 3.5. status = TODO
+      this.prisma.issue.groupBy({
+        by: ['assigneeId'],
+        where: {
+          assigneeId: { not: null },
+          status: IssueStatus.TODO,
         },
         _count: true,
       }),
@@ -478,6 +488,7 @@ export class DashboardService {
     // Build lookup maps
     const focusMap = new Map(focusGrouped.map((r) => [r.assigneeId!, r._count]));
     const inProgressMap = new Map(inProgressGrouped.map((r) => [r.assigneeId!, r._count]));
+    const todoMap = new Map(todoGrouped.map((r) => [r.assigneeId!, r._count]));
     const completedMap = new Map(completedToday.map((r) => [r.userId, r._count._all]));
     const overdueMap = new Map(overdueGrouped.map((r) => [r.assigneeId!, r._count]));
     const activeMap = new Map(activeIssuesGrouped.map((r) => [r.assigneeId!, r._count]));
@@ -524,6 +535,7 @@ export class DashboardService {
       })),
       today: {
         focusCount: focusMap.get(u.id) ?? 0,
+        todoCount: todoMap.get(u.id) ?? 0,
         inProgressCount: inProgressMap.get(u.id) ?? 0,
         completedCount: completedMap.get(u.id) ?? 0,
         overdueCount: overdueMap.get(u.id) ?? 0,

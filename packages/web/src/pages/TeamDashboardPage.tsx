@@ -17,11 +17,11 @@ function getMemberStatus(m: TeamMember): StatusIndicator {
   return 'active'
 }
 
-const STATUS_CONFIG: Record<StatusIndicator, { dot: string; label: string; order: number }> = {
-  overloaded: { dot: 'bg-orange-500', label: 'Overloaded', order: 0 },
-  active: { dot: 'bg-green-500', label: 'Active', order: 1 },
-  light: { dot: 'bg-yellow-500', label: 'Light', order: 2 },
-  idle: { dot: 'bg-red-500', label: 'Idle', order: 3 },
+const STATUS_CONFIG: Record<StatusIndicator, { dot: string; label: string; order: number; tooltip: string }> = {
+  overloaded: { dot: 'bg-orange-500', label: 'Overloaded', order: 0, tooltip: '활성 이슈 15개 초과 — 업무 과부하 상태' },
+  active: { dot: 'bg-green-500', label: 'Active', order: 1, tooltip: '진행 중 이슈가 있고 24시간 내 활동 있음' },
+  light: { dot: 'bg-yellow-500', label: 'Light', order: 2, tooltip: '활성 이슈 2개 이하이거나 진행 중 이슈 없음' },
+  idle: { dot: 'bg-red-500', label: 'Idle', order: 3, tooltip: '24시간 내 활동 없음' },
 }
 
 export default function TeamDashboardPage() {
@@ -131,9 +131,16 @@ export default function TeamDashboardPage() {
   )
 }
 
+const KPI_TOOLTIPS: Record<string, string> = {
+  'Active Members': '현재 활성(ACTIVE) 상태인 전체 팀원 수',
+  'Completed Today': '오늘 DONE으로 변경된 이슈 총 수',
+  'Overdue': '기한이 지난 미완료 이슈 총 수',
+  'Unassigned': '담당자가 없는 미완료 이슈 총 수',
+}
+
 function KpiCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: string }) {
   return (
-    <div className={cn('rounded-xl border border-gray-200 p-4', bg)}>
+    <div className={cn('rounded-xl border border-gray-200 p-4 cursor-help', bg)} title={KPI_TOOLTIPS[label] ?? label}>
       <div className="mb-2">{icon}</div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
       <div className="text-xs text-gray-500">{label}</div>
@@ -171,12 +178,15 @@ function MemberCard({ member }: { member: TeamMember }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-semibold text-gray-900">{member.user.name}</span>
-          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
-            'bg-green-100 text-green-700': status === 'active',
-            'bg-yellow-100 text-yellow-700': status === 'light',
-            'bg-red-100 text-red-700': status === 'idle',
-            'bg-orange-100 text-orange-700': status === 'overloaded',
-          })}>
+          <span
+            className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium cursor-help', {
+              'bg-green-100 text-green-700': status === 'active',
+              'bg-yellow-100 text-yellow-700': status === 'light',
+              'bg-red-100 text-red-700': status === 'idle',
+              'bg-orange-100 text-orange-700': status === 'overloaded',
+            })}
+            title={config.tooltip}
+          >
             {config.label}
           </span>
         </div>
@@ -195,14 +205,15 @@ function MemberCard({ member }: { member: TeamMember }) {
 
       {/* Today Stats */}
       <div className="flex items-center gap-3 text-xs">
-        <Stat label="Focus" value={today.focusCount} color="text-amber-600" />
-        <Stat label="In Progress" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
-        <Stat label="Done" value={today.completedCount} color="text-green-600" icon="✅" />
-        <Stat label="Overdue" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400'} icon="⚠️" />
+        <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600" icon="🎯" />
+        <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400" icon="📋" />
+        <Stat label="In Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
+        <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600" icon="✅" />
+        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400'} icon="⚠️" />
       </div>
 
       {/* Completion bar */}
-      <div className="w-24 shrink-0">
+      <div className="w-24 shrink-0 cursor-help" title={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
         <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
           <span>{overall.totalActive} active</span>
           <span>{completionRate}%</span>
@@ -218,11 +229,12 @@ function MemberCard({ member }: { member: TeamMember }) {
   )
 }
 
-function Stat({ label, value, color, icon }: { label: string; value: number; color: string; icon?: string }) {
+function Stat({ label, tooltip, value, color, icon }: { label: string; tooltip: string; value: number; color: string; icon?: string }) {
   return (
-    <div className="flex flex-col items-center min-w-[48px]" title={label}>
+    <div className="flex flex-col items-center min-w-[48px] cursor-help" title={tooltip}>
       <span className="text-[10px] text-gray-400">{icon ?? label.charAt(0)}</span>
       <span className={cn('text-sm font-semibold', color)}>{value}</span>
+      <span className="text-[9px] text-gray-400 leading-none mt-0.5">{label}</span>
     </div>
   )
 }

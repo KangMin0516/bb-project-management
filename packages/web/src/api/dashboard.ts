@@ -76,7 +76,7 @@ export interface GlobalDashboard {
 export interface TeamMember {
   user: { id: string; email: string; name: string; avatar: string | null }
   projects: { id: string; name: string; key: string; role: string }[]
-  today: { focusCount: number; inProgressCount: number; completedCount: number; overdueCount: number }
+  today: { focusCount: number; todoCount: number; inProgressCount: number; completedCount: number; overdueCount: number }
   overall: { totalActive: number; totalHistorical: number; doneHistorical: number }
   recentActivityCount: number
 }
