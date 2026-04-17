@@ -340,6 +340,25 @@ export default function IssueDetailPanel({
               </select>
             </InlineField>
 
+            {d.status === 'IN_PROGRESS' && (
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-xs font-medium text-gray-500">Recheck</span>
+                <button
+                  type="button"
+                  onClick={() => updateMutation.mutate({ isRecheck: !d.isRecheck })}
+                  className={cn(
+                    'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                    d.isRecheck ? 'bg-orange-500' : 'bg-gray-300',
+                  )}
+                >
+                  <span className={cn(
+                    'inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform',
+                    d.isRecheck ? 'translate-x-4.5' : 'translate-x-0.5',
+                  )} />
+                </button>
+              </div>
+            )}
+
             <InlineField
               label="Priority"
               display={

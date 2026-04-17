@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsUUID,
   IsInt,
+  IsBoolean,
   IsDateString,
   MaxLength,
   ValidateIf,
@@ -72,6 +73,11 @@ export class UpdateIssueDto {
   @ValidateIf((o) => o.focusDate !== null)
   @IsDateString()
   focusDate?: string | null;
+
+  @ApiPropertyOptional({ description: 'Mark as recheck (QA returned)' })
+  @IsOptional()
+  @IsBoolean()
+  isRecheck?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

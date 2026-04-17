@@ -6,7 +6,6 @@ export const IssueStatus = {
   REVIEW_QA: "REVIEW_QA",
   DONE: "DONE",
   CANCELED: "CANCELED",
-  RECHECK: "RECHECK",
 } as const;
 
 export type IssueStatus = (typeof IssueStatus)[keyof typeof IssueStatus];
@@ -17,7 +16,6 @@ export const ISSUE_STATUS_LIST: IssueStatus[] = [
   IssueStatus.IN_PROGRESS,
   IssueStatus.REVIEW_QA,
   IssueStatus.DONE,
-  IssueStatus.RECHECK,
   IssueStatus.CANCELED,
 ];
 
@@ -28,7 +26,6 @@ export const STATUS_LABELS: Record<IssueStatus, string> = {
   REVIEW_QA: "Review/QA",
   DONE: "Done",
   CANCELED: "Canceled",
-  RECHECK: "Recheck",
 };
 
 export const STATUS_CATEGORY: Record<
@@ -39,7 +36,6 @@ export const STATUS_CATEGORY: Record<
   TODO: "todo",
   IN_PROGRESS: "in_progress",
   REVIEW_QA: "in_progress",
-  RECHECK: "in_progress",
   DONE: "done",
   CANCELED: "done",
 };
@@ -51,7 +47,6 @@ export const STATUS_COLORS: Record<IssueStatus, string> = {
   REVIEW_QA: "#8B5CF6",
   DONE: "#10B981",
   CANCELED: "#EF4444",
-  RECHECK: "#F97316",
 };
 
 // ─── Issue Priority ─────────────────────────────────────────

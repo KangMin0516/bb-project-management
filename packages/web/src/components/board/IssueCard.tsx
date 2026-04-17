@@ -57,6 +57,11 @@ export default memo(function IssueCard({
           <span className="font-mono text-xs text-gray-400">
             {projectKey}-{issue.number}
           </span>
+          {issue.isRecheck && (
+            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+              Recheck
+            </span>
+          )}
           {dueBadge && (
             <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium', dueBadge.className)}>
               {dueBadge.text}

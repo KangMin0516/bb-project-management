@@ -9,6 +9,7 @@ export interface Issue {
   priority: string
   type: string
   order: number
+  isRecheck: boolean
   dueDate: string | null
   focusDate: string | null
   archivedAt: string | null
@@ -126,6 +127,7 @@ export interface UpdateIssuePayload {
   dueDate?: string | null
   focusDate?: string | null
   order?: number
+  isRecheck?: boolean
   labelIds?: string[]
   componentIds?: string[]
 }

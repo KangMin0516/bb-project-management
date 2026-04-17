@@ -356,6 +356,9 @@ export default function IssuesPage() {
                       <div className="flex items-center gap-1.5">
                         <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
                         <span className="text-xs text-gray-600">{issue.status.replace(/_/g, ' ')}</span>
+                        {issue.isRecheck && (
+                          <span className="rounded bg-orange-100 px-1 py-0.5 text-[9px] font-medium text-orange-700">Recheck</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2">

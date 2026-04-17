@@ -7,7 +7,6 @@ const ISSUE_STATUSES = [
   'REVIEW_QA',
   'DONE',
   'CANCELED',
-  'RECHECK',
 ] as const;
 
 export class ReorderIssueDto {
