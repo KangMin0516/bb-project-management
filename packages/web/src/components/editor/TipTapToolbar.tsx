@@ -156,10 +156,10 @@ export default function TipTapToolbar({ editor, onImageClick }: Props) {
   ]
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-gray-50 px-2 py-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2 py-1">
       {groups.map((group, gi) => (
         <div key={gi} className="flex items-center gap-0.5">
-          {gi > 0 && <div className="mx-1 h-4 w-px bg-gray-300" />}
+          {gi > 0 && <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-600" />}
           {group.map((btn, bi) => (
             <button
               key={bi}
@@ -168,8 +168,8 @@ export default function TipTapToolbar({ editor, onImageClick }: Props) {
               onClick={btn.action}
               className={`rounded px-1.5 py-1 transition-colors ${
                 btn.isActive?.()
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                  ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               {btn.icon}

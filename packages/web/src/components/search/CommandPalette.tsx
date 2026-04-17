@@ -79,32 +79,32 @@ export default function CommandPalette() {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" onClick={() => setOpen(false)}>
       <div className="fixed inset-0 bg-black/40" />
       <div
-        className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl"
+        className="relative w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
-          <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <Search className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search issues across all projects..."
-            className="flex-1 text-sm text-gray-900 placeholder-gray-400 outline-none"
+            className="flex-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => setQuery('')} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
               <X className="h-4 w-4" />
             </button>
           )}
-          <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">ESC</kbd>
+          <kbd className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">ESC</kbd>
         </div>
 
         {/* Results */}
         <div className="max-h-80 overflow-y-auto">
           {debouncedQuery && results.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">No results found</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No results found</div>
           )}
           {results.map((result, index) => (
             <button
@@ -113,14 +113,14 @@ export default function CommandPalette() {
               onMouseEnter={() => setActiveIndex(index)}
               className={cn(
                 'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm',
-                index === activeIndex ? 'bg-primary-50' : 'hover:bg-gray-50',
+                index === activeIndex ? 'bg-primary-50' : 'hover:bg-gray-50 dark:bg-gray-900',
               )}
             >
               <span className="text-xs">{TYPE_ICONS[result.type] || '📋'}</span>
-              <span className="font-mono text-xs text-gray-400">
+              <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
                 {result.project.key}-{result.number}
               </span>
-              <span className={cn('flex-1 truncate font-medium', index === activeIndex ? 'text-primary-700' : 'text-gray-900')}>
+              <span className={cn('flex-1 truncate font-medium', index === activeIndex ? 'text-primary-700' : 'text-gray-900 dark:text-gray-100')}>
                 {result.title}
               </span>
               <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[result.status])} />
@@ -133,7 +133,7 @@ export default function CommandPalette() {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="border-t border-gray-200 px-4 py-2 text-[11px] text-gray-400">
+          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-[11px] text-gray-400 dark:text-gray-500">
             <span className="mr-3">↑↓ Navigate</span>
             <span className="mr-3">↵ Open</span>
             <span>ESC Close</span>

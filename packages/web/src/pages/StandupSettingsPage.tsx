@@ -55,7 +55,7 @@ export default function StandupSettingsPage() {
   if (!currentUser?.isSuperuser) {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <p className="text-sm text-gray-500">Only superusers can manage standup settings.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Only superusers can manage standup settings.</p>
       </div>
     )
   }
@@ -71,8 +71,8 @@ export default function StandupSettingsPage() {
     }
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <h1 className="mb-4 text-xl font-bold text-gray-900">Standup Bot</h1>
-        <p className="mb-4 text-sm text-gray-500">Connect Slack to use the Standup Bot.</p>
+        <h1 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">Standup Bot</h1>
+        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Connect Slack to use the Standup Bot.</p>
         <button
           onClick={handleConnect}
           className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
@@ -85,7 +85,7 @@ export default function StandupSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6">
-      <h1 className="text-xl font-bold text-gray-900">Standup Bot</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Standup Bot</h1>
 
       <QuestionsSection questions={questions ?? []} />
 
@@ -122,17 +122,17 @@ function QuestionsSection({ questions }: { questions: StandupQuestion[] }) {
   })
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 text-sm font-semibold text-gray-700">Questions</h2>
+    <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Questions</h2>
       <div className="space-y-2">
         {questions.map((q, i) => (
-          <div key={q.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
-            <span className="text-xs font-mono text-gray-400 w-5">{i + 1}</span>
-            <span className="flex-1 text-sm text-gray-900">{q.text}</span>
-            <span className="text-xs text-gray-400">ignore: {q.ignoreText}</span>
+          <div key={q.id} className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
+            <span className="text-xs font-mono text-gray-400 dark:text-gray-500 w-5">{i + 1}</span>
+            <span className="flex-1 text-sm text-gray-900 dark:text-gray-100">{q.text}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">ignore: {q.ignoreText}</span>
             <button
               onClick={() => deleteMutation.mutate(q.id)}
-              className="text-gray-400 hover:text-red-500"
+              className="text-gray-400 dark:text-gray-500 hover:text-red-500"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -144,7 +144,7 @@ function QuestionsSection({ questions }: { questions: StandupQuestion[] }) {
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
           placeholder="New question text..."
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
           onKeyDown={(e) => e.key === 'Enter' && newText && createMutation.mutate()}
         />
         <button
@@ -180,9 +180,9 @@ function ConfigsSection({
   const [showNew, setShowNew] = useState(false)
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5">
+    <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-700">Standup Configs</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Standup Configs</h2>
         <button
           onClick={() => setShowNew(!showNew)}
           className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
@@ -218,7 +218,7 @@ function ConfigsSection({
           />
         ))}
         {configs.length === 0 && !showNew && (
-          <p className="text-sm text-gray-400">No standup configs yet.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">No standup configs yet.</p>
         )}
       </div>
     </section>
@@ -264,12 +264,12 @@ function ConfigRow({
   const channelName = config.channelName ?? channels.find((c) => c.id === config.channelId)?.name ?? config.channelId
 
   return (
-    <div className="rounded-lg border border-gray-100 bg-gray-50/50">
+    <div className="rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
       <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer" onClick={onToggle}>
-        {expanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+        {expanded ? <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />}
         <div className="flex-1">
-          <div className="text-sm font-medium text-gray-900">{config.name}</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{config.name}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             #{channelName} · {config.cronHour}:{config.cronMinute.padStart(2, '0')} · {config.members.length} members · {config._count.reports} reports
           </div>
         </div>
@@ -278,14 +278,14 @@ function ConfigRow({
             type="checkbox"
             checked={config.enabled}
             onChange={() => toggleMutation.mutate()}
-            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
           />
-          <span className="text-xs text-gray-500">On</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">On</span>
         </label>
         <button
           onClick={(e) => { e.stopPropagation(); triggerMutation.mutate() }}
           disabled={triggerMutation.isPending}
-          className="rounded border border-gray-300 p-1 text-gray-500 hover:bg-gray-100"
+          className="rounded border border-gray-300 dark:border-gray-600 p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
           title="Trigger now"
         >
           <Play className="h-3.5 w-3.5" />
@@ -295,14 +295,14 @@ function ConfigRow({
             e.stopPropagation()
             if (confirm(`Delete "${config.name}"?`)) deleteMutation.mutate()
           }}
-          className="text-gray-400 hover:text-red-500"
+          className="text-gray-400 dark:text-gray-500 hover:text-red-500"
         >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
 
       {expanded && (
-        <div className="border-t border-gray-100 px-3 py-3">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-3 py-3">
           <ConfigEditForm config={config} questions={questions} channels={channels} slackUsers={slackUsers} />
         </div>
       )}
@@ -334,7 +334,7 @@ function MemberSelector({
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">
+      <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">
         Members ({selectedIds.length} selected)
       </label>
       {selectedUsers.length > 0 && (
@@ -360,13 +360,13 @@ function MemberSelector({
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder="Search users..."
-        className="mb-1 w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="mb-1 w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
-      <div className="max-h-40 overflow-y-auto rounded border border-gray-200 bg-white">
+      <div className="max-h-40 overflow-y-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         {filtered.map((u) => (
           <label
             key={u.id}
-            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-gray-50"
+            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-gray-50 dark:bg-gray-900"
           >
             <input
               type="checkbox"
@@ -378,15 +378,15 @@ function MemberSelector({
                     : selectedIds.filter((id) => id !== u.id),
                 )
               }}
-              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
             />
             {u.avatar && <img src={u.avatar} alt="" className="h-5 w-5 rounded-full" />}
             <span>{u.realName}</span>
-            <span className="text-xs text-gray-400">@{u.name}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">@{u.name}</span>
           </label>
         ))}
         {filtered.length === 0 && (
-          <p className="px-2 py-2 text-xs text-gray-400">No users found</p>
+          <p className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">No users found</p>
         )}
       </div>
     </div>
@@ -453,15 +453,15 @@ function ConfigForm({
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         placeholder="Config name (e.g. Daily Standup)"
-        className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Channel</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Channel</label>
           <select
             value={form.channelId}
             onChange={(e) => setForm({ ...form, channelId: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             <option value="">Select...</option>
             {channels.map((ch) => (
@@ -470,11 +470,11 @@ function ConfigForm({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Timezone</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Timezone</label>
           <select
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>{tz}</option>
@@ -484,29 +484,29 @@ function ConfigForm({
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Hour</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Hour</label>
           <input
             value={form.cronHour}
             onChange={(e) => setForm({ ...form, cronHour: e.target.value })}
             placeholder="9"
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Minute</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Minute</label>
           <input
             value={form.cronMinute}
             onChange={(e) => setForm({ ...form, cronMinute: e.target.value })}
             placeholder="0"
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Days</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Days</label>
           <select
             value={form.cronDayOfWeek}
             onChange={(e) => setForm({ ...form, cronDayOfWeek: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             {DAYS.map((d) => (
               <option key={d.value} value={d.value}>{d.label}</option>
@@ -515,7 +515,7 @@ function ConfigForm({
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Questions</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Questions</label>
         <div className="space-y-1">
           {questions.map((q) => (
             <label key={q.id} className="flex items-center gap-2 text-sm">
@@ -528,7 +528,7 @@ function ConfigForm({
                     : form.selectedQuestionIds.filter((id) => id !== q.id)
                   setForm({ ...form, selectedQuestionIds: ids })
                 }}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+                className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
               />
               {q.text}
             </label>
@@ -552,7 +552,7 @@ function ConfigForm({
         </button>
         <button
           onClick={onDone}
-          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
         >
           Cancel
         </button>
@@ -622,15 +622,15 @@ function ConfigEditForm({
       <input
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
       />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Channel</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Channel</label>
           <select
             value={form.channelId}
             onChange={(e) => setForm({ ...form, channelId: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             {channels.map((ch) => (
               <option key={ch.id} value={ch.id}>#{ch.name}</option>
@@ -638,11 +638,11 @@ function ConfigEditForm({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Timezone</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Timezone</label>
           <select
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>{tz}</option>
@@ -652,27 +652,27 @@ function ConfigEditForm({
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Hour</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Hour</label>
           <input
             value={form.cronHour}
             onChange={(e) => setForm({ ...form, cronHour: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Minute</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Minute</label>
           <input
             value={form.cronMinute}
             onChange={(e) => setForm({ ...form, cronMinute: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Days</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Days</label>
           <select
             value={form.cronDayOfWeek}
             onChange={(e) => setForm({ ...form, cronDayOfWeek: e.target.value })}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
           >
             {DAYS.map((d) => (
               <option key={d.value} value={d.value}>{d.label}</option>
@@ -681,23 +681,23 @@ function ConfigEditForm({
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Greeting</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Greeting</label>
         <input
           value={form.greeting}
           onChange={(e) => setForm({ ...form, greeting: e.target.value })}
-          className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Goodbye</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Goodbye</label>
         <input
           value={form.goodbye}
           onChange={(e) => setForm({ ...form, goodbye: e.target.value })}
-          className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Questions</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Questions</label>
         <div className="space-y-1">
           {questions.map((q) => (
             <label key={q.id} className="flex items-center gap-2 text-sm">
@@ -710,7 +710,7 @@ function ConfigEditForm({
                     : form.selectedQuestionIds.filter((id) => id !== q.id)
                   setForm({ ...form, selectedQuestionIds: ids })
                 }}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600"
+                className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
               />
               {q.text}
             </label>

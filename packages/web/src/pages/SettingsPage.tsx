@@ -207,34 +207,34 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6">
-      <h1 className="text-xl font-bold text-gray-900">Project Settings</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Project Settings</h1>
 
       {/* General */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">General</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">General</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Project Key</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Project Key</label>
             <input
               value={project?.key || ''}
               disabled
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400"
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm text-gray-400 dark:text-gray-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Name</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Description</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
               rows={2}
             />
           </div>
@@ -248,11 +248,11 @@ export default function SettingsPage() {
       </section>
 
       {/* Members */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Members</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Members</h2>
         <div className="space-y-2">
           {members?.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
+            <div key={m.id} className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
               <div
                 className={`flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden ${m.user.avatar ? 'cursor-pointer hover:ring-2 hover:ring-primary-300 transition' : ''}`}
                 onClick={() => m.user.avatar && useImagePreviewStore.getState().open(m.user.avatar, m.user.name)}
@@ -264,13 +264,13 @@ export default function SettingsPage() {
                 )}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900">{m.user.name}</div>
-                <div className="text-xs text-gray-500">{m.user.email}</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.user.name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{m.user.email}</div>
               </div>
               <select
                 value={m.role}
                 onChange={(e) => updateRole.mutate({ memberId: m.id, role: e.target.value })}
-                className="rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none"
+                className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none"
               >
                 <option value="ADMIN">Admin</option>
                 <option value="PM">PM</option>
@@ -278,7 +278,7 @@ export default function SettingsPage() {
               </select>
               <button
                 onClick={() => removeMember.mutate(m.id)}
-                className="text-gray-400 hover:text-red-500"
+                className="text-gray-400 dark:text-gray-500 hover:text-red-500"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -290,7 +290,7 @@ export default function SettingsPage() {
             <select
               value={addUserId}
               onChange={(e) => setAddUserId(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
             >
               <option value="">Select user...</option>
               {availableUsers.map((u) => (
@@ -300,7 +300,7 @@ export default function SettingsPage() {
             <select
               value={addRole}
               onChange={(e) => setAddRole(e.target.value)}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
             >
               <option value="ADMIN">Admin</option>
               <option value="PM">PM</option>
@@ -319,8 +319,8 @@ export default function SettingsPage() {
       </section>
 
       {/* Labels */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Labels</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Labels</h2>
         <div className="mb-3 flex flex-wrap gap-1.5">
           {labels?.map((l) => (
             <span
@@ -332,7 +332,7 @@ export default function SettingsPage() {
             </span>
           ))}
           {!labels?.length && (
-            <span className="text-sm text-gray-400">No labels yet</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">No labels yet</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -346,7 +346,7 @@ export default function SettingsPage() {
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Label name"
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
           />
           <button
             onClick={() => newLabel && createLabel.mutate()}
@@ -357,7 +357,7 @@ export default function SettingsPage() {
           </button>
           <button
             onClick={() => seedLabels.mutate()}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900"
           >
             Seed Defaults
           </button>
@@ -365,8 +365,8 @@ export default function SettingsPage() {
       </section>
 
       {/* Components */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Components</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Components</h2>
         {components && components.length > 0 ? (
           <div className="mb-3 space-y-2">
             {components.map((comp) =>
@@ -376,19 +376,19 @@ export default function SettingsPage() {
                     value={editComponentName}
                     onChange={(e) => setEditComponentName(e.target.value)}
                     placeholder="Component name"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
                   />
                   <input
                     value={editComponentDesc}
                     onChange={(e) => setEditComponentDesc(e.target.value)}
                     placeholder="Description (optional)"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <select
                       value={editComponentLead}
                       onChange={(e) => setEditComponentLead(e.target.value)}
-                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
                     >
                       <option value="">No lead</option>
                       {members?.map((m) => (
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                     <select
                       value={editComponentDefaultAssignee}
                       onChange={(e) => setEditComponentDefaultAssignee(e.target.value)}
-                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
                     >
                       <option value="">No default assignee</option>
                       {members?.map((m) => (
@@ -416,20 +416,20 @@ export default function SettingsPage() {
                     </button>
                     <button
                       onClick={() => setEditingComponent(null)}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div key={comp.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
+                <div key={comp.id} className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">{comp.name}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{comp.name}</div>
                     {comp.description && (
-                      <div className="text-xs text-gray-500">{comp.description}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{comp.description}</div>
                     )}
-                    <div className="mt-0.5 flex gap-3 text-xs text-gray-400">
+                    <div className="mt-0.5 flex gap-3 text-xs text-gray-400 dark:text-gray-500">
                       {comp.lead && <span>Lead: {comp.lead.name}</span>}
                       {comp.defaultAssignee && <span>Default: {comp.defaultAssignee.name}</span>}
                       <span>{comp._count.issues} issue{comp._count.issues !== 1 ? 's' : ''}</span>
@@ -437,7 +437,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => startEditComponent(comp)}
-                    className="text-gray-400 hover:text-primary-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-primary-500"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                         deleteComponent.mutate(comp.id)
                       }
                     }}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -456,27 +456,27 @@ export default function SettingsPage() {
             )}
           </div>
         ) : (
-          <p className="mb-3 text-sm text-gray-400">No components yet</p>
+          <p className="mb-3 text-sm text-gray-400 dark:text-gray-500">No components yet</p>
         )}
-        <div className="space-y-2 rounded-lg border border-gray-200 p-3">
-          <div className="text-xs font-medium text-gray-500">Add Component</div>
+        <div className="space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Add Component</div>
           <input
             value={newComponentName}
             onChange={(e) => setNewComponentName(e.target.value)}
             placeholder="Component name"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
           />
           <input
             value={newComponentDesc}
             onChange={(e) => setNewComponentDesc(e.target.value)}
             placeholder="Description (optional)"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
           />
           <div className="grid grid-cols-2 gap-2">
             <select
               value={newComponentLead}
               onChange={(e) => setNewComponentLead(e.target.value)}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
             >
               <option value="">No lead</option>
               {members?.map((m) => (
@@ -486,7 +486,7 @@ export default function SettingsPage() {
             <select
               value={newComponentDefaultAssignee}
               onChange={(e) => setNewComponentDefaultAssignee(e.target.value)}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
             >
               <option value="">No default assignee</option>
               {members?.map((m) => (
@@ -515,9 +515,9 @@ export default function SettingsPage() {
       />
 
       {/* Danger zone */}
-      <section className="rounded-xl border border-red-200 bg-white p-5">
+      <section className="rounded-xl border border-red-200 bg-white dark:bg-gray-800 p-5">
         <h2 className="mb-2 text-sm font-semibold text-red-600">Danger Zone</h2>
-        <p className="mb-3 text-xs text-gray-500">Deleting a project is irreversible.</p>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Deleting a project is irreversible.</p>
         <button
           onClick={() => {
             if (confirm('Are you sure you want to delete this project? This cannot be undone.')) {

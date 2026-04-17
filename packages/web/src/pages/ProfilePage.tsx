@@ -67,11 +67,11 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-8 p-6">
-      <h1 className="text-xl font-bold text-gray-900">My Profile</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Profile</h1>
 
       {/* Avatar & Name */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Profile</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Profile</h2>
         <div className="flex items-start gap-5">
           <div>
             <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} />
@@ -92,19 +92,19 @@ export default function ProfilePage() {
           </div>
           <div className="flex-1 space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Email</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Email</label>
               <input
                 value={user?.email || ''}
                 disabled
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400"
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm text-gray-400 dark:text-gray-500"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Name</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
             <button
@@ -119,34 +119,34 @@ export default function ProfilePage() {
       </section>
 
       {/* Change Password */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Change Password</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Current Password</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Current Password</label>
             <input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">New Password</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">New Password</label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Confirm New Password</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Confirm New Password</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
           {passwordError && (

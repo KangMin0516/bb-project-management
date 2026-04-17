@@ -217,8 +217,8 @@ export default function IssuesPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-        <h1 className="text-lg font-bold text-gray-900">{project?.key} Lists</h1>
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{project?.key} Lists</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
@@ -230,7 +230,7 @@ export default function IssuesPage() {
 
       {/* Bulk Action Bar / Filters */}
       {selectedIds.size > 0 ? (
-        <div className="border-b border-gray-200 bg-white px-6 py-2">
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
           <BulkActionBar
             projectId={projectId}
             selectedIds={selectedIds}
@@ -239,7 +239,7 @@ export default function IssuesPage() {
           />
         </div>
       ) : (
-      <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-6 py-2">
+      <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
         <ViewToggle options={VIEW_OPTIONS} value={viewMode} onChange={handleViewChange} />
         <button
           type="button"
@@ -248,7 +248,7 @@ export default function IssuesPage() {
             'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
             showArchived
               ? 'border-amber-300 bg-amber-50 text-amber-700'
-              : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+              : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900',
           )}
         >
           <Archive className="h-3.5 w-3.5" />
@@ -291,14 +291,14 @@ export default function IssuesPage() {
           />
         ) : (
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 text-left text-xs font-medium text-gray-500">
+            <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
               <tr>
                 <th className="w-8 px-3 py-2">
                   <input
                     type="checkbox"
                     checked={displayItems.length > 0 && selectedIds.size === displayItems.length}
                     onChange={toggleSelectAll}
-                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
                 </th>
                 <th className="group cursor-pointer px-6 py-2" onClick={() => toggleSort('number')}>
@@ -322,7 +322,7 @@ export default function IssuesPage() {
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {displayItems.map((issue) => {
                 const badge = getDueBadge(issue.dueDate)
                 const overdue = isIssueOverdue(issue)
@@ -331,7 +331,7 @@ export default function IssuesPage() {
                     key={issue.id}
                     onClick={() => setSelectedIssue(issue)}
                     className={cn(
-                      'cursor-pointer hover:bg-gray-50',
+                      'cursor-pointer hover:bg-gray-50 dark:bg-gray-900',
                       overdue && 'bg-red-50/50',
                       selectedIds.has(issue.id) && 'bg-primary-50',
                       issue.archivedAt && 'opacity-50',
@@ -342,20 +342,20 @@ export default function IssuesPage() {
                         type="checkbox"
                         checked={selectedIds.has(issue.id)}
                         onChange={() => toggleSelectOne(issue.id)}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
                     </td>
-                    <td className="px-6 py-2 font-mono text-xs text-gray-400">
+                    <td className="px-6 py-2 font-mono text-xs text-gray-400 dark:text-gray-500">
                       {project?.key}-{issue.number}
                     </td>
-                    <td className={cn('max-w-xs truncate px-3 py-2 font-medium', overdue ? 'text-red-700' : 'text-gray-900')}>
+                    <td className={cn('max-w-xs truncate px-3 py-2 font-medium', overdue ? 'text-red-700' : 'text-gray-900 dark:text-gray-100')}>
                       <span className="mr-1 text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
                       {issue.title}
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
                         <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
-                        <span className="text-xs text-gray-600">{issue.status.replace(/_/g, ' ')}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-500">{issue.status.replace(/_/g, ' ')}</span>
                         {issue.isRecheck && (
                           <span className="rounded bg-orange-100 px-1 py-0.5 text-[9px] font-medium text-orange-700">Recheck</span>
                         )}
@@ -366,8 +366,8 @@ export default function IssuesPage() {
                         {issue.priority}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{issue.type.replace(/_/g, ' ')}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600">
+                    <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{issue.type.replace(/_/g, ' ')}</td>
+                    <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-500">
                       {issue.assignee?.name || '-'}
                     </td>
                     <td className="px-3 py-2">
@@ -377,7 +377,7 @@ export default function IssuesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-gray-400">
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
                       {new Date(issue.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -395,7 +395,7 @@ export default function IssuesPage() {
               })}
               {displayItems.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
                     No issues found
                   </td>
                 </tr>
@@ -407,8 +407,8 @@ export default function IssuesPage() {
 
       {/* Issue count */}
       {data && (
-        <div className="border-t border-gray-200 bg-white px-6 py-2">
-          <span className="text-xs text-gray-500">{displayItems.length} issues</span>
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">{displayItems.length} issues</span>
         </div>
       )}
 

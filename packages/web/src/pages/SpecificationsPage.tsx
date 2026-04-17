@@ -151,13 +151,13 @@ export default function SpecificationsPage() {
     <div className="flex h-full">
       {/* Left sidebar — spec list */}
       {showSidebar ? (
-        <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-            <h1 className="text-sm font-bold text-gray-900">{project?.key} Specs</h1>
+        <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+            <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100">{project?.key} Specs</h1>
             <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setShowCreate(true)}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
                 title="New specification"
               >
                 <Plus className="h-4 w-4" />
@@ -176,14 +176,14 @@ export default function SpecificationsPage() {
                     }
                   })
                 }}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
                 title="Download all as Markdown"
               >
                 <Download className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setShowSidebar(false)}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
                 title="Close sidebar"
               >
                 <PanelLeftClose className="h-4 w-4" />
@@ -208,7 +208,7 @@ export default function SpecificationsPage() {
                         else next.add(category)
                         return next
                       })}
-                      className="flex w-full items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                      className="flex w-full items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-600 dark:text-gray-500"
                     >
                       <ChevronRight className={cn('h-3 w-3 transition-transform', !isCollapsed && 'rotate-90')} />
                       <span className="flex-1 text-left">{category}</span>
@@ -222,10 +222,10 @@ export default function SpecificationsPage() {
                           'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition',
                           selectedId === spec.id
                             ? 'bg-primary-50 text-primary-700'
-                            : 'text-gray-700 hover:bg-gray-50',
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900',
                         )}
                       >
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
                         <span className="flex-1 truncate">{spec.title}</span>
                         {spec._count.comments > 0 && (
                           <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[9px] font-medium text-amber-600">
@@ -239,15 +239,15 @@ export default function SpecificationsPage() {
               })
             )}
             {!isLoading && (!specs || specs.length === 0) && (
-              <p className="py-8 text-center text-sm text-gray-400">No specifications yet</p>
+              <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No specifications yet</p>
             )}
           </div>
         </div>
       ) : (
-        <div className="flex shrink-0 flex-col items-center border-r border-gray-200 bg-white py-3 px-1.5">
+        <div className="flex shrink-0 flex-col items-center border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-1.5">
           <button
             onClick={() => setShowSidebar(true)}
-            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
             title="Open sidebar"
           >
             <PanelLeftOpen className="h-4 w-4" />
@@ -260,9 +260,9 @@ export default function SpecificationsPage() {
         {detail ? (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-lg font-bold text-gray-900">{detail.title}</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{detail.title}</h2>
                 <span className={cn('rounded px-2 py-0.5 text-[10px] font-medium', SPEC_STATUS_COLORS[detail.status])}>
                   {detail.status}
                 </span>
@@ -285,7 +285,7 @@ export default function SpecificationsPage() {
                 <select
                   value={detail.status}
                   onChange={(e) => updateMutation.mutate({ status: e.target.value as SpecStatus })}
-                  className="rounded border border-gray-300 px-2 py-1 text-xs"
+                  className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs"
                 >
                   {(['DRAFT', 'REVIEW', 'APPROVED', 'DEPRECATED'] as SpecStatus[]).map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -294,7 +294,7 @@ export default function SpecificationsPage() {
                 {!editingContent ? (
                   <button
                     onClick={() => { setDraftContent(detail.content); setEditingContent(true) }}
-                    className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
                   >
                     Edit
                   </button>
@@ -308,7 +308,7 @@ export default function SpecificationsPage() {
                     </button>
                     <button
                       onClick={() => setEditingContent(false)}
-                      className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
                     >
                       Cancel
                     </button>
@@ -325,7 +325,7 @@ export default function SpecificationsPage() {
                       URL.revokeObjectURL(url)
                     })
                   }}
-                  className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
                   title="Download as Markdown"
                 >
                   <Download className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />
@@ -339,7 +339,7 @@ export default function SpecificationsPage() {
                 </button>
                 <button
                   onClick={() => setShowComments((v) => !v)}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
                   title={showComments ? 'Hide comments' : 'Show comments'}
                 >
                   {showComments ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -368,7 +368,7 @@ export default function SpecificationsPage() {
 
               {/* Comment panel */}
               {showComments && (
-                <div className="w-80 shrink-0 border-l border-gray-200 bg-white">
+                <div className="w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                   <SpecCommentPanel
                     projectId={projectId}
                     specId={detail.id}
@@ -387,7 +387,7 @@ export default function SpecificationsPage() {
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-300" />
-              <p className="mt-2 text-sm text-gray-500">Select a specification or create a new one</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Select a specification or create a new one</p>
             </div>
           </div>
         )}
@@ -405,10 +405,10 @@ export default function SpecificationsPage() {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowCreate(false)}>
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-gray-800 p-6 shadow-xl dark:shadow-gray-900/50" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">New Specification</h3>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Specification</h3>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -418,13 +418,13 @@ export default function SpecificationsPage() {
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
                   placeholder="Title"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
                 <input
                   value={createCategory}
                   onChange={(e) => setCreateCategory(e.target.value)}
                   placeholder="Category (optional)"
-                  className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="w-40 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
               <MarkdownEditor
@@ -436,7 +436,7 @@ export default function SpecificationsPage() {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowCreate(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
                 >
                   Cancel
                 </button>

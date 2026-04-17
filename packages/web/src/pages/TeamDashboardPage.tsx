@@ -29,7 +29,7 @@ function Tip({ text, children }: { text: string; children: React.ReactNode }) {
     <div className="group/tip relative inline-flex">
       {children}
       <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 opacity-0 transition-opacity group-hover/tip:opacity-100">
-        <div className="whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg">
+        <div className="whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg dark:shadow-gray-900/50">
           {text}
         </div>
         <div className="mx-auto h-0 w-0 border-x-4 border-t-4 border-x-transparent border-t-gray-900" />
@@ -91,35 +91,35 @@ export default function TeamDashboardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-xl font-bold text-gray-900">Team Dashboard</h1>
+      <h1 className="mb-6 text-xl font-bold text-gray-900 dark:text-gray-100">Team Dashboard</h1>
 
       {/* KPI Cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard icon={<Users className="h-5 w-5 text-blue-600" />} label="Active Members" tooltip="현재 활성(ACTIVE) 상태인 전체 팀원 수" value={summary.activeMembers} bg="bg-blue-50" />
         <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Completed Today" tooltip="오늘 DONE으로 변경된 이슈 총 수" value={summary.completedToday} bg="bg-green-50" />
         <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-600" />} label="Overdue" tooltip="기한이 지난 미완료 이슈 총 수" value={summary.overdueTotal} bg="bg-red-50" />
-        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100" />
+        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600 dark:text-gray-500" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100 dark:bg-gray-700" />
       </div>
 
       {/* Search + Sort */}
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search members..."
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-2 pl-9 pr-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
           {([['status', 'Status'], ['name', 'Name'], ['active', 'Active'], ['overdue', 'Overdue']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setSortKey(key)}
               className={cn(
                 'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition',
-                sortKey === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                sortKey === key ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
               )}
             >
               {key === sortKey && <ArrowUpDown className="h-3 w-3" />}
@@ -135,7 +135,7 @@ export default function TeamDashboardPage() {
           <MemberCard key={m.user.id} member={m} />
         ))}
         {members.length === 0 && (
-          <p className="py-8 text-center text-sm text-gray-400">No members found</p>
+          <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No members found</p>
         )}
       </div>
 
@@ -148,10 +148,10 @@ export default function TeamDashboardPage() {
 function KpiCard({ icon, label, tooltip, value, bg }: { icon: React.ReactNode; label: string; tooltip: string; value: number; bg: string }) {
   return (
     <Tip text={tooltip}>
-      <div className={cn('rounded-xl border border-gray-200 p-4 w-full', bg)}>
+      <div className={cn('rounded-xl border border-gray-200 dark:border-gray-700 p-4 w-full', bg)}>
         <div className="mb-2">{icon}</div>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className="text-xs text-gray-500">{label}</div>
+        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
       </div>
     </Tip>
   )
@@ -167,7 +167,7 @@ function MemberCard({ member }: { member: TeamMember }) {
     : 0
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300 transition">
+    <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:border-gray-300 dark:border-gray-600 transition">
       {/* Avatar + Status */}
       <Tip text={config.tooltip}>
         <div className="relative shrink-0">
@@ -185,7 +185,7 @@ function MemberCard({ member }: { member: TeamMember }) {
       {/* Name + Projects */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-gray-900">{member.user.name}</span>
+          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{member.user.name}</span>
           <Tip text={config.tooltip}>
             <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
               'bg-green-100 text-green-700': status === 'active',
@@ -200,12 +200,12 @@ function MemberCard({ member }: { member: TeamMember }) {
         <div className="mt-0.5 flex flex-wrap gap-1">
           {member.projects.length > 0 ? (
             member.projects.map((p) => (
-              <span key={p.id} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
-                {p.key} <span className="text-gray-400">{p.role}</span>
+              <span key={p.id} className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                {p.key} <span className="text-gray-400 dark:text-gray-500">{p.role}</span>
               </span>
             ))
           ) : (
-            <span className="text-[10px] text-gray-400 italic">no projects</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">no projects</span>
           )}
         </div>
       </div>
@@ -216,17 +216,17 @@ function MemberCard({ member }: { member: TeamMember }) {
         <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400" icon="📋" />
         <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
         <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600" icon="✅" />
-        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400'} icon="⚠️" />
+        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400 dark:text-gray-500'} icon="⚠️" />
       </div>
 
       {/* Completion bar */}
       <Tip text={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
         <div className="w-24 shrink-0">
-          <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+          <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
             <span>{overall.totalActive} active</span>
             <span>{completionRate}%</span>
           </div>
-          <div className="h-1.5 rounded-full bg-gray-100">
+          <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
             <div
               className="h-1.5 rounded-full bg-green-500 transition-all"
               style={{ width: `${completionRate}%` }}
@@ -242,9 +242,9 @@ function Stat({ label, tooltip, value, color, icon }: { label: string; tooltip: 
   return (
     <Tip text={tooltip}>
       <div className="flex flex-col items-center min-w-[48px]">
-        <span className="text-[10px] text-gray-400">{icon ?? label.charAt(0)}</span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">{icon ?? label.charAt(0)}</span>
         <span className={cn('text-sm font-semibold', color)}>{value}</span>
-        <span className="text-[9px] text-gray-400 leading-none mt-0.5">{label}</span>
+        <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-none mt-0.5">{label}</span>
       </div>
     </Tip>
   )

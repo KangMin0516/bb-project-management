@@ -149,7 +149,7 @@ export default function IssueTreeView({
 
   if (groups.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center text-gray-400">
+      <div className="flex h-32 items-center justify-center text-gray-400 dark:text-gray-500">
         No issues found
       </div>
     )
@@ -157,7 +157,7 @@ export default function IssueTreeView({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
         {groups.map((group) => {
           const isCollapsed = collapsed.has(group.id)
           const flatIssues = flattenNodes(group.nodes)
@@ -167,16 +167,16 @@ export default function IssueTreeView({
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className="flex w-full items-center gap-2 bg-gray-100/80 px-6 py-2.5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                className="flex w-full items-center gap-2 bg-gray-100 dark:bg-gray-700/80 px-6 py-2.5 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
               >
                 {isCollapsed ? (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 )}
                 <span>{group.icon}</span>
                 <span className="truncate">{group.label}</span>
-                <span className="ml-1 text-xs text-gray-400">({group.count})</span>
+                <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">({group.count})</span>
               </button>
 
               {/* Group content — droppable zone */}
@@ -209,8 +209,8 @@ export default function IssueTreeView({
                                 {...dragProvided.dragHandleProps}
                                 onClick={() => onIssueClick(issue)}
                                 className={cn(
-                                  'grid cursor-pointer items-center gap-x-2 py-2.5 pr-6 border-b border-gray-100 hover:bg-gray-50 transition-colors',
-                                  dragSnapshot.isDragging && 'bg-white shadow-lg rounded ring-1 ring-primary-300 border-transparent',
+                                  'grid cursor-pointer items-center gap-x-2 py-2.5 pr-6 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 transition-colors',
+                                  dragSnapshot.isDragging && 'bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-900/50 rounded ring-1 ring-primary-300 border-transparent',
                                   isEpicSelf && 'opacity-50',
                                 )}
                                 style={{
@@ -222,21 +222,21 @@ export default function IssueTreeView({
                                 {depth > 0 && (
                                   <span className="text-gray-300 text-xs">└</span>
                                 )}
-                                <span className={`font-mono text-xs text-gray-400 ${depth > 0 ? '' : 'col-start-2'}`}>
+                                <span className={`font-mono text-xs text-gray-400 dark:text-gray-500 ${depth > 0 ? '' : 'col-start-2'}`}>
                                   {projectKey}-{issue.number}
                                 </span>
-                                <span className="min-w-0 truncate text-sm text-gray-900">
+                                <span className="min-w-0 truncate text-sm text-gray-900 dark:text-gray-100">
                                   <span className="mr-1 text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
                                   {issue.title}
                                 </span>
                                 <div className="flex items-center gap-1.5">
                                   <div className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[issue.status])} />
-                                  <span className="text-xs text-gray-500 truncate">{issue.status.replace(/_/g, ' ')}</span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{issue.status.replace(/_/g, ' ')}</span>
                                 </div>
                                 <span className={cn('justify-self-center rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
                                   {issue.priority}
                                 </span>
-                                <span className="truncate text-xs text-gray-600 text-right">
+                                <span className="truncate text-xs text-gray-600 dark:text-gray-500 text-right">
                                   {issue.assignee?.name || '-'}
                                 </span>
                                 <span className="text-right">

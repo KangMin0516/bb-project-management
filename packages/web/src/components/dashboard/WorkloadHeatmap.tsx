@@ -6,7 +6,7 @@ interface Props {
 }
 
 function getCellColor(count: number): string {
-  if (count === 0) return 'bg-gray-100'
+  if (count === 0) return 'bg-gray-100 dark:bg-gray-700'
   if (count <= 2) return 'bg-emerald-200'
   if (count <= 5) return 'bg-emerald-400'
   if (count <= 10) return 'bg-emerald-600 text-white'
@@ -22,27 +22,27 @@ export default function WorkloadHeatmap({ heatmap }: Props) {
   const activeRows = rows.filter((r) => r.cells.some((c) => c.activeCount > 0))
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 text-sm font-semibold text-gray-900">Workload Heatmap</h2>
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+      <h2 className="mb-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Workload Heatmap</h2>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-white pb-2 pr-4 text-left font-medium text-gray-500">Member</th>
+              <th className="sticky left-0 z-10 bg-white dark:bg-gray-800 pb-2 pr-4 text-left font-medium text-gray-500 dark:text-gray-400">Member</th>
               {projects.map((p) => (
-                <th key={p.id} className="pb-2 px-1 text-center font-medium text-gray-500 whitespace-nowrap">
+                <th key={p.id} className="pb-2 px-1 text-center font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                   {p.key}
                 </th>
               ))}
-              <th className="pb-2 px-2 text-center font-medium text-gray-500">Total</th>
+              <th className="pb-2 px-2 text-center font-medium text-gray-500 dark:text-gray-400">Total</th>
             </tr>
           </thead>
           <tbody>
             {activeRows.map((row) => {
               const total = row.cells.reduce((s, c) => s + c.activeCount, 0)
               return (
-                <tr key={row.userId} className="border-t border-gray-100">
-                  <td className="sticky left-0 z-10 bg-white py-1.5 pr-4 font-medium text-gray-700 whitespace-nowrap">
+                <tr key={row.userId} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 py-1.5 pr-4 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {row.userName}
                   </td>
                   {row.cells.map((cell) => (
@@ -52,11 +52,11 @@ export default function WorkloadHeatmap({ heatmap }: Props) {
                           {cell.activeCount}
                         </span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-300 dark:text-gray-600">—</span>
                       )}
                     </td>
                   ))}
-                  <td className="px-2 py-1.5 text-center font-semibold text-gray-700">{total}</td>
+                  <td className="px-2 py-1.5 text-center font-semibold text-gray-700 dark:text-gray-300">{total}</td>
                 </tr>
               )
             })}
@@ -64,7 +64,7 @@ export default function WorkloadHeatmap({ heatmap }: Props) {
         </table>
       </div>
       {/* Legend */}
-      <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-500">
+      <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
         <span>Less</span>
         {[0, 2, 5, 10, 15].map((n) => (
           <span key={n} className={cn('inline-block h-3 w-3 rounded-sm', getCellColor(n))} />

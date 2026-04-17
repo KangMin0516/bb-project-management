@@ -79,22 +79,22 @@ export default function GlobalDashboardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-xl font-bold text-gray-900">My Dashboard</h1>
+      <h1 className="mb-6 text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h1>
 
       {/* Top row: Today's Focus + Overdue Alert */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Today's Focus */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
           <div className="mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-gray-900">Today's Focus</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Today's Focus</h2>
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
               {focusIssues.length}
             </span>
           </div>
 
           {focusIssues.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-400">
+            <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">
               Click the star on any issue below to add it to today's focus
             </p>
           ) : (
@@ -121,8 +121,8 @@ export default function GlobalDashboardPage() {
               {plannedToday.length > 0 && (
                 <div>
                   <div className="mb-1.5 flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500">Planned Today</span>
+                    <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Planned Today</span>
                   </div>
                   <div className="space-y-1">
                     {plannedToday.map((issue) => (
@@ -144,11 +144,11 @@ export default function GlobalDashboardPage() {
         {/* Overdue Alert */}
         <div className={cn(
           'rounded-xl border p-5',
-          overdueIssues.length > 0 ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white',
+          overdueIssues.length > 0 ? 'border-red-200 bg-red-50/50' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800',
         )}>
           <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle className={cn('h-4 w-4', overdueIssues.length > 0 ? 'text-red-500' : 'text-gray-400')} />
-            <h2 className="text-sm font-semibold text-gray-900">Overdue</h2>
+            <AlertTriangle className={cn('h-4 w-4', overdueIssues.length > 0 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500')} />
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Overdue</h2>
             {overdueCount > 0 && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
                 {overdueCount}
@@ -157,7 +157,7 @@ export default function GlobalDashboardPage() {
           </div>
 
           {overdueIssues.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-400">No overdue issues</p>
+            <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">No overdue issues</p>
           ) : (
             <div className="space-y-1">
               {overdueIssues.map((issue) => {
@@ -168,10 +168,10 @@ export default function GlobalDashboardPage() {
                     onClick={() => navigate(`/projects/${issue.project.key}/board?open=${issue.id}`)}
                     className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-red-100/50"
                   >
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                    <span className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                       {issue.project.key}
                     </span>
-                    <span className="font-mono text-xs text-gray-400">#{issue.number}</span>
+                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">#{issue.number}</span>
                     <span className="flex-1 truncate text-sm font-medium text-red-700">{issue.title}</span>
                     {badge && (
                       <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', badge.className)}>
@@ -190,19 +190,19 @@ export default function GlobalDashboardPage() {
       </div>
 
       {/* My Issues — grouped by project */}
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             My Issues ({filteredIssues.length})
           </h2>
           <div className="flex items-center gap-3">
             {/* Project filter tabs */}
-            <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
+            <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
               <button
                 onClick={() => setProjectFilter('all')}
                 className={cn(
                   'rounded-md px-2.5 py-1 text-xs font-medium transition',
-                  projectFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                  projectFilter === 'all' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
                 )}
               >
                 All
@@ -213,7 +213,7 @@ export default function GlobalDashboardPage() {
                   onClick={() => setProjectFilter(p.id)}
                   className={cn(
                     'rounded-md px-2.5 py-1 text-xs font-medium transition',
-                    projectFilter === p.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                    projectFilter === p.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
                   )}
                 >
                   {p.key}
@@ -221,14 +221,14 @@ export default function GlobalDashboardPage() {
               ))}
             </div>
             {/* Sort toggle */}
-            <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
+            <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
               {([['dueDate', 'Due Date'], ['priority', 'Priority']] as const).map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => setSortMode(key)}
                   className={cn(
                     'rounded-md px-2.5 py-1 text-xs font-medium transition',
-                    sortMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                    sortMode === key ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
                   )}
                 >
                   {label}
@@ -239,17 +239,17 @@ export default function GlobalDashboardPage() {
         </div>
 
         {filteredIssues.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">No issues assigned to you</p>
+          <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No issues assigned to you</p>
         ) : (
           <div className="space-y-4">
             {groupedIssues.map((group) => (
               <div key={group.project.id}>
                 <div className="mb-1.5 flex items-center gap-2">
-                  <FolderKanban className="h-3 w-3 text-gray-400" />
-                  <span className="text-xs font-semibold text-gray-500">
+                  <FolderKanban className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                     {group.project.key} — {group.project.name}
                   </span>
-                  <span className="text-xs text-gray-400">({group.issues.length})</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">({group.issues.length})</span>
                 </div>
                 <div className="space-y-1">
                   {group.issues.map((issue) => (
@@ -271,7 +271,7 @@ export default function GlobalDashboardPage() {
       {/* Project Summary Cards */}
       {projects.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-gray-700">Projects</h2>
+          <h2 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Projects</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((p) => {
               const completionRate = p.totalIssues ? Math.round((p.doneIssues / p.totalIssues) * 100) : 0
@@ -279,25 +279,25 @@ export default function GlobalDashboardPage() {
                 <div
                   key={p.id}
                   onClick={() => navigate(`/projects/${p.key}`)}
-                  className="cursor-pointer rounded-xl border border-gray-200 bg-white p-5 transition hover:border-primary-300 hover:shadow-sm"
+                  className="cursor-pointer rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 transition hover:border-primary-300 hover:shadow-sm"
                 >
                   <div className="mb-3 flex items-center gap-2">
                     <span className="rounded bg-primary-50 px-2 py-0.5 text-xs font-bold text-primary-700">{p.key}</span>
-                    <span className="truncate text-sm font-medium text-gray-900">{p.name}</span>
+                    <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</span>
                   </div>
-                  <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
+                  <div className="mb-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>{p.totalIssues} issues</span>
                     <span>{completionRate}% done</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-gray-100">
+                  <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
                     <div
                       className="h-1.5 rounded-full bg-green-500 transition-all"
                       style={{ width: `${completionRate}%` }}
                     />
                   </div>
                   {p.myIssueCount > 0 && (
-                    <div className="mt-2 text-xs text-gray-500">
-                      <span className="font-medium text-gray-700">{p.myIssueCount}</span> assigned to you
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{p.myIssueCount}</span> assigned to you
                     </div>
                   )}
                 </div>
@@ -327,7 +327,7 @@ function GlobalIssueRow({
     <div
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2',
-        focused ? 'bg-gray-50' : 'hover:bg-gray-50',
+        focused ? 'bg-gray-50 dark:bg-gray-900' : 'hover:bg-gray-50 dark:bg-gray-900',
         overdue && 'bg-red-50/50',
       )}
     >
@@ -342,14 +342,14 @@ function GlobalIssueRow({
         <Star className={cn('h-3.5 w-3.5', focused && 'fill-current')} />
       </button>
       <span className="text-xs">{TYPE_ICONS[issue.type] || ''}</span>
-      <span className="font-mono text-xs text-gray-400">
+      <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
         {issue.project.key}-{issue.number}
       </span>
       <span
         onClick={onClick}
         className={cn(
           'flex-1 cursor-pointer truncate text-sm font-medium hover:text-primary-700',
-          overdue ? 'text-red-700' : 'text-gray-900',
+          overdue ? 'text-red-700' : 'text-gray-900 dark:text-gray-100',
         )}
       >
         {issue.title}
@@ -361,7 +361,7 @@ function GlobalIssueRow({
       )}
       <div className="flex items-center gap-1.5">
         <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
-        <span className="text-xs text-gray-500">{issue.status.replace(/_/g, ' ')}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{issue.status.replace(/_/g, ' ')}</span>
       </div>
       <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
         {issue.priority}

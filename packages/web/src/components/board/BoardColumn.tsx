@@ -32,11 +32,11 @@ export default memo(function BoardColumn({
   onChildStatusToggle,
 }: Props) {
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
+    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[status])} />
-        <span className="text-sm font-semibold text-gray-700">{STATUS_LABELS[status] || status}</span>
-        <span className="ml-auto rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{STATUS_LABELS[status] || status}</span>
+        <span className="ml-auto rounded-full bg-gray-200 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
           {issues.length}
         </span>
       </div>
@@ -48,7 +48,7 @@ export default memo(function BoardColumn({
             {...provided.droppableProps}
             className={cn(
               'flex-1 space-y-2 overflow-y-auto px-2 pb-2',
-              snapshot.isDraggingOver && 'bg-primary-50/50',
+              snapshot.isDraggingOver && 'bg-primary-50/50 dark:bg-primary-900/20',
             )}
             style={{ minHeight: 60 }}
           >
@@ -82,7 +82,7 @@ export default memo(function BoardColumn({
 
       <button
         onClick={() => onAddClick(status)}
-        className="m-2 rounded-lg border border-dashed border-gray-300 py-1.5 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600"
+        className="m-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-1.5 text-sm text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
       >
         + Add issue
       </button>

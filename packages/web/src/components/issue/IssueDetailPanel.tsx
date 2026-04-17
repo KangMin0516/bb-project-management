@@ -44,7 +44,7 @@ function InlineField({ label, display, children }: { label: string; display: Rea
 
   return (
     <div className="flex items-center gap-2 py-1.5" ref={fieldRef}>
-      <span className="w-20 shrink-0 text-xs font-medium text-gray-400">{label}</span>
+      <span className="w-20 shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
       {editing ? (
         <div className="flex-1">
           {children}
@@ -52,7 +52,7 @@ function InlineField({ label, display, children }: { label: string; display: Rea
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="flex-1 rounded px-1.5 py-0.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition -mx-1.5"
+          className="flex-1 rounded px-1.5 py-0.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition -mx-1.5"
         >
           {display}
         </button>
@@ -65,19 +65,19 @@ function InlineField({ label, display, children }: { label: string; display: Rea
 function AssigneeDropdown({ members, value, onChange }: { members: { user: { id: string; name: string; avatar?: string | null } }[]; value: string; onChange: (id: string) => void }) {
   return (
     <div className="relative">
-      <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white py-1 shadow-lg max-h-52 overflow-y-auto">
+      <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-1 shadow-lg max-h-52 overflow-y-auto">
         <button
           onClick={() => onChange('')}
-          className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${!value ? 'bg-primary-50 text-primary-700' : 'text-gray-700'}`}
+          className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-600 ${!value ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[10px] text-gray-400">?</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-600 text-[10px] text-gray-400">?</span>
           Unassigned
         </button>
         {members.map((m) => (
           <button
             key={m.user.id}
             onClick={() => onChange(m.user.id)}
-            className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${value === m.user.id ? 'bg-primary-50 text-primary-700' : 'text-gray-700'}`}
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-600 ${value === m.user.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}
           >
             {m.user.avatar ? (
               <img src={m.user.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
@@ -220,11 +220,11 @@ export default function IssueDetailPanel({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
       <div
-        className={`flex h-full w-full flex-col bg-white shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
+        className={`flex h-full w-full flex-col bg-white dark:bg-gray-800 shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 border-b border-gray-200 px-6 py-4">
+        <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-sm text-gray-400">
               {issue.number ? `#${issue.number}` : ''}
@@ -233,7 +233,7 @@ export default function IssueDetailPanel({
               <button
                 onClick={() => copyIssueLink(projectKey, d.number, context)}
                 aria-label="Copy link"
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
                 title="Copy link"
               >
                 <Link2 className="h-4 w-4" />
@@ -245,7 +245,7 @@ export default function IssueDetailPanel({
                   localStorage.setItem('issue-panel-expanded', String(next))
                 }}
                 aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
                 title={expanded ? 'Collapse' : 'Expand'}
               >
                 {expanded ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
@@ -262,7 +262,7 @@ export default function IssueDetailPanel({
               >
                 <Trash2 className="h-4 w-4" />
               </button>
-              <button onClick={onClose} aria-label="Close" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">✕</button>
+              <button onClick={onClose} aria-label="Close" className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
             </div>
           </div>
           {detail?.parent && (
@@ -303,12 +303,12 @@ export default function IssueDetailPanel({
                   setEditingTitle(false)
                 }
               }}
-              className="mt-1 w-full rounded border border-primary-300 px-1 text-xl font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="mt-1 w-full rounded border border-primary-300 dark:border-primary-600 bg-white dark:bg-gray-700 px-1 text-xl font-bold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
               autoFocus
             />
           ) : (
             <h2
-              className="mt-1 cursor-pointer rounded px-1 -mx-1 text-xl font-bold text-gray-900 hover:bg-gray-50 transition"
+              className="mt-1 cursor-pointer rounded px-1 -mx-1 text-xl font-bold text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               onClick={() => {
                 setDraftTitle(d.title)
                 setEditingTitle(true)
@@ -322,7 +322,7 @@ export default function IssueDetailPanel({
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto">
           {/* Compact metadata (scrolls away) */}
-          <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50/50 px-3 mx-6 mt-4">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 px-3 mx-6 mt-4">
             <InlineField
               label="Status"
               display={
@@ -350,7 +350,7 @@ export default function IssueDetailPanel({
               <select
                 value={d.status}
                 onChange={(e) => updateMutation.mutate({ status: e.target.value })}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 autoFocus
               >
                 {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
@@ -368,7 +368,7 @@ export default function IssueDetailPanel({
               <select
                 value={d.priority}
                 onChange={(e) => updateMutation.mutate({ priority: e.target.value })}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 autoFocus
               >
                 {['HIGH', 'MEDIUM', 'LOW'].map((p) => <option key={p} value={p}>{p}</option>)}
@@ -414,7 +414,7 @@ export default function IssueDetailPanel({
                   type="date"
                   value={d.dueDate ? d.dueDate.slice(0, 10) : ''}
                   onChange={(e) => updateMutation.mutate({ dueDate: e.target.value ? `${e.target.value}T00:00:00.000Z` : null })}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                   autoFocus
                 />
                 {d.dueDate && (
@@ -440,7 +440,7 @@ export default function IssueDetailPanel({
               <select
                 value={d.parentId || ''}
                 onChange={(e) => updateMutation.mutate({ parentId: e.target.value || null })}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 autoFocus
               >
                 <option value="">No epic</option>
@@ -517,7 +517,7 @@ export default function IssueDetailPanel({
           </div>
 
           {/* Sticky Tabs */}
-          <div className="sticky top-0 z-10 flex gap-4 border-b border-gray-200 bg-white px-6 pt-4">
+          <div className="sticky top-0 z-10 flex gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 pt-4">
             {(['details', 'activity'] as const).map((tab) => {
               let label: string = tab === 'details' ? `Details${linkCount > 0 ? ` · ${linkCount}` : ''}` : tab
               if (tab === 'activity' && detail) label = `Activity (${detail.activities.length})`
@@ -527,8 +527,8 @@ export default function IssueDetailPanel({
                   onClick={() => setActiveTab(tab)}
                   className={`pb-2 text-sm font-medium capitalize transition-colors ${
                     activeTab === tab
-                      ? 'border-b-2 border-primary-600 text-primary-600'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
                   {label}
@@ -564,7 +564,7 @@ export default function IssueDetailPanel({
                     <button
                       type="button"
                       onClick={() => setEditingDescription(false)}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       Cancel
                     </button>
@@ -581,7 +581,7 @@ export default function IssueDetailPanel({
                     setDraftDescription(d.description || '')
                     setEditingDescription(true)
                   }}
-                  className="group cursor-pointer rounded-lg border border-transparent p-2 -m-2 hover:border-gray-200 hover:bg-gray-50"
+                  className="group cursor-pointer rounded-lg border border-transparent p-2 -m-2 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   {d.description ? (
                     <MarkdownViewer content={d.description} />
@@ -604,7 +604,7 @@ export default function IssueDetailPanel({
                   ))}
                 </div>
               )}
-              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
                 <input
                   type="file"
                   className="hidden"
@@ -634,7 +634,7 @@ export default function IssueDetailPanel({
                           (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
                         )
                       }}
-                      className="flex w-full items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors text-left"
+                      className="flex w-full items-center gap-2 rounded bg-gray-50 dark:bg-gray-700 px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
                     >
                       <span className="font-mono text-xs text-gray-400">#{child.number}</span>
                       <span className="flex-1 truncate">{child.title}</span>
@@ -658,7 +658,7 @@ export default function IssueDetailPanel({
                     value={subtaskTitle}
                     onChange={(e) => setSubtaskTitle(e.target.value)}
                     placeholder="Sub-task title"
-                    className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && subtaskTitle.trim()) {
@@ -676,7 +676,7 @@ export default function IssueDetailPanel({
                   </button>
                   <button
                     onClick={() => { setShowSubtaskInput(false); setSubtaskTitle('') }}
-                    className="rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+                    className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     ✕
                   </button>

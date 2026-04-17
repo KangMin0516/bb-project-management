@@ -101,21 +101,21 @@ export default function CommentInput({ members, onSubmit, isSubmitting }: Props)
       />
 
       {showMentions && filteredMembers.length > 0 && (
-        <div className="absolute z-10 mt-1 w-64 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+        <div className="absolute z-10 mt-1 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
           {filteredMembers.slice(0, 5).map((m, i) => (
             <button
               key={m.user.id}
               type="button"
               onClick={() => insertMention(m)}
               className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
-                i === mentionIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'
+                i === mentionIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900'
               }`}
             >
-              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-medium">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-medium">
                 {m.user.name.charAt(0).toUpperCase()}
               </div>
               <span className="truncate">{m.user.name}</span>
-              <span className="ml-auto truncate text-xs text-gray-400">{m.user.email}</span>
+              <span className="ml-auto truncate text-xs text-gray-400 dark:text-gray-500">{m.user.email}</span>
             </button>
           ))}
         </div>

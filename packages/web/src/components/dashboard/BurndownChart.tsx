@@ -66,7 +66,7 @@ export default function BurndownChart({ data }: Props) {
 
   if (!chart || data.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center text-sm text-gray-400">
+      <div className="flex h-48 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
         No burndown data available
       </div>
     )
@@ -87,7 +87,8 @@ export default function BurndownChart({ data }: Props) {
             y1={tick.y}
             x2={chart.padLeft + chart.chartW}
             y2={tick.y}
-            stroke="#f3f4f6"
+            className="stroke-gray-100 dark:stroke-gray-700"
+            stroke="currentColor"
             strokeWidth={1}
           />
         ))}
@@ -125,7 +126,7 @@ export default function BurndownChart({ data }: Props) {
             x={chart.padLeft - 8}
             y={tick.y + 4}
             textAnchor="end"
-            className="fill-gray-400"
+            className="fill-gray-400 dark:fill-gray-500"
             fontSize={10}
           >
             {tick.val}
@@ -139,7 +140,7 @@ export default function BurndownChart({ data }: Props) {
             x={label.x}
             y={chart.height - 5}
             textAnchor="middle"
-            className="fill-gray-400"
+            className="fill-gray-400 dark:fill-gray-500"
             fontSize={10}
           >
             {label.label}
@@ -152,7 +153,8 @@ export default function BurndownChart({ data }: Props) {
           y1={chart.padTop}
           x2={chart.padLeft}
           y2={chart.padTop + chart.chartH}
-          stroke="#e5e7eb"
+          className="stroke-gray-200 dark:stroke-gray-600"
+          stroke="currentColor"
           strokeWidth={1}
         />
         <line
@@ -160,7 +162,8 @@ export default function BurndownChart({ data }: Props) {
           y1={chart.padTop + chart.chartH}
           x2={chart.padLeft + chart.chartW}
           y2={chart.padTop + chart.chartH}
-          stroke="#e5e7eb"
+          className="stroke-gray-200 dark:stroke-gray-600"
+          stroke="currentColor"
           strokeWidth={1}
         />
       </svg>

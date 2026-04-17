@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import AppLayout from '@/components/layout/AppLayout'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -50,6 +51,10 @@ function AuthGuard() {
 }
 
 export default function App() {
+  useEffect(() => {
+    useThemeStore.getState().initTheme()
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

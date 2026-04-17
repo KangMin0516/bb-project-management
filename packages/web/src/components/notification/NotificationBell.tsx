@@ -74,7 +74,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className="relative rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -85,9 +85,9 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl border border-gray-200 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2.5">
-            <span className="text-sm font-semibold text-gray-900">Notifications</span>
+        <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-900/50">
+          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifications</span>
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllReadMutation.mutate()}
@@ -99,23 +99,23 @@ export default function NotificationBell() {
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">No notifications</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No notifications</div>
             ) : (
               notifications.map((n) => (
                 <button
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   className={cn(
-                    'flex w-full items-start gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50',
+                    'flex w-full items-start gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 dark:bg-gray-900',
                     !n.isRead && 'bg-primary-50/50',
                   )}
                 >
                   <span className="mt-0.5 text-sm">{NOTIFICATION_ICONS[n.type] || '🔔'}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={cn('text-xs leading-relaxed', n.isRead ? 'text-gray-500' : 'text-gray-900 font-medium')}>
+                    <p className={cn('text-xs leading-relaxed', n.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100 font-medium')}>
                       {n.message}
                     </p>
-                    <span className="text-[10px] text-gray-400">{timeAgo(n.createdAt)}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{timeAgo(n.createdAt)}</span>
                   </div>
                   {!n.isRead && (
                     <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
