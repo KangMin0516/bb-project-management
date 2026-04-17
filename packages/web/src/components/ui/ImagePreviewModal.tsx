@@ -12,6 +12,9 @@ export default function ImagePreviewModal() {
       if (target.tagName !== 'IMG') return
       const container = target.closest('.tiptap-editor, .markdown-body')
       if (!container) return
+      // Skip if inside an editable TipTap editor (editing mode)
+      const editable = target.closest('[contenteditable="true"]')
+      if (editable) return
       const img = target as HTMLImageElement
       if (img.src) {
         e.preventDefault()
