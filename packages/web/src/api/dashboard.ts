@@ -72,9 +72,29 @@ export interface GlobalDashboard {
   overdueIssues: GlobalOverdueIssue[]
 }
 
+// Team Dashboard types
+export interface TeamMember {
+  user: { id: string; email: string; name: string; avatar: string | null }
+  projects: { id: string; name: string; key: string; role: string }[]
+  today: { focusCount: number; inProgressCount: number; completedCount: number; overdueCount: number }
+  overall: { totalActive: number; totalHistorical: number; doneHistorical: number }
+  recentActivityCount: number
+}
+
+export interface TeamDashboard {
+  summary: { activeMembers: number; completedToday: number; overdueTotal: number; unassignedTotal: number }
+  members: TeamMember[]
+  heatmap: {
+    projects: { id: string; name: string; key: string }[]
+    rows: { userId: string; userName: string; cells: { projectId: string; activeCount: number }[] }[]
+  }
+}
+
 export const dashboardApi = {
   getStats: (projectId: string) =>
     api.get<{ data: DashboardStats }>(`/projects/${projectId}/dashboard`).then((r) => r.data.data),
   getMyDashboard: () =>
     api.get<{ data: GlobalDashboard }>('/dashboard/my').then((r) => r.data.data),
+  getTeamDashboard: () =>
+    api.get<{ data: TeamDashboard }>('/dashboard/team').then((r) => r.data.data),
 }

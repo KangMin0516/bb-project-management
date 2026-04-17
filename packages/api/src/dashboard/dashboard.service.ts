@@ -361,6 +361,207 @@ export class DashboardService {
     return result;
   }
 
+  async getTeamDashboard() {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [
+      activeUsers,
+      focusGrouped,
+      inProgressGrouped,
+      completedToday,
+      overdueGrouped,
+      activeIssuesGrouped,
+      historicalGrouped,
+      activity24h,
+      unassignedCount,
+      heatmapGrouped,
+    ] = await Promise.all([
+      // 1. Active users + memberships
+      this.prisma.user.findMany({
+        where: { status: 'ACTIVE' },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatar: true,
+          memberships: {
+            select: {
+              role: true,
+              project: { select: { id: true, name: true, key: true } },
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      // 2. focusDate = today
+      this.prisma.issue.groupBy({
+        by: ['assigneeId'],
+        where: {
+          assigneeId: { not: null },
+          focusDate: { gte: todayStart, lte: todayEnd },
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        _count: true,
+      }),
+      // 3. status = IN_PROGRESS
+      this.prisma.issue.groupBy({
+        by: ['assigneeId'],
+        where: {
+          assigneeId: { not: null },
+          status: IssueStatus.IN_PROGRESS,
+        },
+        _count: true,
+      }),
+      // 4. Completed today (status→DONE activities today)
+      this.prisma.activity.groupBy({
+        by: ['userId'],
+        where: {
+          field: 'status',
+          newValue: IssueStatus.DONE,
+          createdAt: { gte: todayStart, lte: todayEnd },
+        },
+        _count: { _all: true },
+      }),
+      // 5. Overdue issues
+      this.prisma.issue.groupBy({
+        by: ['assigneeId'],
+        where: {
+          assigneeId: { not: null },
+          dueDate: { lt: todayStart },
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        _count: true,
+      }),
+      // 6. Active issues (not DONE/CANCELED)
+      this.prisma.issue.groupBy({
+        by: ['assigneeId'],
+        where: {
+          assigneeId: { not: null },
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        _count: true,
+      }),
+      // 7. Historical issues (groupBy assigneeId + status)
+      this.prisma.issue.groupBy({
+        by: ['assigneeId', 'status'],
+        where: { assigneeId: { not: null } },
+        _count: true,
+      }),
+      // 8. Activity 24h
+      this.prisma.activity.groupBy({
+        by: ['userId'],
+        where: { createdAt: { gte: twentyFourHoursAgo } },
+        _count: { _all: true },
+      }),
+      // 9. Unassigned issues
+      this.prisma.issue.count({
+        where: {
+          assigneeId: null,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+      }),
+      // 10. Heatmap: active issues by assignee + project
+      this.prisma.issue.groupBy({
+        by: ['assigneeId', 'projectId'],
+        where: {
+          assigneeId: { not: null },
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        _count: true,
+      }),
+    ]);
+
+    // Build lookup maps
+    const focusMap = new Map(focusGrouped.map((r) => [r.assigneeId!, r._count]));
+    const inProgressMap = new Map(inProgressGrouped.map((r) => [r.assigneeId!, r._count]));
+    const completedMap = new Map(completedToday.map((r) => [r.userId, r._count._all]));
+    const overdueMap = new Map(overdueGrouped.map((r) => [r.assigneeId!, r._count]));
+    const activeMap = new Map(activeIssuesGrouped.map((r) => [r.assigneeId!, r._count]));
+    const activityMap = new Map(activity24h.map((r) => [r.userId, r._count._all]));
+
+    // Historical: total & done per user
+    const historicalTotalMap = new Map<string, number>();
+    const historicalDoneMap = new Map<string, number>();
+    for (const row of historicalGrouped) {
+      if (!row.assigneeId) continue;
+      historicalTotalMap.set(row.assigneeId, (historicalTotalMap.get(row.assigneeId) ?? 0) + row._count);
+      if (row.status === IssueStatus.DONE) {
+        historicalDoneMap.set(row.assigneeId, (historicalDoneMap.get(row.assigneeId) ?? 0) + row._count);
+      }
+    }
+
+    // Heatmap data
+    const heatmapByUser = new Map<string, Map<string, number>>();
+    const projectSet = new Map<string, { id: string; name: string; key: string }>();
+    for (const row of heatmapGrouped) {
+      if (!row.assigneeId) continue;
+      if (!heatmapByUser.has(row.assigneeId)) heatmapByUser.set(row.assigneeId, new Map());
+      heatmapByUser.get(row.assigneeId)!.set(row.projectId, row._count);
+    }
+
+    // Collect all projects from user memberships
+    for (const user of activeUsers) {
+      for (const m of user.memberships) {
+        if (!projectSet.has(m.project.id)) {
+          projectSet.set(m.project.id, m.project);
+        }
+      }
+    }
+    const allProjects = [...projectSet.values()].sort((a, b) => a.key.localeCompare(b.key));
+
+    // Build members array
+    const members = activeUsers.map((u) => ({
+      user: { id: u.id, email: u.email, name: u.name, avatar: u.avatar },
+      projects: u.memberships.map((m) => ({
+        id: m.project.id,
+        name: m.project.name,
+        key: m.project.key,
+        role: m.role,
+      })),
+      today: {
+        focusCount: focusMap.get(u.id) ?? 0,
+        inProgressCount: inProgressMap.get(u.id) ?? 0,
+        completedCount: completedMap.get(u.id) ?? 0,
+        overdueCount: overdueMap.get(u.id) ?? 0,
+      },
+      overall: {
+        totalActive: activeMap.get(u.id) ?? 0,
+        totalHistorical: historicalTotalMap.get(u.id) ?? 0,
+        doneHistorical: historicalDoneMap.get(u.id) ?? 0,
+      },
+      recentActivityCount: activityMap.get(u.id) ?? 0,
+    }));
+
+    // Summary
+    const totalCompletedToday = completedToday.reduce((sum, r) => sum + r._count._all, 0);
+    const totalOverdue = overdueGrouped.reduce((sum, r) => sum + r._count, 0);
+
+    return {
+      summary: {
+        activeMembers: activeUsers.length,
+        completedToday: totalCompletedToday,
+        overdueTotal: totalOverdue,
+        unassignedTotal: unassignedCount,
+      },
+      members,
+      heatmap: {
+        projects: allProjects,
+        rows: activeUsers.map((u) => ({
+          userId: u.id,
+          userName: u.name,
+          cells: allProjects.map((p) => ({
+            projectId: p.id,
+            activeCount: heatmapByUser.get(u.id)?.get(p.id) ?? 0,
+          })),
+        })),
+      },
+    };
+  }
+
   async getMyGlobalDashboard(userId: string) {
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
