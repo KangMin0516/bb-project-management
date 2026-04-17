@@ -615,22 +615,37 @@ export class DashboardService {
     const standupUnanswered = todayReports.filter(
       (r) => r.status === 'UNANSWERED',
     ).length;
+
+    // Map Slack users to system users
+    const slackUserIds = todayReports.map((r) => r.slackUserId);
+    const mappedUsers = await this.prisma.user.findMany({
+      where: { slackUserId: { in: slackUserIds } },
+      select: { id: true, name: true, avatar: true, slackUserId: true },
+    });
+    const slackUserMap = new Map(mappedUsers.map((u) => [u.slackUserId!, u]));
+
     const standup = {
       total: todayReports.length,
       answered: standupAnswered,
       unanswered: standupUnanswered,
-      reports: todayReports.map((r) => ({
-        slackUsername: r.username ?? r.slackUserId,
-        status: r.status,
-        configName: r.config.name,
-        completedAt: r.updatedAt?.toISOString() ?? null,
-        answers: r.answers
-          .filter((a) => a.answer)
-          .map((a) => ({
-            question: a.question.text,
-            answer: a.answer!,
-          })),
-      })),
+      reports: todayReports.map((r) => {
+        const mapped = slackUserMap.get(r.slackUserId);
+        return {
+          slackUsername: r.username ?? r.slackUserId,
+          systemUser: mapped
+            ? { id: mapped.id, name: mapped.name, avatar: mapped.avatar }
+            : null,
+          status: r.status,
+          configName: r.config.name,
+          completedAt: r.updatedAt?.toISOString() ?? null,
+          answers: r.answers
+            .filter((a) => a.answer)
+            .map((a) => ({
+              question: a.question.text,
+              answer: a.answer!,
+            })),
+        };
+      }),
     };
 
     return {

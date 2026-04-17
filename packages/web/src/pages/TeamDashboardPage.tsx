@@ -263,11 +263,23 @@ const STANDUP_STATUS_CONFIG: Record<string, { label: string; color: string; orde
 
 function StandupSection({ standup }: { standup: TeamStandup }) {
   const [open, setOpen] = useState(true)
-  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  const [expandedUser, setExpandedUser] = useState<string | null>(null)
 
-  const sorted = [...standup.reports].sort(
-    (a, b) => (STANDUP_STATUS_CONFIG[a.status]?.order ?? 9) - (STANDUP_STATUS_CONFIG[b.status]?.order ?? 9),
-  )
+  // Group reports by slackUsername
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof standup.reports>()
+    for (const r of standup.reports) {
+      const key = r.slackUsername
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(r)
+    }
+    // Sort users: best status first (ANSWERED < ACTIVE < UNANSWERED < AWAY < CANCELED)
+    return [...map.entries()].sort((a, b) => {
+      const bestA = Math.min(...a[1].map((r) => STANDUP_STATUS_CONFIG[r.status]?.order ?? 9))
+      const bestB = Math.min(...b[1].map((r) => STANDUP_STATUS_CONFIG[r.status]?.order ?? 9))
+      return bestA - bestB
+    })
+  }, [standup])
 
   return (
     <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -287,46 +299,71 @@ function StandupSection({ standup }: { standup: TeamStandup }) {
 
       {open && (
         <div className="border-t border-gray-100 dark:border-gray-700">
-          {sorted.length === 0 ? (
+          {grouped.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-400">No standup reports today</p>
           ) : (
             <div className="divide-y divide-gray-50 dark:divide-gray-700">
-              {sorted.map((r) => {
-                const cfg = STANDUP_STATUS_CONFIG[r.status] ?? STANDUP_STATUS_CONFIG.UNANSWERED
-                const rKey = `${r.slackUsername}-${r.configName}`
-                const isExpanded = expandedKey === rKey
-                const hasAnswers = r.status === 'ANSWERED' && r.answers.length > 0
+              {grouped.map(([username, reports]) => {
+                const isExpanded = expandedUser === username
+                const bestStatus = reports.reduce((best, r) => {
+                  const order = STANDUP_STATUS_CONFIG[r.status]?.order ?? 9
+                  return order < (STANDUP_STATUS_CONFIG[best]?.order ?? 9) ? r.status : best
+                }, reports[0].status)
+                const bestCfg = STANDUP_STATUS_CONFIG[bestStatus] ?? STANDUP_STATUS_CONFIG.UNANSWERED
+                const hasAnyAnswers = reports.some((r) => r.status === 'ANSWERED' && r.answers.length > 0)
+                const sysUser = reports[0].systemUser
+                const displayName = sysUser?.name ?? username
 
                 return (
-                  <div key={rKey} className="px-4 py-2.5">
+                  <div key={username} className="px-4 py-2.5">
                     <button
-                      onClick={() => hasAnswers && setExpandedKey(isExpanded ? null : rKey)}
-                      className={cn('flex w-full items-center gap-3 text-left', hasAnswers && 'cursor-pointer')}
+                      onClick={() => hasAnyAnswers && setExpandedUser(isExpanded ? null : username)}
+                      className={cn('flex w-full items-center gap-3 text-left', hasAnyAnswers && 'cursor-pointer')}
                     >
-                      {hasAnswers && (
+                      {hasAnyAnswers && (
                         isExpanded
                           ? <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
                           : <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
                       )}
-                      {!hasAnswers && <span className="w-3 shrink-0" />}
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.slackUsername}</span>
-                      <span className={cn('text-[11px] font-medium', cfg.color)}>{cfg.label}</span>
-                      {r.configName && (
-                        <span className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">{r.configName}</span>
+                      {!hasAnyAnswers && <span className="w-3 shrink-0" />}
+                      {sysUser?.avatar ? (
+                        <img src={sysUser.avatar} alt={displayName} className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[10px] font-medium text-primary-700 dark:text-primary-300">
+                          {displayName.charAt(0).toUpperCase()}
+                        </span>
                       )}
-                      {r.status === 'ANSWERED' && r.completedAt && (
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
+                      <span className={cn('text-[11px] font-medium', bestCfg.color)}>{bestCfg.label}</span>
+                      <div className="flex items-center gap-1">
+                        {reports.map((r) => (
+                          <span key={r.configName} className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">
+                            {r.configName}
+                          </span>
+                        ))}
+                      </div>
+                      {reports.some((r) => r.status === 'ANSWERED' && r.completedAt) && (
                         <span className="ml-auto text-[10px] text-gray-400">
-                          {new Date(r.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(reports.find((r) => r.status === 'ANSWERED' && r.completedAt)!.completedAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                     </button>
 
-                    {isExpanded && hasAnswers && (
-                      <div className="ml-6 mt-2 space-y-2">
-                        {r.answers.map((a, aIdx) => (
-                          <div key={aIdx} className="text-xs">
-                            <div className="font-medium text-gray-500 dark:text-gray-400">{a.question}</div>
-                            <div className="mt-0.5 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{a.answer}</div>
+                    {isExpanded && hasAnyAnswers && (
+                      <div className="ml-6 mt-2 space-y-3">
+                        {reports.filter((r) => r.status === 'ANSWERED' && r.answers.length > 0).map((r) => (
+                          <div key={r.configName}>
+                            {reports.length > 1 && (
+                              <div className="mb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">{r.configName}</div>
+                            )}
+                            <div className="space-y-2">
+                              {r.answers.map((a, aIdx) => (
+                                <div key={aIdx} className="text-xs">
+                                  <div className="font-medium text-gray-500 dark:text-gray-400">{a.question}</div>
+                                  <div className="mt-0.5 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{a.answer}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>

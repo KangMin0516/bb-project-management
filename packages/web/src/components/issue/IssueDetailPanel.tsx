@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -17,6 +17,7 @@ import TipTapEditor from '@/components/editor/TipTapEditor'
 import ActivityTab from '@/components/issue/ActivityTab'
 import AttachmentItem from '@/components/issue/AttachmentItem'
 import LinkedIssues from '@/components/issue/LinkedIssues'
+import LinkedPullRequests from '@/components/issue/LinkedPullRequests'
 
 interface IssueDetailPanelProps {
   projectId: string
@@ -745,6 +746,15 @@ export default function IssueDetailPanel({
                 />
               </div>
             )}
+
+            {/* Pull Requests */}
+            <div>
+              <LinkedPullRequests
+                projectId={projectId}
+                issueId={issue.id}
+                prLinks={detail?.githubPrLinks}
+              />
+            </div>
           </div>
           )}
 

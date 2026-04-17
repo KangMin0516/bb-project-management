@@ -410,6 +410,12 @@ export class IssueService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        githubPrLinks: {
+          include: {
+            pullRequest: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
