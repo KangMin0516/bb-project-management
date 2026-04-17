@@ -7,6 +7,7 @@ import { UpdateQuestionDto } from './dto/update-question.dto.js';
 import { CreateConfigDto } from './dto/create-config.dto.js';
 import { UpdateConfigDto } from './dto/update-config.dto.js';
 import { formatStandupReport } from './formatters/report.formatter.js';
+import { IssueStatus } from '../../generated/prisma/enums.js';
 
 @Injectable()
 export class StandupService {
@@ -302,6 +303,15 @@ export class StandupService {
       ],
     });
 
+    // Try Slack-User mapping and send issue list block
+    const mappedUserId = await this.mapSlackUserToSystemUser(
+      member.slackUserId,
+      client,
+    );
+    if (mappedUserId) {
+      await this.sendIssueListBlock(client, dmChannelId, mappedUserId);
+    }
+
     // Send first question
     const firstQuestion = config.questions[0];
     if (firstQuestion) {
@@ -560,9 +570,7 @@ export class StandupService {
           userInfo.user.profile.image_48 ??
           undefined;
         displayName =
-          userInfo.user.real_name ??
-          userInfo.user.name ??
-          displayName;
+          userInfo.user.real_name ?? userInfo.user.name ?? displayName;
       }
     } catch (err) {
       this.logger.warn(
@@ -606,9 +614,7 @@ export class StandupService {
 
     for (const report of reports) {
       try {
-        const client = this.getClient(
-          report.config.slackIntegration.botToken,
-        );
+        const client = this.getClient(report.config.slackIntegration.botToken);
 
         const dm = await client.conversations.open({
           users: report.slackUserId,
@@ -651,5 +657,98 @@ export class StandupService {
   private async ensureConfigExists(id: string) {
     const c = await this.prisma.standupConfig.findUnique({ where: { id } });
     if (!c) throw new NotFoundException('Config not found');
+  }
+
+  // ─── Slack-User Mapping ─────────────────────────────────
+
+  async mapSlackUserToSystemUser(
+    slackUserId: string,
+    client: WebClient,
+  ): Promise<string | null> {
+    // Skip if already mapped
+    const existing = await this.prisma.user.findFirst({
+      where: { slackUserId },
+    });
+    if (existing) return existing.id;
+
+    try {
+      const slackUser = await client.users.info({ user: slackUserId });
+      const email = slackUser.user?.profile?.email;
+      if (!email) return null;
+
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (!user) return null;
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { slackUserId },
+      });
+      this.logger.log(
+        `Mapped Slack ${slackUserId} → User ${user.id} (${email})`,
+      );
+      return user.id;
+    } catch (err) {
+      this.logger.warn(
+        `Failed to map Slack user ${slackUserId}`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return null;
+    }
+  }
+
+  // ─── Issue List Block for DM ────────────────────────────
+
+  private async sendIssueListBlock(
+    client: WebClient,
+    dmChannelId: string,
+    userId: string,
+  ) {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const activeIssues = await this.prisma.issue.findMany({
+      where: {
+        assigneeId: userId,
+        status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+      },
+      include: { project: { select: { key: true } } },
+      orderBy: [
+        { focusDate: { sort: 'desc', nulls: 'last' } },
+        { status: 'asc' },
+      ],
+      take: 15,
+    });
+
+    if (activeIssues.length === 0) return;
+
+    const lines = activeIssues.map((issue) => {
+      const isFocus =
+        issue.focusDate &&
+        issue.focusDate >= todayStart &&
+        issue.focusDate <= todayEnd;
+      const prefix = isFocus ? '🎯' : '    ';
+      const key = `${issue.project.key}-${issue.number}`;
+      const statusLabel =
+        issue.status === IssueStatus.IN_PROGRESS ? 'IN_PROGRESS' : issue.status;
+      return `${prefix} \`${key}\`  ${issue.title}  _${statusLabel}_`;
+    });
+
+    const text = `📋 *Your Active Issues (${activeIssues.length})*\n${lines.join('\n')}${activeIssues.length >= 15 ? '\n_...and more_' : ''}\n🎯 = Today's Focus`;
+
+    await client.chat.postMessage({
+      channel: dmChannelId,
+      text,
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text,
+          },
+        },
+      ],
+    });
   }
 }

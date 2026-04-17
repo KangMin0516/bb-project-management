@@ -1,4 +1,5 @@
 import api from './client'
+import type { GitHubPrLink } from './github'
 
 export interface Issue {
   id: string
@@ -65,6 +66,7 @@ export interface IssueDetail extends Issue {
   sourceLinks?: IssueLink[]
   targetLinks?: IssueLink[]
   specLinks?: IssueSpecLink[]
+  githubPrLinks?: GitHubPrLink[]
 }
 
 export interface Activity {

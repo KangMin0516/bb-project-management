@@ -7,6 +7,7 @@ import { componentApi, type Component } from '@/api/components'
 import { Trash2, UserPlus, Pencil } from 'lucide-react'
 import { slackApi } from '@/api/slack'
 import SlackIntegration from '@/components/settings/SlackIntegration'
+import GitHubIntegration from '@/components/settings/GitHubIntegration'
 import DailyReportSettings from '@/components/settings/DailyReportSettings'
 import { useToastStore } from '@/stores/toast'
 import { useImagePreviewStore } from '@/stores/imagePreview'
@@ -504,8 +505,9 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Slack Integration */}
+      {/* Integrations */}
       <SlackIntegration />
+      <GitHubIntegration projectId={projectId!} />
 
       {/* Daily Reports */}
       <DailyReportSettings

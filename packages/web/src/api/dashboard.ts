@@ -83,6 +83,7 @@ export interface TeamMember {
 
 export interface StandupReportEntry {
   slackUsername: string
+  systemUser: { id: string; name: string; avatar: string | null } | null
   status: 'ANSWERED' | 'ACTIVE' | 'UNANSWERED' | 'AWAY' | 'CANCELED'
   configName: string
   completedAt: string | null
