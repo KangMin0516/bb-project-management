@@ -1,4 +1,5 @@
 import type { Activity, Issue, User } from '../../../generated/prisma/client.js';
+import { pushMrkdwnBlocks } from './utils.js';
 
 type ActivityWithRelations = Activity & {
   issue: Issue & { project: { key: string } };
@@ -73,13 +74,7 @@ export function formatLunchReport(
     }
   }
 
-  blocks.push({
-    type: 'section',
-    text: {
-      type: 'mrkdwn',
-      text: `:arrows_counterclockwise: *Changes Today (${activities.length})*\n${lines.join('\n')}`,
-    },
-  });
+  pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Changes Today (${activities.length})*`, lines);
 
   // Summary line
   blocks.push({ type: 'divider' });

@@ -1,4 +1,5 @@
 import type { Issue, User } from '../../../generated/prisma/client.js';
+import { pushMrkdwnBlocks } from './utils.js';
 
 type IssueWithAssignee = Issue & { assignee: User | null; project: { key: string } };
 
@@ -56,13 +57,7 @@ export function formatEveningReport(
       return `  ${link}  ${i.title}    :bust_in_silhouette: ${assignee}`;
     });
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `:white_check_mark: *Completed Today*\n${lines.join('\n')}`,
-      },
-    });
+    pushMrkdwnBlocks(blocks, `:white_check_mark: *Completed Today*`, lines);
   }
 
   // Still in progress
@@ -76,13 +71,7 @@ export function formatEveningReport(
       return `  ${link}  ${i.title}  :bust_in_silhouette: ${assignee}  ${prio}`;
     });
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `:arrows_counterclockwise: *Still In Progress*\n${lines.join('\n')}`,
-      },
-    });
+    pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Still In Progress*`, lines);
   }
 
   // Overdue
@@ -101,13 +90,7 @@ export function formatEveningReport(
       return `  ${link}  ${i.title}       :bust_in_silhouette: ${assignee}  :calendar: ${dueStr}`;
     });
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `:warning: *Overdue (${overdueIssues.length})*\n${lines.join('\n')}`,
-      },
-    });
+    pushMrkdwnBlocks(blocks, `:warning: *Overdue (${overdueIssues.length})*`, lines);
   }
 
   // Overall progress

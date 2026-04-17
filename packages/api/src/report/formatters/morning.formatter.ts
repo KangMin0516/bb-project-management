@@ -1,4 +1,5 @@
 import type { Issue, User } from '../../../generated/prisma/client.js';
+import { pushMrkdwnBlocks } from './utils.js';
 
 type IssueWithAssignee = Issue & { assignee: User | null; project: { key: string } };
 
@@ -65,13 +66,7 @@ export function formatMorningReport(
       return `  ${link}  ${i.title}    ${i.status}  ${prio}`;
     });
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `:bust_in_silhouette: *${assignee} (${assigneeIssues.length})*\n${lines.join('\n')}`,
-      },
-    });
+    pushMrkdwnBlocks(blocks, `:bust_in_silhouette: *${assignee} (${assigneeIssues.length})*`, lines);
   }
 
   // Overdue
@@ -90,13 +85,7 @@ export function formatMorningReport(
       return `  ${link}  ${i.title}    :bust_in_silhouette: ${assignee}    :calendar: Due: ${dueStr}`;
     });
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `:warning: *Overdue (${overdueIssues.length})*\n${overdueLines.join('\n')}`,
-      },
-    });
+    pushMrkdwnBlocks(blocks, `:warning: *Overdue (${overdueIssues.length})*`, overdueLines);
   }
 
   return { blocks, text: `[${projectName}] Morning Report -- ${dateStr}` };
