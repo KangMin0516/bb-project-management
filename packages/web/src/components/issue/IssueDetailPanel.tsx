@@ -6,6 +6,7 @@ import { componentApi } from '@/api/components'
 import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
+import { useImagePreviewStore } from '@/stores/imagePreview'
 import { getErrorMessage } from '@/lib/error'
 import { Trash2, Link2, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { copyIssueLink } from '@/components/issue/IssueActionMenu'
@@ -504,8 +505,11 @@ export default function IssueDetailPanel({
               ) : (
                 <div
                   onClick={(e) => {
-                    // Don't enter edit mode if clicking an image (let image preview handle it)
-                    if ((e.target as HTMLElement).tagName === 'IMG') return
+                    if ((e.target as HTMLElement).tagName === 'IMG') {
+                      const img = e.target as HTMLImageElement
+                      if (img.src) useImagePreviewStore.getState().open(img.src, img.alt || '')
+                      return
+                    }
                     setDraftDescription(d.description || '')
                     setEditingDescription(true)
                   }}
