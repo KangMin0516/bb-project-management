@@ -34,7 +34,7 @@ export class UploadController {
     }
     res.set({
       'Content-Type': result.contentType,
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'public, max-age=2592000',
     });
     if (result.stream instanceof Readable) {
       result.stream.pipe(res);
