@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { authApi } from '@/api/auth'
 import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
 import { componentApi, type Component } from '@/api/components'
-import { Trash2, UserPlus, Check, X, Pencil } from 'lucide-react'
+import { Trash2, UserPlus, Pencil } from 'lucide-react'
 import { slackApi } from '@/api/slack'
 import SlackIntegration from '@/components/settings/SlackIntegration'
 import DailyReportSettings from '@/components/settings/DailyReportSettings'
 import { useToastStore } from '@/stores/toast'
-import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
 
 export default function SettingsPage() {
@@ -198,63 +196,6 @@ export default function SettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['labels', projectId] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels'))
-    },
-  })
-
-  const currentUser = useAuthStore((s) => s.user)
-
-  // Change password
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
-
-  const changePassword = useMutation({
-    mutationFn: () => authApi.changePassword({ currentPassword, newPassword }),
-    onSuccess: () => {
-      useToastStore.getState().addToast('Password changed successfully')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      setPasswordError('')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change password'))
-    },
-  })
-
-  const handleChangePassword = () => {
-    if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
-      return
-    }
-    setPasswordError('')
-    changePassword.mutate()
-  }
-
-  const { data: pendingUsers } = useQuery({
-    queryKey: ['users', 'pending'],
-    queryFn: () => userApi.listPending(),
-    enabled: !!currentUser?.isSuperuser,
-  })
-
-  const approveUser = useMutation({
-    mutationFn: (userId: string) => userApi.approve(userId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', 'pending'] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve user'))
-    },
-  })
-
-  const rejectUser = useMutation({
-    mutationFn: (userId: string) => userApi.reject(userId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', 'pending'] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject user'))
     },
   })
 
@@ -555,91 +496,6 @@ export default function SettingsPage() {
             className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
           >
             Add
-          </button>
-        </div>
-      </section>
-
-      {/* User Approval (superuser only) */}
-      {currentUser?.isSuperuser && (
-        <section className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-gray-700">User Approval</h2>
-          {pendingUsers && pendingUsers.length > 0 ? (
-            <div className="space-y-2">
-              {pendingUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700">
-                    {u.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">{u.name}</div>
-                    <div className="text-xs text-gray-500">{u.email}</div>
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {new Date(u.createdAt).toLocaleDateString()}
-                  </span>
-                  <button
-                    onClick={() => approveUser.mutate(u.id)}
-                    className="rounded-md bg-green-50 p-1.5 text-green-600 hover:bg-green-100"
-                    title="Approve"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => rejectUser.mutate(u.id)}
-                    className="rounded-md bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                    title="Reject"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">No pending approval requests</p>
-          )}
-        </section>
-      )}
-
-      {/* Change Password */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Current Password</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">New Password</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Confirm New Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-            />
-          </div>
-          {passwordError && (
-            <p className="text-xs text-red-500">{passwordError}</p>
-          )}
-          <button
-            onClick={handleChangePassword}
-            disabled={!currentPassword || !newPassword || !confirmPassword || changePassword.isPending}
-            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-          >
-            {changePassword.isPending ? 'Changing...' : 'Change Password'}
           </button>
         </div>
       </section>

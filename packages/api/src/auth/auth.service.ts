@@ -67,6 +67,10 @@ export class AuthService {
       throw new ForbiddenException('가입이 거절되었습니다.');
     }
 
+    if (user.status === 'DELETED') {
+      throw new ForbiddenException('삭제된 계정입니다.');
+    }
+
     return this.buildTokenResponse(user.id, user.email);
   }
 
