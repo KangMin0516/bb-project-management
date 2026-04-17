@@ -18,6 +18,7 @@ import {
   UserX,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useImagePreviewStore } from '@/stores/imagePreview'
 
 const STATUS_TABS = [
   { key: '', label: 'All' },
@@ -162,7 +163,10 @@ export default function AdminPage() {
         <div className="divide-y divide-gray-100">
           {users?.map((u) => (
             <div key={u.id} className="flex items-center gap-3 px-5 py-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden">
+              <div
+                className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden', u.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300 transition')}
+                onClick={() => u.avatar && useImagePreviewStore.getState().open(u.avatar, u.name)}
+              >
                 {u.avatar ? (
                   <img src={u.avatar} alt={u.name} className="h-full w-full object-cover" />
                 ) : (

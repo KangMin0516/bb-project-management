@@ -9,6 +9,7 @@ import { slackApi } from '@/api/slack'
 import SlackIntegration from '@/components/settings/SlackIntegration'
 import DailyReportSettings from '@/components/settings/DailyReportSettings'
 import { useToastStore } from '@/stores/toast'
+import { useImagePreviewStore } from '@/stores/imagePreview'
 import { getErrorMessage } from '@/lib/error'
 
 export default function SettingsPage() {
@@ -252,7 +253,10 @@ export default function SettingsPage() {
         <div className="space-y-2">
           {members?.map((m) => (
             <div key={m.id} className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden">
+              <div
+                className={`flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden ${m.user.avatar ? 'cursor-pointer hover:ring-2 hover:ring-primary-300 transition' : ''}`}
+                onClick={() => m.user.avatar && useImagePreviewStore.getState().open(m.user.avatar, m.user.name)}
+              >
                 {m.user.avatar ? (
                   <img src={m.user.avatar} alt={m.user.name} className="h-full w-full object-cover" />
                 ) : (

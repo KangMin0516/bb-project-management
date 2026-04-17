@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react'
 import type { Issue } from '@/api/issues'
 import type { ChildIssue } from './types'
 import { cn } from '@/lib/utils'
+import { useImagePreviewStore } from '@/stores/imagePreview'
 import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
 import { getDueBadge, isIssueOverdue } from '@/lib/time'
 import { ChevronRight, ChevronDown } from 'lucide-react'
@@ -127,8 +128,9 @@ export default memo(function IssueCard({
                 {extras.map((a) => (
                   <div
                     key={a.name}
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-500 overflow-hidden ring-1 ring-white opacity-50"
+                    className={cn('flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-500 overflow-hidden ring-1 ring-white opacity-50', a.avatar && 'cursor-pointer hover:opacity-80')}
                     title={a.name}
+                    onClick={(e) => { if (a.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(a.avatar, a.name) } }}
                   >
                     {a.avatar ? (
                       <img src={a.avatar} alt={a.name} className="h-full w-full object-cover" />
@@ -139,8 +141,9 @@ export default memo(function IssueCard({
                 ))}
                 {issue.assignee && (
                   <div
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden ring-1 ring-white z-10"
+                    className={cn('flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden ring-1 ring-white z-10', issue.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
                     title={issue.assignee.name}
+                    onClick={(e) => { if (issue.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(issue.assignee.avatar, issue.assignee.name) } }}
                   >
                     {issue.assignee.avatar ? (
                       <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
@@ -202,8 +205,9 @@ export default memo(function IssueCard({
               />
               {child.assignee && (
                 <div
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9px] font-medium text-primary-700 overflow-hidden"
+                  className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9px] font-medium text-primary-700 overflow-hidden', child.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
                   title={child.assignee.name}
+                  onClick={(e) => { if (child.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(child.assignee.avatar, child.assignee.name) } }}
                 >
                   {child.assignee.avatar ? (
                     <img src={child.assignee.avatar} alt={child.assignee.name} className="h-full w-full object-cover" />

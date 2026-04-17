@@ -20,6 +20,7 @@ import AdminPage from '@/pages/AdminPage'
 import ProfilePage from '@/pages/ProfilePage'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/ToastContainer'
+import ImagePreviewModal from '@/components/ui/ImagePreviewModal'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +81,7 @@ export default function App() {
         </BrowserRouter>
       </ErrorBoundary>
       <ToastContainer />
+      <ImagePreviewModal />
     </QueryClientProvider>
   )
 }

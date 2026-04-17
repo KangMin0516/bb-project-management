@@ -1,5 +1,6 @@
 import { type Attachment } from '@/api/issues'
 import { Trash2 } from 'lucide-react'
+import { useImagePreviewStore } from '@/stores/imagePreview'
 
 export default function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete: (id: string) => void }) {
   const isImage = attachment.mimeType.startsWith('image/')
@@ -11,9 +12,12 @@ export default function AttachmentItem({ attachment, onDelete }: { attachment: A
   return (
     <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
       {isImage && (
-        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-          <img src={attachment.url} alt={attachment.fileName} className="h-10 w-10 rounded object-cover" />
-        </a>
+        <button
+          onClick={() => useImagePreviewStore.getState().open(attachment.url, attachment.fileName)}
+          className="shrink-0"
+        >
+          <img src={attachment.url} alt={attachment.fileName} className="h-10 w-10 cursor-pointer rounded object-cover hover:opacity-80 transition" />
+        </button>
       )}
       {isVideo && (
         <video src={attachment.url} className="h-10 w-10 rounded object-cover" muted />
