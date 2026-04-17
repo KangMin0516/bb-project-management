@@ -503,7 +503,9 @@ export default function IssueDetailPanel({
                 </div>
               ) : (
                 <div
-                  onClick={() => {
+                  onClick={(e) => {
+                    // Don't enter edit mode if clicking an image (let image preview handle it)
+                    if ((e.target as HTMLElement).tagName === 'IMG') return
                     setDraftDescription(d.description || '')
                     setEditingDescription(true)
                   }}
