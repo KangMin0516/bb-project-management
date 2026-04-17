@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, type TeamMember } from '@/api/dashboard'
+import { dashboardApi, type TeamMember, type StandupReportEntry, type TeamStandup } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { Navigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Users, CheckCircle2, AlertTriangle, Inbox, Search, ArrowUpDown } from 'lucide-react'
+import { Users, CheckCircle2, AlertTriangle, Inbox, Search, ArrowUpDown, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import WorkloadHeatmap from '@/components/dashboard/WorkloadHeatmap'
 
 type StatusIndicator = 'active' | 'light' | 'idle' | 'overloaded'
@@ -95,11 +95,14 @@ export default function TeamDashboardPage() {
 
       {/* KPI Cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard icon={<Users className="h-5 w-5 text-blue-600" />} label="Active Members" tooltip="현재 활성(ACTIVE) 상태인 전체 팀원 수" value={summary.activeMembers} bg="bg-blue-50" />
-        <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Completed Today" tooltip="오늘 DONE으로 변경된 이슈 총 수" value={summary.completedToday} bg="bg-green-50" />
-        <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-600" />} label="Overdue" tooltip="기한이 지난 미완료 이슈 총 수" value={summary.overdueTotal} bg="bg-red-50" />
-        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600 dark:text-gray-500" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100 dark:bg-gray-700" />
+        <KpiCard icon={<Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />} label="Active Members" tooltip="현재 활성(ACTIVE) 상태인 전체 팀원 수" value={summary.activeMembers} bg="bg-blue-50 dark:bg-blue-900/30" />
+        <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />} label="Completed Today" tooltip="오늘 DONE으로 변경된 이슈 총 수" value={summary.completedToday} bg="bg-green-50 dark:bg-green-900/30" />
+        <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />} label="Overdue" tooltip="기한이 지난 미완료 이슈 총 수" value={summary.overdueTotal} bg="bg-red-50 dark:bg-red-900/30" />
+        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600 dark:text-gray-400" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100 dark:bg-gray-700" />
       </div>
+
+      {/* Standup Section */}
+      {data.standup.total > 0 && <StandupSection standup={data.standup} />}
 
       {/* Search + Sort */}
       <div className="mb-4 flex items-center gap-3">
@@ -171,14 +174,14 @@ function MemberCard({ member }: { member: TeamMember }) {
       {/* Avatar + Status */}
       <Tip text={config.tooltip}>
         <div className="relative shrink-0">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-sm font-medium text-primary-700 dark:text-primary-300 overflow-hidden">
             {member.user.avatar ? (
               <img src={member.user.avatar} alt={member.user.name} className="h-full w-full object-cover" />
             ) : (
               member.user.name.charAt(0).toUpperCase()
             )}
           </div>
-          <span className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white', config.dot)} />
+          <span className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-800', config.dot)} />
         </div>
       </Tip>
 
@@ -188,10 +191,10 @@ function MemberCard({ member }: { member: TeamMember }) {
           <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{member.user.name}</span>
           <Tip text={config.tooltip}>
             <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
-              'bg-green-100 text-green-700': status === 'active',
-              'bg-yellow-100 text-yellow-700': status === 'light',
-              'bg-red-100 text-red-700': status === 'idle',
-              'bg-orange-100 text-orange-700': status === 'overloaded',
+              'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': status === 'active',
+              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': status === 'light',
+              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': status === 'idle',
+              'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400': status === 'overloaded',
             })}>
               {config.label}
             </span>
@@ -212,11 +215,11 @@ function MemberCard({ member }: { member: TeamMember }) {
 
       {/* Today Stats */}
       <div className="flex items-center gap-3 text-xs">
-        <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600" icon="🎯" />
-        <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400" icon="📋" />
-        <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
-        <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600" icon="✅" />
-        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400 dark:text-gray-500'} icon="⚠️" />
+        <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600 dark:text-amber-400" icon="🎯" />
+        <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400 dark:text-blue-300" icon="📋" />
+        <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600 dark:text-blue-400" icon="🔄" />
+        <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600 dark:text-green-400" icon="✅" />
+        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'} icon="⚠️" />
       </div>
 
       {/* Completion bar */}
@@ -247,5 +250,94 @@ function Stat({ label, tooltip, value, color, icon }: { label: string; tooltip: 
         <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-none mt-0.5">{label}</span>
       </div>
     </Tip>
+  )
+}
+
+const STANDUP_STATUS_CONFIG: Record<string, { label: string; color: string; order: number }> = {
+  ANSWERED: { label: 'Answered', color: 'text-green-600', order: 0 },
+  ACTIVE: { label: 'In Progress', color: 'text-yellow-600', order: 1 },
+  UNANSWERED: { label: 'No Response', color: 'text-red-500', order: 2 },
+  AWAY: { label: 'Away', color: 'text-gray-400', order: 3 },
+  CANCELED: { label: 'Canceled', color: 'text-gray-400', order: 4 },
+}
+
+function StandupSection({ standup }: { standup: TeamStandup }) {
+  const [open, setOpen] = useState(true)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+
+  const sorted = [...standup.reports].sort(
+    (a, b) => (STANDUP_STATUS_CONFIG[a.status]?.order ?? 9) - (STANDUP_STATUS_CONFIG[b.status]?.order ?? 9),
+  )
+
+  return (
+    <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-primary-600" />
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Today's Standup</span>
+          <span className="rounded-full bg-primary-100 dark:bg-primary-900 px-2 py-0.5 text-[11px] font-medium text-primary-700 dark:text-primary-300">
+            {standup.answered}/{standup.total}
+          </span>
+        </div>
+        {open ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 dark:border-gray-700">
+          {sorted.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-gray-400">No standup reports today</p>
+          ) : (
+            <div className="divide-y divide-gray-50 dark:divide-gray-700">
+              {sorted.map((r) => {
+                const cfg = STANDUP_STATUS_CONFIG[r.status] ?? STANDUP_STATUS_CONFIG.UNANSWERED
+                const rKey = `${r.slackUsername}-${r.configName}`
+                const isExpanded = expandedKey === rKey
+                const hasAnswers = r.status === 'ANSWERED' && r.answers.length > 0
+
+                return (
+                  <div key={rKey} className="px-4 py-2.5">
+                    <button
+                      onClick={() => hasAnswers && setExpandedKey(isExpanded ? null : rKey)}
+                      className={cn('flex w-full items-center gap-3 text-left', hasAnswers && 'cursor-pointer')}
+                    >
+                      {hasAnswers && (
+                        isExpanded
+                          ? <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
+                          : <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
+                      )}
+                      {!hasAnswers && <span className="w-3 shrink-0" />}
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.slackUsername}</span>
+                      <span className={cn('text-[11px] font-medium', cfg.color)}>{cfg.label}</span>
+                      {r.configName && (
+                        <span className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">{r.configName}</span>
+                      )}
+                      {r.status === 'ANSWERED' && r.completedAt && (
+                        <span className="ml-auto text-[10px] text-gray-400">
+                          {new Date(r.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </button>
+
+                    {isExpanded && hasAnswers && (
+                      <div className="ml-6 mt-2 space-y-2">
+                        {r.answers.map((a, aIdx) => (
+                          <div key={aIdx} className="text-xs">
+                            <div className="font-medium text-gray-500 dark:text-gray-400">{a.question}</div>
+                            <div className="mt-0.5 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{a.answer}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
