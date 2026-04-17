@@ -51,6 +51,52 @@ function InlineField({ label, display, children }: { label: string; display: Rea
   )
 }
 
+/** Assignee dropdown with avatars */
+function AssigneeDropdown({ members, value, onChange }: { members: { user: { id: string; name: string; avatar?: string | null } }[]; value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(true)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  if (!open) return null
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white py-1 shadow-lg max-h-52 overflow-y-auto">
+        <button
+          onClick={() => { onChange(''); setOpen(false) }}
+          className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${!value ? 'bg-primary-50 text-primary-700' : 'text-gray-700'}`}
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[10px] text-gray-400">?</span>
+          Unassigned
+        </button>
+        {members.map((m) => (
+          <button
+            key={m.user.id}
+            onClick={() => { onChange(m.user.id); setOpen(false) }}
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${value === m.user.id ? 'bg-primary-50 text-primary-700' : 'text-gray-700'}`}
+          >
+            {m.user.avatar ? (
+              <img src={m.user.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
+                {m.user.name?.charAt(0).toUpperCase()}
+              </span>
+            )}
+            {m.user.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function IssueDetailPanel({
   projectId,
   projectKey,
@@ -318,19 +364,28 @@ export default function IssueDetailPanel({
 
             <InlineField
               label="Assignee"
-              display={<span className={d.assignee ? 'text-gray-700' : 'text-gray-400 italic'}>{d.assignee?.name || 'Unassigned'}</span>}
+              display={
+                <span className={`flex items-center gap-2 ${d.assignee ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                  {d.assignee ? (
+                    <>
+                      {d.assignee.avatar ? (
+                        <img src={d.assignee.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
+                          {d.assignee.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      {d.assignee.name}
+                    </>
+                  ) : 'Unassigned'}
+                </span>
+              }
             >
-              <select
+              <AssigneeDropdown
+                members={members || []}
                 value={d.assigneeId || ''}
-                onChange={(e) => updateMutation.mutate({ assigneeId: e.target.value || null })}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                autoFocus
-              >
-                <option value="">Unassigned</option>
-                {members?.map((m) => (
-                  <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-                ))}
-              </select>
+                onChange={(id) => updateMutation.mutate({ assigneeId: id || null })}
+              />
             </InlineField>
 
             <InlineField
