@@ -104,6 +104,7 @@ model Issue {
   order       Int           @default(0)
   dueDate     DateTime?     @map("due_date")
   focusDate   DateTime?     @map("focus_date") @db.Date
+  isRecheck   Boolean       @default(false) @map("is_recheck")
   archivedAt  DateTime?     @map("archived_at")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
@@ -146,7 +147,6 @@ enum IssueStatus {
   REVIEW_QA
   DONE
   CANCELED
-  RECHECK
 }
 
 enum IssuePriority {

@@ -321,7 +321,6 @@ export class IssueService {
       'REVIEW_QA' as IssueStatus,
       'DONE' as IssueStatus,
       'CANCELED' as IssueStatus,
-      'RECHECK' as IssueStatus,
     ];
 
     const grouped: Record<
@@ -468,11 +467,21 @@ export class IssueService {
         ? { archivedAt: null }
         : {};
 
+    // Reset isRecheck when status changes away from IN_PROGRESS
+    const recheckReset =
+      data.status &&
+      data.status !== existing.status &&
+      data.status !== 'IN_PROGRESS' &&
+      existing.isRecheck
+        ? { isRecheck: false }
+        : {};
+
     const issue = await this.prisma.issue.update({
       where: { id: issueId },
       data: {
         ...data,
         ...archiveReset,
+        ...recheckReset,
         ...(labelIds !== undefined && {
           labels: {
             deleteMany: {},
@@ -567,6 +576,12 @@ export class IssueService {
         ? { archivedAt: null }
         : {};
 
+    // Reset isRecheck when dragging to a non-IN_PROGRESS column
+    const recheckReset =
+      existing.isRecheck && targetStatus !== 'IN_PROGRESS'
+        ? { isRecheck: false }
+        : {};
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.issue.update({
         where: { id: issueId },
@@ -574,6 +589,7 @@ export class IssueService {
           status: targetStatus as IssueStatus,
           order: targetOrder,
           ...archiveReset,
+          ...recheckReset,
           ...(activities.length > 0 && {
             activities: {
               create: activities.map((a) => ({ ...a, userId })),

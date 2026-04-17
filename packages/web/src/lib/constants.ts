@@ -1,4 +1,4 @@
-export const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED', 'RECHECK'] as const
+export const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED'] as const
 
 export const STATUS_LABELS: Record<string, string> = {
   BACKLOG: 'Backlog',
@@ -7,7 +7,6 @@ export const STATUS_LABELS: Record<string, string> = {
   REVIEW_QA: 'Review/QA',
   DONE: 'Done',
   CANCELED: 'Canceled',
-  RECHECK: 'Recheck',
 }
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -17,7 +16,6 @@ export const STATUS_COLORS: Record<string, string> = {
   REVIEW_QA: 'bg-purple-400',
   DONE: 'bg-green-400',
   CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
 }
 
 export const PRIORITIES = ['HIGH', 'MEDIUM', 'LOW'] as const
@@ -61,7 +59,6 @@ export const STATUS_BAR_COLORS: Record<string, string> = {
   REVIEW_QA: 'bg-purple-400',
   DONE: 'bg-green-400',
   CANCELED: 'bg-red-400',
-  RECHECK: 'bg-orange-400',
 }
 
 export const ORDER_GAP = 1000
@@ -73,7 +70,6 @@ export const STATUS_BADGE_COLORS: Record<string, string> = {
   REVIEW_QA: 'bg-purple-100 text-purple-700',
   DONE: 'bg-green-100 text-green-700',
   CANCELED: 'bg-red-100 text-red-700',
-  RECHECK: 'bg-orange-100 text-orange-700',
 }
 
 export const EPIC_STATUS_ORDER: Record<string, number> = {
@@ -81,9 +77,8 @@ export const EPIC_STATUS_ORDER: Record<string, number> = {
   TODO: 1,
   BACKLOG: 2,
   REVIEW_QA: 3,
-  RECHECK: 4,
-  DONE: 5,
-  CANCELED: 6,
+  DONE: 4,
+  CANCELED: 5,
 }
 
 export function calculateDropOrder(
