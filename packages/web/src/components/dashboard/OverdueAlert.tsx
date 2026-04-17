@@ -23,11 +23,11 @@ export default function OverdueAlert({ issues, projectKey, onIssueClick }: Overd
   if (issues.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50/50 p-5">
+    <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20 p-5">
       {/* Header */}
       <div className="mb-3 flex items-center gap-2">
         <AlertTriangle className="h-4 w-4 text-red-500" />
-        <h2 className="text-sm font-semibold text-red-800">
+        <h2 className="text-sm font-semibold text-red-800 dark:text-red-300">
           Overdue Issues
         </h2>
         <InfoTooltip
@@ -38,7 +38,7 @@ export default function OverdueAlert({ issues, projectKey, onIssueClick }: Overd
             { lang: 'VN', text: 'Các issue đã quá hạn nhưng chưa hoàn thành. Cần xử lý ngay.' },
           ]}
         />
-        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+        <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-400">
           {issues.length}
         </span>
       </div>
@@ -51,22 +51,22 @@ export default function OverdueAlert({ issues, projectKey, onIssueClick }: Overd
             <div
               key={issue.id}
               onClick={() => onIssueClick(issue.id)}
-              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-red-100/50"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-red-100/50 dark:hover:bg-red-900/30"
             >
-              <span className="font-mono text-xs text-red-400">
+              <span className="font-mono text-xs text-red-400 dark:text-red-500">
                 {projectKey}-{issue.number}
               </span>
-              <span className="flex-1 truncate text-sm font-medium text-red-900">
+              <span className="flex-1 truncate text-sm font-medium text-red-900 dark:text-red-200">
                 {issue.title}
               </span>
               {issue.assignee && (
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-[9px] font-medium text-red-700">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-[9px] font-medium text-red-700 dark:text-red-400">
                   {issue.assignee.name?.charAt(0).toUpperCase() || '?'}
                 </div>
               )}
               <div className="flex items-center gap-1.5">
                 <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[issue.status])} />
-                <span className="text-xs text-red-600">{issue.status.replace(/_/g, ' ')}</span>
+                <span className="text-xs text-red-600 dark:text-red-400">{issue.status.replace(/_/g, ' ')}</span>
               </div>
               <span
                 className={cn(
@@ -76,7 +76,7 @@ export default function OverdueAlert({ issues, projectKey, onIssueClick }: Overd
               >
                 {issue.priority}
               </span>
-              <span className="shrink-0 text-xs font-medium text-red-600">
+              <span className="shrink-0 text-xs font-medium text-red-600 dark:text-red-400">
                 {days}d overdue
               </span>
             </div>

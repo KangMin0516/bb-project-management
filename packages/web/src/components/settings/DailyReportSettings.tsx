@@ -109,12 +109,12 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
 
   if (!slackConnected) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
         <div className="flex items-center gap-3">
-          <Clock className="h-5 w-5 text-gray-400" />
+          <Clock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Daily Reports</h3>
-            <p className="text-xs text-gray-500">Connect Slack first to configure daily reports</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Daily Reports</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Connect Slack first to configure daily reports</p>
           </div>
         </div>
       </div>
@@ -128,13 +128,13 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
   ]
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Clock className="h-5 w-5 text-primary-600" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Daily Reports</h3>
-            <p className="text-xs text-gray-500">Automated Slack reports 3x daily</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Daily Reports</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Automated Slack reports 3x daily</p>
           </div>
         </div>
         <label className="flex items-center gap-2">
@@ -142,9 +142,9 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
             type="checkbox"
             checked={form.enabled}
             onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
           />
-          <span className="text-xs font-medium text-gray-700">Enabled</span>
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Enabled</span>
         </label>
       </div>
 
@@ -152,11 +152,11 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
         {/* Timezone + Skip Weekends */}
         <div className="flex items-center gap-4">
           <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Timezone</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Timezone</label>
             <select
               value={form.timezone}
               onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>{tz}</option>
@@ -164,35 +164,35 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
             </select>
           </div>
           <label className="flex items-center gap-2 pt-5">
-            <Calendar className="h-3.5 w-3.5 text-gray-400" />
+            <Calendar className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
             <input
               type="checkbox"
               checked={form.skipWeekends}
               onChange={(e) => setForm({ ...form, skipWeekends: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-xs text-gray-600">Skip weekends</span>
+            <span className="text-xs text-gray-600 dark:text-gray-500">Skip weekends</span>
           </label>
         </div>
 
         {/* Report Rows */}
         <div className="space-y-2">
           {reports.map((r) => (
-            <div key={r.key} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2.5">
+            <div key={r.key} className="flex items-center gap-3 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-3 py-2.5">
               <div className="w-20">
-                <div className="text-xs font-semibold text-gray-900">{r.label}</div>
-                <div className="text-[10px] text-gray-500">{r.desc}</div>
+                <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">{r.label}</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400">{r.desc}</div>
               </div>
               <input
                 type="time"
                 value={form[r.timeKey]}
                 onChange={(e) => setForm({ ...form, [r.timeKey]: e.target.value })}
-                className="rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
               <select
                 value={form[r.channelKey]}
                 onChange={(e) => setForm({ ...form, [r.channelKey]: e.target.value })}
-                className="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="flex-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="">Select channel...</option>
                 {channels?.map((ch: SlackChannel) => (
@@ -202,7 +202,7 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
               <button
                 onClick={() => testMutation.mutate(r.key)}
                 disabled={!form[r.channelKey] || testMutation.isPending}
-                className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+                className="flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40"
                 title="Send test report"
               >
                 <Send className="h-3 w-3" />

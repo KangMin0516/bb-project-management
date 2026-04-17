@@ -35,7 +35,7 @@ export default function NewProjectPage() {
 
   return (
     <div className="mx-auto max-w-lg p-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Create Project</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-gray-100">Create Project</h1>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -45,33 +45,33 @@ export default function NewProjectPage() {
       >
         {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Name</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
           <input
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
             placeholder="My Project"
             required
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Key <span className="text-gray-400">(2-10 uppercase letters)</span>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Key <span className="text-gray-400 dark:text-gray-500">(2-10 uppercase letters)</span>
           </label>
           <input
             value={key}
             onChange={(e) => setKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 10))}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 font-mono text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
             placeholder="PROJ"
             required
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
             rows={3}
           />
         </div>
@@ -79,7 +79,7 @@ export default function NewProjectPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
           >
             Cancel
           </button>

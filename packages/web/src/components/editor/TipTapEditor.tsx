@@ -237,7 +237,7 @@ export default function TipTapEditor({
   if (!editor) return null
 
   return (
-    <div className={`rounded-lg border border-gray-300 overflow-hidden ${className}`}>
+    <div className={`rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden ${className}`}>
       {editable && (
         <TipTapToolbar editor={editor} onImageClick={handleImageButtonClick} />
       )}

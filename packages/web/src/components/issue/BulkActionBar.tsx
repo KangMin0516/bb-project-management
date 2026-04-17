@@ -87,7 +87,7 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
 
       <button
         onClick={onClear}
-        className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+        className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
       >
         <X className="h-3 w-3" /> Cancel
       </button>
@@ -113,14 +113,14 @@ function BulkDropdown({
       <button
         onClick={() => setOpen(!open)}
         disabled={disabled}
-        className="rounded-md bg-white border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900 disabled:opacity-50"
       >
         {label} ▾
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
             {options.map((opt) => (
               <button
                 key={opt.value}
@@ -128,7 +128,7 @@ function BulkDropdown({
                   onSelect(opt.value)
                   setOpen(false)
                 }}
-                className="flex w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50"
+                className="flex w-full px-3 py-1.5 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
               >
                 {opt.label}
               </button>

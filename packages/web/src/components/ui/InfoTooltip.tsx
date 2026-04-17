@@ -49,7 +49,7 @@ export default function InfoTooltip({ lines, className, iconClassName }: InfoToo
         onClick={() => setOpen(!open)}
         className={cn(
           'inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium transition-colors',
-          'text-gray-400 hover:bg-gray-100 hover:text-gray-600',
+          'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500',
           iconClassName,
         )}
       >
@@ -60,7 +60,7 @@ export default function InfoTooltip({ lines, className, iconClassName }: InfoToo
         <div
           ref={tooltipRef}
           className={cn(
-            'absolute z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg',
+            'absolute z-50 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-lg dark:shadow-gray-900/50',
             'animate-in fade-in-0 zoom-in-95 duration-150',
             position === 'bottom' ? 'top-full mt-1.5' : 'bottom-full mb-1.5',
             'left-1/2 -translate-x-1/2',
@@ -71,10 +71,10 @@ export default function InfoTooltip({ lines, className, iconClassName }: InfoToo
           <div className="space-y-2">
             {lines.map((line) => (
               <div key={line.lang} className="flex gap-2">
-                <span className="mt-px shrink-0 rounded bg-gray-100 px-1 py-0.5 text-[9px] font-bold uppercase leading-none text-gray-500">
+                <span className="mt-px shrink-0 rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5 text-[9px] font-bold uppercase leading-none text-gray-500 dark:text-gray-400">
                   {line.lang}
                 </span>
-                <span className="text-xs leading-relaxed text-gray-600">
+                <span className="text-xs leading-relaxed text-gray-600 dark:text-gray-500">
                   {line.text}
                 </span>
               </div>

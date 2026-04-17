@@ -130,26 +130,26 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" onClick={close}>
       <div className="fixed inset-0 bg-black/40" />
       <div
-        className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl"
+        className="relative w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
-          <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <Search className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a command or search issues..."
-            className="flex-1 text-sm text-gray-900 placeholder-gray-400 outline-none"
+            className="flex-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none bg-transparent"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => setQuery('')} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
               <X className="h-4 w-4" />
             </button>
           )}
-          <kbd className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">ESC</kbd>
+          <kbd className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">ESC</kbd>
         </div>
 
         {/* Results */}
@@ -158,7 +158,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           {showQuickActions && actionItems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Quick Actions</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Quick Actions</span>
               </div>
               {actionItems.map((action) => {
                 const idx = runningIndex++
@@ -169,10 +169,10 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                     onMouseEnter={() => setActiveIndex(idx)}
                     className={cn(
                       'flex w-full items-center gap-3 px-4 py-2 text-left text-sm',
-                      idx === activeIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50',
+                      idx === activeIndex ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
                     )}
                   >
-                    <span className={cn('text-gray-400', idx === activeIndex && 'text-primary-500')}>{action.icon}</span>
+                    <span className={cn('text-gray-400 dark:text-gray-500', idx === activeIndex && 'text-primary-500 dark:text-primary-400')}>{action.icon}</span>
                     {action.label}
                   </button>
                 )
@@ -184,7 +184,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           {showQuickActions && pageItems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Pages</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Pages</span>
               </div>
               {pageItems.map((action) => {
                 const idx = runningIndex++
@@ -195,10 +195,10 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                     onMouseEnter={() => setActiveIndex(idx)}
                     className={cn(
                       'flex w-full items-center gap-3 px-4 py-2 text-left text-sm',
-                      idx === activeIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50',
+                      idx === activeIndex ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
                     )}
                   >
-                    <span className={cn('text-gray-400', idx === activeIndex && 'text-primary-500')}>{action.icon}</span>
+                    <span className={cn('text-gray-400 dark:text-gray-500', idx === activeIndex && 'text-primary-500 dark:text-primary-400')}>{action.icon}</span>
                     {action.label}
                   </button>
                 )
@@ -211,11 +211,11 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
             <div>
               {results.length > 0 && (
                 <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Issues</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Issues</span>
                 </div>
               )}
               {results.length === 0 && totalQuickItems === 0 && (
-                <div className="px-4 py-8 text-center text-sm text-gray-400">No results found</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No results found</div>
               )}
               {results.map((result) => {
                 const idx = runningIndex++
@@ -226,14 +226,14 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                     onMouseEnter={() => setActiveIndex(idx)}
                     className={cn(
                       'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm',
-                      idx === activeIndex ? 'bg-primary-50' : 'hover:bg-gray-50',
+                      idx === activeIndex ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700',
                     )}
                   >
-                    <span className="text-xs">{TYPE_ICONS[result.type] || '\uD83D\uDCCB'}</span>
-                    <span className="font-mono text-xs text-gray-400">
+                    <span className="text-xs">{TYPE_ICONS[result.type] || '📋'}</span>
+                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
                       {result.project.key}-{result.number}
                     </span>
-                    <span className={cn('flex-1 truncate font-medium', idx === activeIndex ? 'text-primary-700' : 'text-gray-900')}>
+                    <span className={cn('flex-1 truncate font-medium', idx === activeIndex ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100')}>
                       {result.title}
                     </span>
                     <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[result.status])} />
@@ -248,9 +248,9 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-4 py-2 text-[11px] text-gray-400">
-          <span className="mr-3">\u2191\u2193 Navigate</span>
-          <span className="mr-3">\u21B5 Open</span>
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="mr-3">↑↓ Navigate</span>
+          <span className="mr-3">↵ Open</span>
           <span>ESC Close</span>
         </div>
       </div>

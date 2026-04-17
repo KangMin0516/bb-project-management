@@ -47,12 +47,12 @@ export default memo(function SwimlaneRow({
   const droppablePrefix = epic ? epic.id : '__no_epic__'
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Swimlane Header */}
       <button
         type="button"
         onClick={onToggleCollapse}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-gray-50"
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
       >
         {isCollapsed
           ? <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
@@ -61,9 +61,9 @@ export default memo(function SwimlaneRow({
         {epic ? (
           <>
             <span className="text-sm">⚡</span>
-            <span className="font-mono text-xs text-gray-400">{projectKey}-{epic.number}</span>
-            <span className="text-sm font-semibold text-gray-800 truncate">{epic.title}</span>
-            <span className="text-xs text-gray-400">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
+            <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{projectKey}-{epic.number}</span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{epic.title}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
             <span className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium',
               STATUS_BADGE_COLORS[epic.status] || 'bg-blue-100 text-blue-700',
@@ -73,15 +73,15 @@ export default memo(function SwimlaneRow({
           </>
         ) : (
           <>
-            <span className="text-sm font-semibold text-gray-400">No Epic</span>
-            <span className="text-xs text-gray-400">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
+            <span className="text-sm font-semibold text-gray-400 dark:text-gray-500">No Epic</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
           </>
         )}
         {/* Mini progress bar */}
         {totalCount > 0 && (
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] text-gray-400">{doneCount}/{totalCount}</span>
-            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200">
+            <span className="text-[11px] text-gray-400 dark:text-gray-500">{doneCount}/{totalCount}</span>
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
               <div
                 className="h-full rounded-full bg-green-400 transition-all"
                 style={{ width: `${progress}%` }}
@@ -93,15 +93,15 @@ export default memo(function SwimlaneRow({
 
       {/* Swimlane Columns */}
       {!isCollapsed && (
-        <div className="flex gap-0 border-t border-gray-200 overflow-x-auto">
+        <div className="flex gap-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
           {STATUSES.map((status) => {
             const columnIssues = issues[status] || []
             const droppableId = `${droppablePrefix}:${status}`
             return (
-              <div key={status} className="flex w-56 shrink-0 flex-col border-r border-gray-100 last:border-r-0">
-                <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-100">
+              <div key={status} className="flex w-56 shrink-0 flex-col border-r border-gray-100 dark:border-gray-700 last:border-r-0">
+                <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-100 dark:border-gray-700">
                   <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[status])} />
-                  <span className="text-[11px] font-medium text-gray-500">{STATUS_LABELS[status] || status}</span>
+                  <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{STATUS_LABELS[status] || status}</span>
                   {columnIssues.length > 0 && (
                     <span className="ml-auto text-[10px] text-gray-400">{columnIssues.length}</span>
                   )}
@@ -114,7 +114,7 @@ export default memo(function SwimlaneRow({
                       {...provided.droppableProps}
                       className={cn(
                         'flex-1 space-y-1.5 overflow-y-auto p-1.5',
-                        snapshot.isDraggingOver && 'bg-primary-50/50',
+                        snapshot.isDraggingOver && 'bg-primary-50/50 dark:bg-primary-900/20',
                       )}
                       style={{ minHeight: 48 }}
                     >

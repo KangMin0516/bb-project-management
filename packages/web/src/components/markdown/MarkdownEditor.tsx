@@ -82,15 +82,15 @@ export default function MarkdownEditor({ value, onChange, placeholder, minRows =
   }, [applyFormat])
 
   return (
-    <div className="rounded-lg border border-gray-300 overflow-hidden">
-      <div className="flex items-center border-b border-gray-200 bg-gray-50">
+    <div className="rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+      <div className="flex items-center border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
         <button
           type="button"
           onClick={() => setTab('write')}
           className={`px-3 py-1.5 text-xs font-medium transition ${
             tab === 'write'
-              ? 'border-b-2 border-primary-600 text-primary-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
           Write
@@ -100,8 +100,8 @@ export default function MarkdownEditor({ value, onChange, placeholder, minRows =
           onClick={() => setTab('preview')}
           className={`px-3 py-1.5 text-xs font-medium transition ${
             tab === 'preview'
-              ? 'border-b-2 border-primary-600 text-primary-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
           Preview
@@ -109,14 +109,14 @@ export default function MarkdownEditor({ value, onChange, placeholder, minRows =
       </div>
 
       {tab === 'write' && (
-        <div className="flex flex-wrap gap-0.5 border-b border-gray-200 bg-gray-50 px-2 py-1">
+        <div className="flex flex-wrap gap-0.5 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2 py-1">
           {TOOLBAR_ACTIONS.map((action) => (
             <button
               key={action.label}
               type="button"
               title={action.label}
               onClick={() => applyFormat(action)}
-              className="rounded px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+              className="rounded px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-gray-200"
             >
               {action.icon}
             </button>
@@ -131,14 +131,14 @@ export default function MarkdownEditor({ value, onChange, placeholder, minRows =
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={minRows}
-          className="w-full resize-y px-3 py-2 text-sm focus:outline-none"
+          className="w-full resize-y bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
         />
       ) : (
-        <div className="min-h-[150px] px-3 py-2">
+        <div className="min-h-[150px] bg-white dark:bg-gray-800 px-3 py-2">
           {value ? (
             <MarkdownViewer content={value} />
           ) : (
-            <p className="text-sm text-gray-400 italic">Nothing to preview</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nothing to preview</p>
           )}
         </div>
       )}

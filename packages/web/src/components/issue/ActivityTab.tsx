@@ -110,7 +110,7 @@ export default function ActivityTab({
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-400 italic">No activity yet</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 italic">No activity yet</p>
       )}
     </div>
   )

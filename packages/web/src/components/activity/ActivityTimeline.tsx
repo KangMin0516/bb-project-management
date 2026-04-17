@@ -54,7 +54,7 @@ function StatusBadge({ value }: { value: string }) {
   const colorClass = STATUS_COLORS[value] || 'bg-gray-400'
   const label = STATUS_LABELS[value] || value.replace(/_/g, ' ')
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
       <span className={`h-2 w-2 rounded-full ${colorClass}`} />
       {label}
     </span>
@@ -63,7 +63,7 @@ function StatusBadge({ value }: { value: string }) {
 
 function PriorityBadge({ value }: { value: string }) {
   const dotColor = PRIORITY_DOT_COLORS[value] || 'bg-gray-400'
-  const colorClass = PRIORITY_COLORS[value] || 'bg-gray-100 text-gray-700'
+  const colorClass = PRIORITY_COLORS[value] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
   const label = PRIORITY_LABELS[value] || value
   return (
     <span className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${colorClass}`}>
@@ -108,7 +108,7 @@ function formatFieldValue(
       return <PriorityBadge value={value} />
     case 'type':
       return (
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+        <span className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
           {TYPE_LABELS[value] || value.replace(/_/g, ' ')}
         </span>
       )
@@ -116,36 +116,36 @@ function formatFieldValue(
       const name = resolveUserName(value, members)
       if (name) {
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
             <UserAvatar name={name} />
             {name}
           </span>
         )
       }
-      return <span className="text-xs text-gray-500">Unassigned</span>
+      return <span className="text-xs text-gray-500 dark:text-gray-400">Unassigned</span>
     }
     case 'parentId':
       return (
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-600">
+        <span className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-mono text-gray-600 dark:text-gray-500">
           {value.slice(0, 8)}...
         </span>
       )
     case 'dueDate':
       return (
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+        <span className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">
           {formatDate(value)}
         </span>
       )
     case 'title':
       return (
-        <span className="max-w-[200px] truncate text-xs font-medium text-gray-700" title={value}>
+        <span className="max-w-[200px] truncate text-xs font-medium text-gray-700 dark:text-gray-300" title={value}>
           {value.length > 50 ? value.slice(0, 50) + '...' : value}
         </span>
       )
     case 'description':
       return null
     default:
-      return <span className="text-xs text-gray-700">{value}</span>
+      return <span className="text-xs text-gray-700 dark:text-gray-300">{value}</span>
   }
 }
 
@@ -201,7 +201,7 @@ function ActivityItem({
 
   return (
     <div className="flex gap-3 py-2.5">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-medium text-gray-600">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-medium text-gray-600 dark:text-gray-500">
         {user?.name?.charAt(0)?.toUpperCase() || '?'}
       </div>
 
@@ -211,19 +211,19 @@ function ActivityItem({
 
           {isCreation ? (
             <>
-              <span className="text-gray-500">created the issue</span>
+              <span className="text-gray-500 dark:text-gray-400">created the issue</span>
               <Plus className="h-3 w-3 text-green-500" />
             </>
           ) : isDescription ? (
-            <span className="text-gray-500">
-              <FileText className="mr-1 inline h-3 w-3 text-gray-400" />
+            <span className="text-gray-500 dark:text-gray-400">
+              <FileText className="mr-1 inline h-3 w-3 text-gray-400 dark:text-gray-500" />
               updated description
             </span>
           ) : (
             <>
-              <span className="text-gray-500">changed</span>
-              <Icon className="h-3 w-3 text-gray-400" />
-              <span className="text-gray-500">{getFieldLabel(field)}</span>
+              <span className="text-gray-500 dark:text-gray-400">changed</span>
+              <Icon className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+              <span className="text-gray-500 dark:text-gray-400">{getFieldLabel(field)}</span>
             </>
           )}
         </div>
@@ -233,9 +233,9 @@ function ActivityItem({
             {oldValue !== null && oldValue !== undefined ? (
               <span className="inline-flex items-center opacity-60">
                 {field === 'assigneeId' && !resolveUserName(oldValue, members) ? (
-                  <span className="text-xs text-gray-400 line-through">Unassigned</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 line-through">Unassigned</span>
                 ) : field === 'title' ? (
-                  <span className="max-w-[180px] truncate text-xs text-gray-400 line-through" title={oldValue}>
+                  <span className="max-w-[180px] truncate text-xs text-gray-400 dark:text-gray-500 line-through" title={oldValue}>
                     {oldValue.length > 40 ? oldValue.slice(0, 40) + '...' : oldValue}
                   </span>
                 ) : (
@@ -249,18 +249,18 @@ function ActivityItem({
             {newValue !== null && newValue !== undefined ? (
               <span className="inline-flex items-center">
                 {field === 'assigneeId' && !resolveUserName(newValue, members) ? (
-                  <span className="text-xs text-gray-500">Unassigned</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Unassigned</span>
                 ) : (
                   formatFieldValue(field, newValue, members)
                 )}
               </span>
             ) : (
-              <span className="text-xs italic text-gray-400">none</span>
+              <span className="text-xs italic text-gray-400 dark:text-gray-500">none</span>
             )}
           </div>
         )}
 
-        <div className="mt-1 text-[11px] text-gray-400">{timeAgo(createdAt)}</div>
+        <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{timeAgo(createdAt)}</div>
       </div>
     </div>
   )

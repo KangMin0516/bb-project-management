@@ -33,23 +33,23 @@ export default function SlackIntegration() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse rounded-lg border border-gray-200 bg-white p-6">
-        <div className="h-5 w-40 rounded bg-gray-200" />
-        <div className="mt-3 h-4 w-64 rounded bg-gray-100" />
+      <div className="animate-pulse rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-gray-600" />
+        <div className="mt-3 h-4 w-64 rounded bg-gray-100 dark:bg-gray-700" />
       </div>
     )
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
             <MessageSquare className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Slack Integration</h3>
-            <p className="text-xs text-gray-500">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Slack Integration</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {status?.connected
                 ? `Connected to ${status.teamName}`
                 : 'Connect to send daily reports to Slack channels'}

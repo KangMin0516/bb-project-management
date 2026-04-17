@@ -111,11 +111,11 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
             <button
               onClick={(e) => { e.preventDefault(); onSectionClick(id) }}
               className={cn(
-                'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition hover:bg-gray-100',
+                'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition hover:bg-gray-100 dark:hover:bg-gray-700',
                 count > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
               )}
             >
-              <MessageSquare className="h-3 w-3 text-gray-400" />
+              <MessageSquare className="h-3 w-3 text-gray-400 dark:text-gray-500" />
               {count > 0 && <span className="text-amber-600">{count}</span>}
             </button>
             {onCreateIssue && (
@@ -124,7 +124,7 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
                 className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] font-medium opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
                 title="Create issue for this section"
               >
-                <Plus className="h-3 w-3 text-gray-400" />
+                <Plus className="h-3 w-3 text-gray-400 dark:text-gray-500" />
               </button>
             )}
             {sectionIssues.length > 0 && (
@@ -174,27 +174,27 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
         <>
           <div className="fixed inset-0 z-40" onClick={() => setPopoverIssue(null)} />
           <div
-            className="fixed z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+            className="fixed z-50 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-lg dark:shadow-gray-900/50"
             style={{ top: Math.min(popoverPos.top, window.innerHeight - 120), left: Math.min(popoverPos.left, window.innerWidth - 288) }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className={cn('h-2 w-2 rounded-full shrink-0', STATUS_COLORS[popoverIssue.issue.status])} />
-                  <span className="text-[10px] text-gray-500">{STATUS_LABELS[popoverIssue.issue.status] || popoverIssue.issue.status}</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">{STATUS_LABELS[popoverIssue.issue.status] || popoverIssue.issue.status}</span>
                   <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium', PRIORITY_COLORS[popoverIssue.issue.priority])}>
                     {popoverIssue.issue.priority}
                   </span>
                 </div>
-                <p className="mt-1 text-sm font-medium text-gray-900">#{popoverIssue.issue.number} {popoverIssue.issue.title}</p>
+                <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">#{popoverIssue.issue.number} {popoverIssue.issue.title}</p>
               </div>
-              <button onClick={() => setPopoverIssue(null)} className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100">
+              <button onClick={() => setPopoverIssue(null)} className="shrink-0 rounded p-0.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
             <button
               onClick={() => { onIssueClick?.(popoverIssue.issue.id); setPopoverIssue(null) }}
-              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-gray-50 dark:bg-gray-900 px-2 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             >
               <ExternalLink className="h-3 w-3" />
               Go to issue
@@ -206,7 +206,7 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
       {sections.length > 0 && (
         <nav className="sticky top-0 hidden w-48 shrink-0 self-start lg:block">
           <div className="max-h-[calc(100vh-10rem)] overflow-y-auto py-4">
-            <p className="mb-2 text-xs font-medium uppercase text-gray-400">On this page</p>
+            <p className="mb-2 text-xs font-medium uppercase text-gray-400 dark:text-gray-500">On this page</p>
             <ul className="space-y-0.5">
               {sections.map((sec) => (
                 <li key={sec.id}>
@@ -215,7 +215,7 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
                     className={`flex w-full items-center gap-1 rounded px-2 py-1 text-left text-xs transition ${
                       activeTocId === sec.sectionId
                         ? 'bg-primary-50 font-medium text-primary-700'
-                        : 'text-gray-500 hover:text-gray-700'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
                     }`}
                     style={{ paddingLeft: `${(sec.level - 1) * 8 + 8}px` }}
                   >

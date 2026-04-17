@@ -8,7 +8,7 @@ interface WorkloadChartProps {
 export default function WorkloadChart({ data }: WorkloadChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center text-sm text-gray-400">
+      <div className="flex h-32 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
         No assignee data available
       </div>
     )
@@ -25,7 +25,7 @@ export default function WorkloadChart({ data }: WorkloadChartProps) {
             {assignee.name?.charAt(0).toUpperCase() || '?'}
           </div>
           {/* Name */}
-          <span className="w-20 shrink-0 truncate text-sm text-gray-600">
+          <span className="w-20 shrink-0 truncate text-sm text-gray-600 dark:text-gray-500">
             {assignee.name}
           </span>
           {/* Stacked bar */}
@@ -50,18 +50,18 @@ export default function WorkloadChart({ data }: WorkloadChartProps) {
             </div>
           </div>
           {/* Total count */}
-          <span className="w-8 shrink-0 text-right text-xs font-medium text-gray-500">
+          <span className="w-8 shrink-0 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
             {assignee.total}
           </span>
         </div>
       ))}
 
       {/* Legend */}
-      <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100 pt-3">
+      <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100 dark:border-gray-700 pt-3">
         {STATUSES.map((status) => (
           <div key={status} className="flex items-center gap-1.5">
             <div className={`h-2.5 w-2.5 rounded-sm ${STATUS_BAR_COLORS[status]}`} />
-            <span className="text-[10px] text-gray-500">{STATUS_LABELS[status] || status}</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">{STATUS_LABELS[status] || status}</span>
           </div>
         ))}
       </div>

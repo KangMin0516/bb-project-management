@@ -331,12 +331,12 @@ export default function BoardPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {project?.key} Board
           </h1>
-          <p className="text-sm text-gray-500">{project?.name}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{project?.name}</p>
         </div>
         <div className="flex items-center gap-3">
           <SearchInput value={search} onChange={setSearch} />
@@ -359,8 +359,8 @@ export default function BoardPage() {
             className={cn(
               'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
               showArchived
-                ? 'border-amber-300 bg-amber-50 text-amber-700'
-                : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700',
             )}
           >
             <Archive className="h-3.5 w-3.5" />
@@ -372,8 +372,8 @@ export default function BoardPage() {
             className={cn(
               'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
               groupByEpic
-                ? 'border-primary-300 bg-primary-50 text-primary-700'
-                : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700',
             )}
           >
             <Rows3 className="h-3.5 w-3.5" />

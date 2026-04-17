@@ -54,9 +54,9 @@ export default memo(function IssueCard({
         role="button"
         tabIndex={0}
         className={cn(
-          'cursor-pointer rounded-lg border bg-white shadow-sm transition hover:shadow-md',
+          'cursor-pointer rounded-lg border bg-white dark:bg-gray-700 shadow-sm transition hover:shadow-md',
           compact ? 'p-2' : 'p-3',
-          overdue ? 'border-red-300 border-l-4 border-l-red-500' : 'border-gray-200',
+          overdue ? 'border-red-300 dark:border-red-700 border-l-4 border-l-red-500' : 'border-gray-200 dark:border-gray-600',
           isExpanded && hasChildren && 'rounded-b-none border-b-0',
           issue.archivedAt && 'opacity-50',
           isFocused && 'ring-2 ring-primary-400 border-primary-300',
@@ -64,11 +64,11 @@ export default memo(function IssueCard({
       >
         <div className="mb-1.5 flex items-center gap-1.5">
           <span className="text-xs">{TYPE_ICONS[issue.type] || '📋'}</span>
-          <span className="font-mono text-xs text-gray-400">
+          <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
             {projectKey}-{issue.number}
           </span>
           {issue.isRecheck && (
-            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+            <span className="rounded bg-orange-100 dark:bg-orange-900/40 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-400">
               Recheck
             </span>
           )}
@@ -78,7 +78,7 @@ export default memo(function IssueCard({
             </span>
           )}
         </div>
-        <p className={cn('font-medium leading-snug text-gray-900', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
+        <p className={cn('font-medium leading-snug text-gray-900 dark:text-gray-100', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
 
         {/* Progress bar for parent issues */}
         {hasChildren && (
@@ -89,7 +89,7 @@ export default memo(function IssueCard({
                   e.stopPropagation()
                   onToggleExpand?.(issue.id)
                 }}
-                className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700"
+                className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 {isExpanded
                   ? <ChevronDown className="h-3 w-3" />
@@ -97,11 +97,11 @@ export default memo(function IssueCard({
                 }
                 {totalCount} sub-task{totalCount > 1 ? 's' : ''}
               </button>
-              <span className="text-[11px] font-medium text-gray-500">
+              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
                 {doneCount}/{totalCount}
               </span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
               <div
                 className="h-full rounded-full bg-green-400 transition-all"
                 style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }}
@@ -115,7 +115,7 @@ export default memo(function IssueCard({
             <span
               className={cn(
                 'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                PRIORITY_COLORS[issue.priority] || 'bg-gray-100 text-gray-600',
+                PRIORITY_COLORS[issue.priority] || 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400',
               )}
             >
               {issue.priority}
@@ -144,7 +144,7 @@ export default memo(function IssueCard({
                 {extras.map((a) => (
                   <div
                     key={a.name}
-                    className={cn('flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[8px] font-medium text-gray-500 overflow-hidden ring-1 ring-white opacity-50', a.avatar && 'cursor-pointer hover:opacity-80')}
+                    className={cn('flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[8px] font-medium text-gray-500 dark:text-gray-400 overflow-hidden ring-1 ring-white dark:ring-gray-700 opacity-50', a.avatar && 'cursor-pointer hover:opacity-80')}
                     title={a.name}
                     onClick={(e) => { if (a.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(a.avatar, a.name) } }}
                   >
@@ -157,7 +157,7 @@ export default memo(function IssueCard({
                 ))}
                 {issue.assignee && (
                   <div
-                    className={cn('flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden ring-1 ring-white z-10', issue.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
+                    className={cn('flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[10px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden ring-1 ring-white dark:ring-gray-700 z-10', issue.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
                     title={issue.assignee.name}
                     onClick={(e) => { if (issue.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(issue.assignee.avatar, issue.assignee.name) } }}
                   >
@@ -176,13 +176,13 @@ export default memo(function IssueCard({
 
       {/* Expanded child issues */}
       {isExpanded && hasChildren && (
-        <div className="rounded-b-lg border border-t-0 border-gray-200 bg-gray-50">
+        <div className="rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
           {childList.map((child, idx) => (
             <div
               key={child.id}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100',
-                idx < childList.length - 1 && 'border-b border-gray-100',
+                'flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700',
+                idx < childList.length - 1 && 'border-b border-gray-100 dark:border-gray-700',
               )}
             >
               <button
@@ -194,7 +194,7 @@ export default memo(function IssueCard({
                   'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition',
                   child.status === 'DONE'
                     ? 'border-green-400 bg-green-400 text-white'
-                    : 'border-gray-300 bg-white hover:border-gray-400',
+                    : 'border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-400',
                 )}
               >
                 {child.status === 'DONE' && (
@@ -210,7 +210,7 @@ export default memo(function IssueCard({
                 }}
                 className={cn(
                   'flex-1 truncate text-left text-xs',
-                  child.status === 'DONE' ? 'text-gray-400 line-through' : 'text-gray-700',
+                  child.status === 'DONE' ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300',
                 )}
               >
                 {child.title}
@@ -221,7 +221,7 @@ export default memo(function IssueCard({
               />
               {child.assignee && (
                 <div
-                  className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9px] font-medium text-primary-700 overflow-hidden', child.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
+                  className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden', child.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
                   title={child.assignee.name}
                   onClick={(e) => { if (child.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(child.assignee.avatar, child.assignee.name) } }}
                 >

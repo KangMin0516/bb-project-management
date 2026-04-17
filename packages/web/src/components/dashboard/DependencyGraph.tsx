@@ -64,7 +64,7 @@ function PriorityBadge({ priority }: { priority: string }) {
     <span
       className={cn(
         'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
-        PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600',
+        PRIORITY_COLORS[priority] || 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-500',
       )}
     >
       {priority}
@@ -92,20 +92,20 @@ function IssueNode({
       className={cn(
         'group flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all hover:shadow-sm',
         showWarning
-          ? 'border-red-200 bg-red-50/60 hover:border-red-300'
+          ? 'border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/30 hover:border-red-300 dark:hover:border-red-700'
           : resolved
-            ? 'border-green-200 bg-green-50/40 hover:border-green-300'
-            : 'border-gray-200 bg-white hover:border-gray-300',
+            ? 'border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-900/30 hover:border-green-300 dark:hover:border-green-700'
+            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600',
       )}
     >
       <StatusDot status={issue.status} />
-      <span className="shrink-0 font-mono text-xs text-gray-400">
+      <span className="shrink-0 font-mono text-xs text-gray-400 dark:text-gray-500">
         {issue.project.key}-{issue.number}
       </span>
       <span
         className={cn(
           'min-w-0 flex-1 truncate text-sm font-medium group-hover:text-primary-700',
-          showWarning ? 'text-red-800' : resolved ? 'text-gray-500' : 'text-gray-900',
+          showWarning ? 'text-red-800 dark:text-red-300' : resolved ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100',
         )}
       >
         {issue.title}
@@ -135,12 +135,12 @@ function DependencyChainRow({
   ).length
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Blocker header */}
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
         >
           {expanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -153,8 +153,8 @@ function DependencyChainRow({
           className={cn(
             'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
             blockerResolved
-              ? 'bg-green-100 text-green-700'
-              : 'bg-amber-100 text-amber-700',
+              ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+              : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
           )}
         >
           {blockerResolved ? 'Resolved' : 'Blocking'}
@@ -168,13 +168,13 @@ function DependencyChainRow({
           />
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-gray-500">
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
           <ArrowRight className="h-3 w-3" />
           <span>
             blocks {chain.blocked.length} issue{chain.blocked.length !== 1 ? 's' : ''}
           </span>
           {!blockerResolved && unresolvedBlockedCount > 0 && (
-            <span className="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+            <span className="ml-1 rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-400">
               {unresolvedBlockedCount} waiting
             </span>
           )}
@@ -265,10 +265,10 @@ export default function DependencyGraph() {
 
   if (!links || links.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
         <GitBranch className="mx-auto mb-3 h-8 w-8 text-gray-300" />
-        <p className="text-sm font-medium text-gray-500">No dependencies found</p>
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No dependencies found</p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
           Link issues with "Blocks" / "Is blocked by" to see the dependency graph
         </p>
       </div>
@@ -279,37 +279,37 @@ export default function DependencyGraph() {
     <div className="space-y-4">
       {/* Stats row */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-          <GitBranch className="h-4 w-4 text-gray-400" />
-          <span className="text-sm text-gray-600">
-            <span className="font-semibold text-gray-900">{stats.totalBlockers}</span> blocking chain{stats.totalBlockers !== 1 ? 's' : ''}
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2">
+          <GitBranch className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+          <span className="text-sm text-gray-600 dark:text-gray-500">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.totalBlockers}</span> blocking chain{stats.totalBlockers !== 1 ? 's' : ''}
           </span>
         </div>
         {stats.unresolvedBlockers > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-3 py-2">
             <AlertTriangle className="h-4 w-4 text-red-500" />
-            <span className="text-sm text-red-700">
+            <span className="text-sm text-red-700 dark:text-red-400">
               <span className="font-semibold">{stats.unresolvedBlockers}</span> active blocker{stats.unresolvedBlockers !== 1 ? 's' : ''}
             </span>
           </div>
         )}
         {stats.resolvedBlockers > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-3 py-2">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-green-700">
+            <span className="text-sm text-green-700 dark:text-green-400">
               <span className="font-semibold">{stats.resolvedBlockers}</span> resolved
             </span>
           </div>
         )}
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-          <span className="text-sm text-gray-600">
-            <span className="font-semibold text-gray-900">{stats.totalBlocked}</span> blocked issue{stats.totalBlocked !== 1 ? 's' : ''}
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2">
+          <span className="text-sm text-gray-600 dark:text-gray-500">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.totalBlocked}</span> blocked issue{stats.totalBlocked !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5 w-fit">
+      <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 w-fit">
         {([
           ['all', 'All'],
           ['blocked', 'Active Blockers'],
@@ -321,13 +321,13 @@ export default function DependencyGraph() {
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition',
               filterMode === key
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700',
+                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
             )}
           >
             {label}
             {key === 'blocked' && stats.unresolvedBlockers > 0 && (
-              <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700">
+              <span className="ml-1.5 rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-[10px] text-red-700 dark:text-red-400">
                 {stats.unresolvedBlockers}
               </span>
             )}
@@ -338,8 +338,8 @@ export default function DependencyGraph() {
       {/* Dependency chains */}
       <div className="space-y-3">
         {filteredChains.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
-            <p className="text-sm text-gray-400">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 text-center">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
               No {filterMode === 'blocked' ? 'active blockers' : 'resolved dependencies'} found
             </p>
           </div>

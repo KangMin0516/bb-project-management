@@ -14,8 +14,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, State> 
     if (this.state.hasError) {
       return (
         <div className="flex h-screen flex-col items-center justify-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900">Something went wrong</h1>
-          <p className="text-sm text-gray-500">{this.state.error?.message}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Something went wrong</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{this.state.error?.message}</p>
           <button
             onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/' }}
             className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"

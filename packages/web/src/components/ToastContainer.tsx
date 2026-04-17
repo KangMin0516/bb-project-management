@@ -10,7 +10,7 @@ export default function ToastContainer() {
         <div
           key={t.id}
           role="alert"
-          className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
+          className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg dark:shadow-gray-900/50 ${
             t.type === 'error' ? 'bg-red-600' : 'bg-green-600'
           }`}
           onClick={() => removeToast(t.id)}

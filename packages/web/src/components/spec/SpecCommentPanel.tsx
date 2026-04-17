@@ -55,11 +55,11 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-gray-200 px-4 py-3">
+      <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-900">Comments</span>
+            <MessageSquare className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Comments</span>
             {unresolvedCount > 0 && (
               <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                 {unresolvedCount} open
@@ -69,7 +69,7 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
         </div>
         {filterSection && (
           <div className="mt-2 flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-400">Section:</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">Section:</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700">
               {filterSectionTitle || filterSection}
               <button onClick={() => onClearFilter?.()} className="ml-0.5 rounded-full hover:bg-primary-100 p-0.5">
@@ -82,7 +82,7 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {/* New comment form */}
-        <div className="rounded-lg border border-gray-200 p-3">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
           <textarea
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
@@ -121,7 +121,7 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
         ))}
 
         {filtered.length === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400 italic">No comments yet</p>
+          <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500 italic">No comments yet</p>
         )}
       </div>
     </div>
@@ -146,7 +146,7 @@ function CommentThread({
   onScrollToSection?: (sectionId: string) => void
 }) {
   return (
-    <div className={`rounded-lg border p-3 ${comment.resolved ? 'border-green-200 bg-green-50/50' : 'border-gray-200'}`}>
+    <div className={`rounded-lg border p-3 ${comment.resolved ? 'border-green-200 bg-green-50/50' : 'border-gray-200 dark:border-gray-700'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           {comment.section && (
@@ -155,14 +155,14 @@ function CommentThread({
                 onSectionClick?.(comment.section!.sectionId)
                 onScrollToSection?.(comment.section!.sectionId)
               }}
-              className="mb-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:bg-gray-200"
+              className="mb-1 inline-block rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-500 hover:bg-gray-200"
               title="Filter & scroll to section"
             >
               {comment.section.title}
             </button>
           )}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className="font-medium text-gray-700">{comment.user.name}</span>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{comment.user.name}</span>
             <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
           </div>
           <div className="mt-1 text-sm text-gray-800">
@@ -172,13 +172,13 @@ function CommentThread({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onToggleResolve(comment.id, !comment.resolved)}
-            className={`rounded p-1 ${comment.resolved ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-100'}`}
+            className={`rounded p-1 ${comment.resolved ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             title={comment.resolved ? 'Reopen' : 'Resolve'}
           >
             <Check className="h-3.5 w-3.5" />
           </button>
           {comment.userId === currentUserId && (
-            <button onClick={() => onDelete(comment.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500">
+            <button onClick={() => onDelete(comment.id)} className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-red-50 hover:text-red-500">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
@@ -187,14 +187,14 @@ function CommentThread({
 
       {/* Replies */}
       {comment.replies.length > 0 && (
-        <div className="mt-2 ml-3 space-y-2 border-l-2 border-gray-100 pl-3">
+        <div className="mt-2 ml-3 space-y-2 border-l-2 border-gray-100 dark:border-gray-700 pl-3">
           {comment.replies.map((reply) => (
             <div key={reply.id} className="text-sm">
-              <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                <span className="font-medium text-gray-700">{reply.user.name}</span>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-medium text-gray-700 dark:text-gray-300">{reply.user.name}</span>
                 <span>{new Date(reply.createdAt).toLocaleDateString()}</span>
               </div>
-              <MarkdownViewer content={reply.content} className="mt-0.5 text-sm text-gray-700" />
+              <MarkdownViewer content={reply.content} className="mt-0.5 text-sm text-gray-700 dark:text-gray-300" />
             </div>
           ))}
         </div>
@@ -208,7 +208,7 @@ function CommentThread({
               value={replyContent}
               onChange={(e) => onSetReplyContent(e.target.value)}
               placeholder="Reply..."
-              className="flex-1 rounded border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="flex-1 rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
               onKeyDown={(e) => { if (e.key === 'Enter' && replyContent.trim()) onReply(comment.id) }}
             />
             <button
@@ -218,14 +218,14 @@ function CommentThread({
             >
               Send
             </button>
-            <button onClick={() => onSetReplyTo(null)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => onSetReplyTo(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : (
           <button
             onClick={() => { onSetReplyTo(comment.id); onSetReplyContent('') }}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+            className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500"
           >
             <Reply className="h-3 w-3" /> Reply
           </button>

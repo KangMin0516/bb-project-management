@@ -125,13 +125,13 @@ export default function LinkedIssues({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <span className="block text-sm font-medium text-gray-700">
+        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           <Link2 className="inline h-4 w-4 mr-1.5 -mt-0.5" />
           Linked Issues {totalLinks > 0 && `(${totalLinks})`}
         </span>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:bg-gray-900 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Link
@@ -142,26 +142,26 @@ export default function LinkedIssues({
         <div className="space-y-2">
           {[...grouped.entries()].map(([type, items]) => (
             <div key={type}>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
                 {LINK_TYPE_LABELS[type]}
               </span>
               <div className="mt-0.5 space-y-0.5">
                 {items.map((item) => (
                   <div
                     key={item.linkId}
-                    className="flex items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm group"
+                    className="flex items-center gap-2 rounded bg-gray-50 dark:bg-gray-900 px-2 py-1.5 text-sm group"
                   >
                     <div className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[item.status])} />
-                    <span className="font-mono text-[10px] text-gray-400 shrink-0">
+                    <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
                       {item.projectKey}-{item.number}
                     </span>
-                    <span className="flex-1 truncate text-gray-700 text-xs">{item.title}</span>
+                    <span className="flex-1 truncate text-gray-700 dark:text-gray-300 text-xs">{item.title}</span>
                     <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium shrink-0', PRIORITY_COLORS[item.priority])}>
                       {item.priority}
                     </span>
                     <button
                       onClick={() => deleteLinkMutation.mutate(item.linkId)}
-                      className="inline-flex items-center gap-0.5 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-medium text-gray-400 opacity-0 group-hover:opacity-100 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all shrink-0"
+                      className="inline-flex items-center gap-0.5 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all shrink-0"
                       title="Remove link"
                     >
                       <X className="h-3 w-3" />
@@ -174,19 +174,19 @@ export default function LinkedIssues({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-400 italic">No linked issues</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 italic">No linked issues</p>
       )}
 
       {/* Spec References */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
-          <span className="block text-sm font-medium text-gray-700">
+          <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             <FileText className="inline h-4 w-4 mr-1.5 -mt-0.5" />
             Spec References {specLinks && specLinks.length > 0 && `(${specLinks.length})`}
           </span>
           <button
             onClick={() => setShowSpecModal(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:bg-gray-900 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Spec
@@ -200,7 +200,7 @@ export default function LinkedIssues({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-gray-400 italic">No spec references</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 italic">No spec references</p>
         )}
       </div>
 
@@ -243,16 +243,16 @@ function SpecLinkItem({ link, projectId, issueId }: { link: IssueSpecLink; proje
   }
 
   return (
-    <div className="flex items-center gap-2 rounded bg-gray-50 px-2 py-1.5 text-sm group">
-      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-      <button onClick={handleClick} className="flex-1 truncate text-gray-700 text-xs text-left hover:text-primary-600 transition-colors">
+    <div className="flex items-center gap-2 rounded bg-gray-50 dark:bg-gray-900 px-2 py-1.5 text-sm group">
+      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+      <button onClick={handleClick} className="flex-1 truncate text-gray-700 dark:text-gray-300 text-xs text-left hover:text-primary-600 transition-colors">
         {link.spec.title}
         {link.sectionSlug && (
-          <span className="ml-1 text-gray-400">§ {link.sectionSlug}</span>
+          <span className="ml-1 text-gray-400 dark:text-gray-500">§ {link.sectionSlug}</span>
         )}
       </button>
       {link.spec.category && (
-        <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] font-medium text-gray-500 shrink-0">
+        <span className="rounded bg-gray-200 dark:bg-gray-600 px-1 py-0.5 text-[9px] font-medium text-gray-500 dark:text-gray-400 shrink-0">
           {link.spec.category}
         </span>
       )}
@@ -261,7 +261,7 @@ function SpecLinkItem({ link, projectId, issueId }: { link: IssueSpecLink; proje
       </span>
       <button
         onClick={() => deleteMutation.mutate()}
-        className="inline-flex items-center gap-0.5 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-medium text-gray-400 opacity-0 group-hover:opacity-100 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all shrink-0"
+        className="inline-flex items-center gap-0.5 rounded border border-transparent px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all shrink-0"
         title="Remove spec link"
       >
         <X className="h-3 w-3" />
@@ -323,27 +323,27 @@ function LinkSpecModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-white shadow-xl"
+        className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-900/50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-gray-200 px-4 py-3">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {selectedSpec && (
-                <button onClick={() => setSelectedSpec(null)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setSelectedSpec(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               )}
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {selectedSpec ? 'Select Section' : 'Link Specification'}
               </h3>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
               <X className="h-4 w-4" />
             </button>
           </div>
           {selectedSpec && (
-            <p className="mt-1 text-xs text-gray-500 truncate">{selectedSpec.title}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">{selectedSpec.title}</p>
           )}
         </div>
 
@@ -351,29 +351,29 @@ function LinkSpecModal({
           {!selectedSpec ? (
             <>
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by title or category..."
-                  className="w-full rounded border border-gray-300 pl-7 pr-2 py-1.5 text-sm"
+                  className="w-full rounded border border-gray-300 dark:border-gray-600 pl-7 pr-2 py-1.5 text-sm"
                   autoFocus
                 />
               </div>
 
-              <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+              <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
                 {filtered.length > 0 ? (
                   filtered.map((spec: SpecListItem) => (
                     <button
                       key={spec.id}
                       onClick={() => setSelectedSpec(spec)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors"
                     >
-                      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <span className="flex-1 truncate text-gray-700">{spec.title}</span>
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                      <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{spec.title}</span>
                       {spec.category && (
-                        <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] font-medium text-gray-500 shrink-0">
+                        <span className="rounded bg-gray-200 dark:bg-gray-600 px-1 py-0.5 text-[9px] font-medium text-gray-500 dark:text-gray-400 shrink-0">
                           {spec.category}
                         </span>
                       )}
@@ -383,32 +383,32 @@ function LinkSpecModal({
                     </button>
                   ))
                 ) : (
-                  <div className="px-3 py-4 text-center text-xs text-gray-400">
+                  <div className="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
                     {searchQuery ? 'No matching specs' : 'No specifications available'}
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+            <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
               <button
                 onClick={() => createMutation.mutate({ specId: selectedSpec.id })}
                 disabled={createMutation.isPending}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 transition-colors disabled:opacity-50 font-medium"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 transition-colors disabled:opacity-50 font-medium"
               >
                 <FileText className="h-3.5 w-3.5 shrink-0 text-primary-500" />
-                <span className="text-gray-700">Entire specification</span>
+                <span className="text-gray-700 dark:text-gray-300">Entire specification</span>
               </button>
               {specDetail?.sections.map((sec) => (
                 <button
                   key={sec.id}
                   onClick={() => createMutation.mutate({ specId: selectedSpec.id, sectionSlug: sec.sectionId })}
                   disabled={createMutation.isPending}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors disabled:opacity-50"
                   style={{ paddingLeft: `${(sec.level - 1) * 12 + 12}px` }}
                 >
-                  <span className="text-[10px] text-gray-400 shrink-0">§</span>
-                  <span className="flex-1 truncate text-gray-700">{sec.title}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">§</span>
+                  <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{sec.title}</span>
                 </button>
               ))}
               {!specDetail && (
@@ -473,13 +473,13 @@ function LinkIssueModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-white shadow-xl"
+        className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-900/50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-gray-200 px-4 py-3">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Link Issue</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Link Issue</h3>
+            <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -487,13 +487,13 @@ function LinkIssueModal({
 
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
               Link Type
             </label>
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-              className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
             >
               {LINK_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -504,43 +504,43 @@ function LinkIssueModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
               Search Issues
             </label>
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by title or number..."
-                className="w-full rounded border border-gray-300 pl-7 pr-2 py-1.5 text-sm"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 pl-7 pr-2 py-1.5 text-sm"
                 autoFocus
               />
             </div>
           </div>
 
-          <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+          <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
             {filteredIssues.length > 0 ? (
               filteredIssues.map((issue: Issue) => (
                 <button
                   key={issue.id}
                   onClick={() => createLinkMutation.mutate(issue.id)}
                   disabled={createLinkMutation.isPending}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors disabled:opacity-50"
                 >
                   <div className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[issue.status])} />
-                  <span className="font-mono text-[10px] text-gray-400 shrink-0">
+                  <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
                     #{issue.number}
                   </span>
-                  <span className="flex-1 truncate text-gray-700">{issue.title}</span>
+                  <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{issue.title}</span>
                   <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium shrink-0', PRIORITY_COLORS[issue.priority])}>
                     {issue.priority}
                   </span>
                 </button>
               ))
             ) : (
-              <div className="px-3 py-4 text-center text-xs text-gray-400">
+              <div className="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
                 {searchQuery ? 'No matching issues' : 'No issues available'}
               </div>
             )}

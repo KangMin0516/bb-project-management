@@ -161,7 +161,7 @@ export default function SwimlaneBoardView({
           )
         })}
         {swimlanes.length === 0 && (
-          <div className="flex h-40 items-center justify-center text-sm text-gray-400">
+          <div className="flex h-40 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
             No issues found
           </div>
         )}

@@ -53,7 +53,7 @@ function getServiceColor(type: string) {
     case 'SLACK':
       return 'bg-purple-100 text-purple-700'
     default:
-      return 'bg-gray-100 text-gray-700'
+      return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
   }
 }
 
@@ -105,8 +105,8 @@ export default function CredentialManager() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-gray-500" />
-          <h2 className="text-sm font-semibold text-gray-700">Credentials</h2>
+          <Shield className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Credentials</h2>
         </div>
         <button
           onClick={() => {
@@ -129,33 +129,33 @@ export default function CredentialManager() {
               <button
                 key={cred.id}
                 onClick={() => setSelectedCredential(cred)}
-                className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 text-left transition hover:border-primary-200 hover:shadow-sm"
+                className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 text-left transition hover:border-primary-200 hover:shadow-sm"
               >
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorClass}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900">{cred.name}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{cred.name}</div>
                   {cred.description && (
-                    <div className="truncate text-xs text-gray-500">{cred.description}</div>
+                    <div className="truncate text-xs text-gray-500 dark:text-gray-400">{cred.description}</div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                  <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400">
                     <Key className="mr-1 inline h-3 w-3" />
                     {cred.entries.length} {cred.entries.length === 1 ? 'entry' : 'entries'}
                   </span>
-                  <span className="text-xs text-gray-400">{cred.serviceType}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{cred.serviceType}</span>
                 </div>
               </button>
             )
           })}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-10 text-center">
           <Shield className="mx-auto h-8 w-8 text-gray-300" />
-          <p className="mt-2 text-sm text-gray-400">No credentials yet</p>
-          <p className="text-xs text-gray-400">Add credentials to store service access keys securely</p>
+          <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">No credentials yet</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Add credentials to store service access keys securely</p>
         </div>
       )}
 
@@ -223,36 +223,36 @@ function CredentialDetail({
     <div>
       <button
         onClick={onBack}
-        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to list
       </button>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
         <div className="mb-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorClass}`}>
               <Icon className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900">{credential.name}</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{credential.name}</h3>
               {credential.description && (
-                <p className="text-sm text-gray-500">{credential.description}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{credential.description}</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(credential)}
-              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600"
+              className="rounded-md p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600"
               title="Edit"
             >
               <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(credential.id)}
-              className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+              className="rounded-md p-1.5 text-gray-400 dark:text-gray-500 hover:bg-red-50 hover:text-red-600"
               title="Delete"
             >
               <Trash2 className="h-4 w-4" />
@@ -262,7 +262,7 @@ function CredentialDetail({
 
         {credential.url && (
           <div className="mb-4">
-            <span className="text-xs font-medium text-gray-500">URL: </span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">URL: </span>
             <a
               href={credential.url}
               target="_blank"
@@ -275,11 +275,11 @@ function CredentialDetail({
         )}
 
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500">Entries</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Entries</span>
           <button
             onClick={handleReveal}
             disabled={revealing}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
           >
             {revealedEntries ? (
               <>
@@ -295,20 +295,20 @@ function CredentialDetail({
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-gray-200">
+        <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Key</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Value</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Key</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Value</th>
                 <th className="w-10 px-3 py-2"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {entries.map((entry, idx) => (
                 <tr key={idx}>
-                  <td className="px-3 py-2 font-medium text-gray-700">{entry.key}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-gray-600">
+                  <td className="px-3 py-2 font-medium text-gray-700 dark:text-gray-300">{entry.key}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-500">
                     {entry.sensitive && !revealedEntries ? '••••••••' : entry.value}
                   </td>
                   <td className="px-3 py-2">
@@ -320,7 +320,7 @@ function CredentialDetail({
                         }
                         handleCopy(entry.value)
                       }}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                      className="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:text-gray-500"
                       title="Copy"
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -332,7 +332,7 @@ function CredentialDetail({
           </table>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 text-xs text-gray-400">
+        <div className="mt-4 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
           <span>Created by {credential.createdBy.name}</span>
           <span>·</span>
           <span>{new Date(credential.createdAt).toLocaleDateString()}</span>
@@ -421,12 +421,12 @@ function CredentialModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h3 className="text-base font-semibold text-gray-900">
+      <div className="mx-4 w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-900/50">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
             {credential ? 'Edit Credential' : 'Add Credential'}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -435,11 +435,11 @@ function CredentialModal({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">Service Type</label>
+                <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Service Type</label>
                 <select
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                 >
                   {SERVICE_TYPES.map((t) => (
                     <option key={t} value={t}>{t}</option>
@@ -447,40 +447,40 @@ function CredentialModal({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">Name</label>
+                <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. AWS Production"
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Description</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Description</label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional description"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">URL</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">URL</label>
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
               />
             </div>
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-xs font-medium text-gray-500">Entries</label>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Entries</label>
                 <button
                   type="button"
                   onClick={addEntry}
@@ -497,19 +497,19 @@ function CredentialModal({
                       value={entry.key}
                       onChange={(e) => updateEntry(idx, 'key', e.target.value)}
                       placeholder="Key"
-                      className="w-1/3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none"
+                      className="w-1/3 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none"
                     />
                     <input
                       value={entry.value}
                       onChange={(e) => updateEntry(idx, 'value', e.target.value)}
                       placeholder="Value"
                       type={entry.sensitive ? 'password' : 'text'}
-                      className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none"
+                      className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => updateEntry(idx, 'sensitive', !entry.sensitive)}
-                      className={`rounded p-1.5 ${entry.sensitive ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-400'}`}
+                      className={`rounded p-1.5 ${entry.sensitive ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 dark:bg-gray-900 text-gray-400 dark:text-gray-500'}`}
                       title={entry.sensitive ? 'Sensitive (masked)' : 'Not sensitive'}
                     >
                       {entry.sensitive ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -518,7 +518,7 @@ function CredentialModal({
                       <button
                         type="button"
                         onClick={() => removeEntry(idx)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                        className="rounded p-1.5 text-gray-400 dark:text-gray-500 hover:bg-red-50 hover:text-red-500"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -533,7 +533,7 @@ function CredentialModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
             >
               Cancel
             </button>

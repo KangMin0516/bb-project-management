@@ -207,19 +207,19 @@ export default function TimelinePage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">{project?.key} Timeline</h1>
-          <p className="text-sm text-gray-500">{project?.name}</p>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{project?.key} Timeline</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{project?.name}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Group by toggle */}
-          <div className="flex items-center gap-1 rounded-lg border border-gray-300 p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 p-0.5">
             <button
               onClick={() => setGroupBy('type')}
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                groupBy === 'type' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 hover:text-gray-700',
+                groupBy === 'type' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
               )}
             >
               By Type
@@ -228,7 +228,7 @@ export default function TimelinePage() {
               onClick={() => setGroupBy('assignee')}
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                groupBy === 'assignee' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 hover:text-gray-700',
+                groupBy === 'assignee' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
               )}
             >
               By Assignee
@@ -267,7 +267,7 @@ export default function TimelinePage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
         ) : filteredIssues.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-gray-400">
+          <div className="flex h-full flex-col items-center justify-center text-gray-400 dark:text-gray-500">
             <p className="text-lg font-medium">No issues to display</p>
             <p className="text-sm">Try adjusting your filters or create some issues first.</p>
           </div>
@@ -275,39 +275,39 @@ export default function TimelinePage() {
           <div className="flex h-full">
             {/* Left: Issue labels (fixed) */}
             <div
-              className="shrink-0 overflow-y-auto border-r border-gray-200 bg-white"
+              className="shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
               style={{ width: LABEL_WIDTH }}
             >
               {/* Header spacer */}
-              <div className="h-10 border-b border-gray-200 bg-gray-50 px-3 flex items-center">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Issues</span>
+              <div className="h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 flex items-center">
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Issues</span>
               </div>
               {/* Issue rows */}
               {[...groups.entries()].map(([groupName, issues]) => (
                 <div key={groupName}>
                   {/* Group header */}
                   <div
-                    className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/80 px-3"
+                    className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-3"
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       {groupBy === 'type' ? `${TYPE_ICONS[groupName] || ''} ${groupName.replace(/_/g, ' ')}` : groupName}
                     </span>
-                    <span className="text-xs text-gray-400">({issues.length})</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">({issues.length})</span>
                   </div>
                   {/* Issue rows */}
                   {issues.map((issue) => (
                     <div
                       key={issue.id}
-                      className="flex items-center border-b border-gray-100 px-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="flex items-center border-b border-gray-100 dark:border-gray-700 px-3 cursor-pointer hover:bg-gray-50 dark:bg-gray-900 transition-colors"
                       style={{ height: ROW_HEIGHT }}
                       onClick={() => setSelectedIssue(issue)}
                     >
                       <div className={cn('h-2 w-2 shrink-0 rounded-full mr-2', STATUS_COLORS[issue.status])} />
-                      <span className="text-xs font-mono text-gray-400 mr-1.5 shrink-0">
+                      <span className="text-xs font-mono text-gray-400 dark:text-gray-500 mr-1.5 shrink-0">
                         {project?.key}-{issue.number}
                       </span>
-                      <span className="text-sm text-gray-700 truncate">{issue.title}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{issue.title}</span>
                     </div>
                   ))}
                 </div>
@@ -318,14 +318,14 @@ export default function TimelinePage() {
             <div className="flex-1 overflow-auto" ref={scrollRef}>
               <div className="relative" style={{ minWidth: Math.max(800, totalDays * 12) }}>
                 {/* Week headers */}
-                <div className="sticky top-0 z-10 h-10 border-b border-gray-200 bg-gray-50">
+                <div className="sticky top-0 z-10 h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                   {weeks.map((week, i) => (
                     <div
                       key={i}
                       className="absolute top-0 flex h-full items-center"
                       style={{ left: `${week.offset}%` }}
                     >
-                      <span className="text-[10px] font-medium text-gray-400 whitespace-nowrap pl-1">
+                      <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap pl-1">
                         {formatDate(week.date)}
                       </span>
                     </div>
@@ -348,14 +348,14 @@ export default function TimelinePage() {
                   <div key={groupName}>
                     {/* Group header row */}
                     <div
-                      className="relative border-b border-gray-100 bg-gray-50/80"
+                      className="relative border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80"
                       style={{ height: ROW_HEIGHT }}
                     >
                       {/* Vertical week lines in group header */}
                       {weeks.map((week, i) => (
                         <div
                           key={i}
-                          className="absolute top-0 h-full w-px bg-gray-200/60"
+                          className="absolute top-0 h-full w-px bg-gray-200 dark:bg-gray-600/60"
                           style={{ left: `${week.offset}%` }}
                         />
                       ))}
@@ -368,14 +368,14 @@ export default function TimelinePage() {
                       return (
                         <div
                           key={issue.id}
-                          className="relative border-b border-gray-100"
+                          className="relative border-b border-gray-100 dark:border-gray-700"
                           style={{ height: ROW_HEIGHT }}
                         >
                           {/* Vertical week lines */}
                           {weeks.map((week, i) => (
                             <div
                               key={i}
-                              className="absolute top-0 h-full w-px bg-gray-100"
+                              className="absolute top-0 h-full w-px bg-gray-100 dark:bg-gray-700"
                               style={{ left: `${week.offset}%` }}
                             />
                           ))}
@@ -427,19 +427,19 @@ export default function TimelinePage() {
       {/* Tooltip */}
       {hoveredIssueData && tooltipPos && (
         <div
-          className="fixed z-50 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg pointer-events-none"
+          className="fixed z-50 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 shadow-lg dark:shadow-gray-900/50 pointer-events-none"
           style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 10 }}
         >
           <div className="flex items-center gap-2">
             <span className={cn('h-2 w-2 rounded-full', STATUS_COLORS[hoveredIssueData.status])} />
-            <span className="text-xs font-mono text-gray-400">
+            <span className="text-xs font-mono text-gray-400 dark:text-gray-500">
               {project?.key}-{hoveredIssueData.number}
             </span>
-            <span className="text-xs font-medium text-gray-900 max-w-[240px] truncate">
+            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 max-w-[240px] truncate">
               {hoveredIssueData.title}
             </span>
           </div>
-          <div className="mt-1 flex items-center gap-3 text-[10px] text-gray-500">
+          <div className="mt-1 flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
             <span>{STATUS_LABELS[hoveredIssueData.status] || hoveredIssueData.status}</span>
             <span>{hoveredIssueData.priority}</span>
             {hoveredIssueData.assignee && (
@@ -451,7 +451,7 @@ export default function TimelinePage() {
               </span>
             )}
           </div>
-          <div className="mt-0.5 text-[10px] text-gray-400">
+          <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
             {formatDate(new Date(hoveredIssueData.createdAt))}
             {hoveredIssueData.dueDate && ` — ${formatDate(new Date(hoveredIssueData.dueDate))}`}
             {!hoveredIssueData.dueDate && ' (no due date)'}

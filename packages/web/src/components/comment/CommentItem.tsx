@@ -39,12 +39,12 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">{comment.user.name}</span>
-          <span className="text-xs text-gray-400" title={new Date(comment.createdAt).toLocaleString()}>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{comment.user.name}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500" title={new Date(comment.createdAt).toLocaleString()}>
             {timeAgo(comment.createdAt)}
           </span>
           {comment.createdAt !== comment.updatedAt && (
-            <span className="text-xs text-gray-400">(edited)</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>
           )}
           {isOwner && !editing && (
             <div className="ml-auto flex gap-1">
@@ -54,14 +54,14 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
                   setEditContent(comment.content)
                   setEditing(true)
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => { if (window.confirm('Delete this comment?')) onDelete(comment.id) }}
-                className="text-xs text-gray-400 hover:text-red-500"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500"
               >
                 Delete
               </button>
@@ -88,7 +88,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
               >
                 Cancel
               </button>

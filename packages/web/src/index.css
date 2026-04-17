@@ -13,8 +13,47 @@
   --color-primary-900: #1e3a8a;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Editor / Markdown CSS custom properties */
+:root {
+  --editor-text: #374151;
+  --editor-heading: #111827;
+  --editor-link: #2563eb;
+  --editor-link-hover: #1d4ed8;
+  --editor-code-bg: #f3f4f6;
+  --editor-code-text: #374151;
+  --editor-pre-bg: #1f2937;
+  --editor-pre-text: #e5e7eb;
+  --editor-blockquote-border: #d1d5db;
+  --editor-blockquote-text: #6b7280;
+  --editor-border: #e5e7eb;
+  --editor-th-bg: #f9fafb;
+  --editor-del: #9ca3af;
+  --editor-placeholder: #9ca3af;
+  --editor-selected-cell: #dbeafe;
+}
+
+.dark {
+  --editor-text: #d1d5db;
+  --editor-heading: #f3f4f6;
+  --editor-link: #60a5fa;
+  --editor-link-hover: #93c5fd;
+  --editor-code-bg: #374151;
+  --editor-code-text: #d1d5db;
+  --editor-pre-bg: #111827;
+  --editor-pre-text: #d1d5db;
+  --editor-blockquote-border: #4b5563;
+  --editor-blockquote-text: #9ca3af;
+  --editor-border: #374151;
+  --editor-th-bg: #1f2937;
+  --editor-del: #6b7280;
+  --editor-placeholder: #6b7280;
+  --editor-selected-cell: #1e3a8a;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 antialiased;
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
