@@ -21,14 +21,22 @@ export class ProjectService {
       throw new ConflictException(`Project key "${dto.key}" already exists`);
     }
 
-    return this.prisma.project.create({
+    // Collect member creates: creator + all superusers
+    const superusers = await this.prisma.user.findMany({
+      where: { isSuperuser: true, status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    const memberUserIds = new Set([creatorId, ...superusers.map((u) => u.id)]);
+
+    const project = await this.prisma.project.create({
       data: {
         ...dto,
         members: {
-          create: {
-            userId: creatorId,
+          create: [...memberUserIds].map((userId) => ({
+            userId,
             role: ProjectRole.ADMIN,
-          },
+          })),
         },
       },
       include: {
@@ -42,6 +50,23 @@ export class ProjectService {
         _count: { select: { issues: true } },
       },
     });
+
+    // Seed default labels
+    const defaultLabels = [
+      { name: 'Bug', color: '#EF4444' },
+      { name: 'Feature', color: '#3B82F6' },
+      { name: 'Improvement', color: '#8B5CF6' },
+      { name: 'Documentation', color: '#6B7280' },
+      { name: 'Urgent', color: '#F59E0B' },
+      { name: 'Design', color: '#EC4899' },
+    ];
+
+    await this.prisma.label.createMany({
+      data: defaultLabels.map((label) => ({ ...label, projectId: project.id })),
+      skipDuplicates: true,
+    });
+
+    return project;
   }
 
   async findAll(userId: string) {
