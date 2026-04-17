@@ -4,6 +4,7 @@ import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIs
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
 import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
 import { useImagePreviewStore } from '@/stores/imagePreview'
