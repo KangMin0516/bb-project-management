@@ -267,10 +267,12 @@ export class IssueService {
       sortOrder,
       page = 1,
       limit = 50,
+      includeArchived = false,
     } = query;
 
     const where: IssueWhereInput = {
       projectId,
+      ...(!includeArchived && { archivedAt: null }),
       ...(status && { status }),
       ...(priority && { priority }),
       ...(type && { type }),
@@ -307,7 +309,7 @@ export class IssueService {
     };
   }
 
-  async findByStatus(projectId: string) {
+  async findByStatus(projectId: string, includeArchived = false) {
     // Kanban board: group issues by status with a per-column limit to prevent
     // performance issues on projects with many completed/canceled issues.
     const MAX_PER_COLUMN = 50;
@@ -330,7 +332,11 @@ export class IssueService {
     await Promise.all(
       statuses.map(async (status) => {
         const issues = await this.prisma.issue.findMany({
-          where: { projectId, status },
+          where: {
+            projectId,
+            status,
+            ...(!includeArchived && { archivedAt: null }),
+          },
           include: issueInclude,
           orderBy: { order: 'asc' },
           take: MAX_PER_COLUMN,
@@ -453,10 +459,20 @@ export class IssueService {
       data as unknown as Record<string, unknown>,
     );
 
+    // Reset archivedAt when status changes away from DONE/CANCELED
+    const archiveReset =
+      data.status &&
+      data.status !== existing.status &&
+      !['DONE', 'CANCELED'].includes(data.status) &&
+      existing.archivedAt
+        ? { archivedAt: null }
+        : {};
+
     const issue = await this.prisma.issue.update({
       where: { id: issueId },
       data: {
         ...data,
+        ...archiveReset,
         ...(labelIds !== undefined && {
           labels: {
             deleteMany: {},
@@ -545,12 +561,19 @@ export class IssueService {
       });
     }
 
+    // Reset archivedAt when dragging to a non-DONE/CANCELED column
+    const archiveReset =
+      existing.archivedAt && !['DONE', 'CANCELED'].includes(targetStatus)
+        ? { archivedAt: null }
+        : {};
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.issue.update({
         where: { id: issueId },
         data: {
           status: targetStatus as IssueStatus,
           order: targetOrder,
+          ...archiveReset,
           ...(activities.length > 0 && {
             activities: {
               create: activities.map((a) => ({ ...a, userId })),

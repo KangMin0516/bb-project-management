@@ -49,6 +49,7 @@ export default memo(function IssueCard({
           compact ? 'p-2' : 'p-3',
           overdue ? 'border-red-300 border-l-4 border-l-red-500' : 'border-gray-200',
           isExpanded && hasChildren && 'rounded-b-none border-b-0',
+          issue.archivedAt && 'opacity-50',
         )}
       >
         <div className="mb-1.5 flex items-center gap-1.5">
