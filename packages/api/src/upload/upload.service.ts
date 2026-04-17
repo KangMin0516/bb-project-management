@@ -15,9 +15,13 @@ import {
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  AVATAR_MAX_SIZE,
+  ATTACHMENT_MAX_SIZE,
+} from '../common/constants.js';
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = ATTACHMENT_MAX_SIZE;
+const MAX_AVATAR_SIZE = AVATAR_MAX_SIZE;
 const ALLOWED_AVATAR_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_AVATAR_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 

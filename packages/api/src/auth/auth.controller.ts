@@ -1,5 +1,5 @@
-// TODO: Add rate limiting (@nestjs/throttler) to prevent brute force attacks
 import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -19,12 +19,14 @@ export class AuthController {
   constructor(private auth: AuthService) {}
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto);

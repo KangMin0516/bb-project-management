@@ -1,11 +1,11 @@
 import type { WorkloadAssignee } from '@/api/dashboard'
 import { STATUSES, STATUS_LABELS, STATUS_BAR_COLORS } from '@/lib/constants'
 
-interface Props {
+interface WorkloadChartProps {
   data: WorkloadAssignee[]
 }
 
-export default function WorkloadChart({ data }: Props) {
+export default function WorkloadChart({ data }: WorkloadChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-sm text-gray-400">

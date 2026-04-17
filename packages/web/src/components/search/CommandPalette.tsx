@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { searchApi, type SearchResult } from '@/api/search'
 import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
+import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS, DEBOUNCE_DELAY } from '@/lib/constants'
 import { Search, X } from 'lucide-react'
 
 export default function CommandPalette() {
@@ -16,7 +16,7 @@ export default function CommandPalette() {
   // Debounced query
   const [debouncedQuery, setDebouncedQuery] = useState('')
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300)
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), DEBOUNCE_DELAY)
     return () => clearTimeout(timer)
   }, [query])
 

@@ -7,14 +7,14 @@ import { X, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
-interface Props {
+interface BulkActionBarProps {
   projectId: string
   selectedIds: Set<string>
   members: { id: string; name: string }[]
   onClear: () => void
 }
 
-export default function BulkActionBar({ projectId, selectedIds, members, onClear }: Props) {
+export default function BulkActionBar({ projectId, selectedIds, members, onClear }: BulkActionBarProps) {
   const queryClient = useQueryClient()
   const count = selectedIds.size
 

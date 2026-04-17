@@ -18,7 +18,7 @@ import {
   Redo,
 } from 'lucide-react'
 
-interface Props {
+interface TipTapToolbarProps {
   editor: Editor
   onImageClick?: () => void
 }
@@ -30,7 +30,7 @@ interface ToolbarButton {
   isActive?: () => boolean
 }
 
-export default function TipTapToolbar({ editor, onImageClick }: Props) {
+export default function TipTapToolbar({ editor, onImageClick }: TipTapToolbarProps) {
   const groups: ToolbarButton[][] = [
     // Text formatting
     [

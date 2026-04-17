@@ -14,6 +14,18 @@ export interface CredentialEntry {
 export class CredentialService {
   constructor(private prisma: PrismaService) {}
 
+  private parseEntries(raw: unknown): CredentialEntry[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(
+      (e): e is CredentialEntry =>
+        typeof e === 'object' &&
+        e !== null &&
+        typeof e.key === 'string' &&
+        typeof e.value === 'string' &&
+        typeof e.sensitive === 'boolean',
+    );
+  }
+
   private maskEntries(entries: CredentialEntry[]): CredentialEntry[] {
     return entries.map((entry) => ({
       ...entry,
@@ -32,7 +44,7 @@ export class CredentialService {
 
     return credentials.map((cred) => ({
       ...cred,
-      entries: this.maskEntries(cred.entries as unknown as CredentialEntry[]),
+      entries: this.maskEntries(this.parseEntries(cred.entries)),
     }));
   }
 
@@ -50,9 +62,7 @@ export class CredentialService {
 
     return {
       ...credential,
-      entries: this.maskEntries(
-        credential.entries as unknown as CredentialEntry[],
-      ),
+      entries: this.maskEntries(this.parseEntries(credential.entries)),
     };
   }
 
@@ -89,9 +99,7 @@ export class CredentialService {
 
     return {
       ...credential,
-      entries: this.maskEntries(
-        credential.entries as unknown as CredentialEntry[],
-      ),
+      entries: this.maskEntries(this.parseEntries(credential.entries)),
     };
   }
 
@@ -122,9 +130,7 @@ export class CredentialService {
 
     return {
       ...credential,
-      entries: this.maskEntries(
-        credential.entries as unknown as CredentialEntry[],
-      ),
+      entries: this.maskEntries(this.parseEntries(credential.entries)),
     };
   }
 

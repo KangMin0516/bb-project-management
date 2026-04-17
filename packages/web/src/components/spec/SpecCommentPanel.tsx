@@ -7,7 +7,7 @@ import { getErrorMessage } from '@/lib/error'
 import { MessageSquare, Check, Reply, Trash2, X } from 'lucide-react'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 
-interface Props {
+interface SpecCommentPanelProps {
   projectId: string
   specId: string
   comments: SpecComment[]
@@ -18,7 +18,7 @@ interface Props {
   onScrollToSection?: (sectionId: string) => void
 }
 
-export default function SpecCommentPanel({ projectId, specId, comments, filterSection, filterSectionTitle, onSectionClick, onClearFilter, onScrollToSection }: Props) {
+export default function SpecCommentPanel({ projectId, specId, comments, filterSection, filterSectionTitle, onSectionClick, onClearFilter, onScrollToSection }: SpecCommentPanelProps) {
   const currentUser = useAuthStore((s) => s.user)
   const queryClient = useQueryClient()
   const [replyTo, setReplyTo] = useState<string | null>(null)

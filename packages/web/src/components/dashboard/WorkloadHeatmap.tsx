@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { TeamDashboard } from '@/api/dashboard'
 
-interface Props {
+interface WorkloadHeatmapProps {
   heatmap: TeamDashboard['heatmap']
 }
 
@@ -13,7 +13,7 @@ function getCellColor(count: number): string {
   return 'bg-emerald-800 text-white'
 }
 
-export default function WorkloadHeatmap({ heatmap }: Props) {
+export default function WorkloadHeatmap({ heatmap }: WorkloadHeatmapProps) {
   const { projects, rows } = heatmap
 
   if (projects.length === 0) return null

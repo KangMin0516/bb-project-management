@@ -18,6 +18,7 @@ import { Readable } from 'node:stream';
 import { UploadService } from './upload.service.js';
 import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 import { Public } from '../common/decorators/public.decorator.js';
+import { AVATAR_MAX_SIZE, ATTACHMENT_MAX_SIZE } from '../common/constants.js';
 
 @ApiTags('Upload')
 @ApiBearerAuth()
@@ -56,7 +57,7 @@ export class UploadController {
   @Post('avatar')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+    FileInterceptor('file', { limits: { fileSize: AVATAR_MAX_SIZE } }),
   )
   uploadAvatar(
     @UploadedFile() file: Express.Multer.File,
@@ -71,7 +72,7 @@ export class UploadController {
   @Post()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
+    FileInterceptor('file', { limits: { fileSize: ATTACHMENT_MAX_SIZE } }),
   )
   upload(
     @UploadedFile() file: Express.Multer.File,

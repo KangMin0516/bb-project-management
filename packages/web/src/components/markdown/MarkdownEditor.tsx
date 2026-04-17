@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import MarkdownViewer from './MarkdownViewer'
 
-interface Props {
+interface MarkdownEditorProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
@@ -29,7 +29,7 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
   { label: 'Heading', icon: 'H', prefix: '## ', suffix: '', block: true },
 ]
 
-export default function MarkdownEditor({ value, onChange, placeholder, minRows = 6 }: Props) {
+export default function MarkdownEditor({ value, onChange, placeholder, minRows = 6 }: MarkdownEditorProps) {
   const [tab, setTab] = useState<TabMode>('write')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 

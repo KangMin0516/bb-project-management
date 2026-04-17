@@ -6,7 +6,7 @@ import IssueCard from './IssueCard'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
 
-interface Props {
+interface BoardColumnProps {
   status: string
   issues: Issue[]
   projectKey: string
@@ -30,7 +30,7 @@ export default memo(function BoardColumn({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
-}: Props) {
+}: BoardColumnProps) {
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100">
       <div className="flex items-center gap-2 px-3 py-2.5">

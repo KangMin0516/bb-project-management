@@ -13,7 +13,7 @@ export interface SpecContentHandle {
   scrollToSection: (sectionId: string) => void
 }
 
-interface Props {
+interface SpecContentProps {
   content: string
   sections: SpecSection[]
   comments: SpecComment[]
@@ -31,7 +31,7 @@ function slugify(text: string) {
     .slice(0, 100)
 }
 
-const SpecContent = forwardRef<SpecContentHandle, Props>(function SpecContent({ content, sections, comments, issueLinks, onSectionClick, onIssueClick, onCreateIssue }, ref) {
+const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function SpecContent({ content, sections, comments, issueLinks, onSectionClick, onIssueClick, onCreateIssue }, ref) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [activeTocId, setActiveTocId] = useState<string | null>(null)
   const [popoverIssue, setPopoverIssue] = useState<SpecIssueLink | null>(null)

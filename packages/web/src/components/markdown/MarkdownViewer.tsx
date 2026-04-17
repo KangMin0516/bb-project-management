@@ -5,7 +5,7 @@ import rehypeHighlight from 'rehype-highlight'
 import DOMPurify from 'dompurify'
 import './markdown.css'
 
-interface Props {
+interface MarkdownViewerProps {
   content: string
   className?: string
 }
@@ -21,7 +21,7 @@ function isHtmlContent(content: string): boolean {
   return /<(p|h[1-6]|div|span|ul|ol|li|table|img|a|strong|em|blockquote|pre|code)\b/i.test(trimmed)
 }
 
-export default function MarkdownViewer({ content, className = '' }: Props) {
+export default function MarkdownViewer({ content, className = '' }: MarkdownViewerProps) {
   if (isHtmlContent(content)) {
     const sanitized = DOMPurify.sanitize(content, {
       ADD_TAGS: ['img'],

@@ -6,13 +6,13 @@ interface TooltipLine {
   text: string
 }
 
-interface Props {
+interface InfoTooltipProps {
   lines: TooltipLine[]
   className?: string
   iconClassName?: string
 }
 
-export default function InfoTooltip({ lines, className, iconClassName }: Props) {
+export default function InfoTooltip({ lines, className, iconClassName }: InfoTooltipProps) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<'bottom' | 'top'>('bottom')
   const triggerRef = useRef<HTMLButtonElement>(null)

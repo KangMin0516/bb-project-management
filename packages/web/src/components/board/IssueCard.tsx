@@ -7,7 +7,7 @@ import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/lib
 import { getDueBadge, isIssueOverdue } from '@/lib/time'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
-interface Props {
+interface IssueCardProps {
   issue: Issue
   projectKey: string
   onClick: () => void
@@ -29,7 +29,7 @@ export default memo(function IssueCard({
   onChildClick,
   onChildStatusToggle,
   compact,
-}: Props) {
+}: IssueCardProps) {
   const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
   const overdue = isIssueOverdue(issue)
   const childList = childIssues || []

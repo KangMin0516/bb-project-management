@@ -63,6 +63,10 @@ export const STATUS_BAR_COLORS: Record<string, string> = {
 
 export const ORDER_GAP = 1000
 
+export const TOAST_DURATION = 4000
+
+export const DEBOUNCE_DELAY = 300
+
 export const STATUS_BADGE_COLORS: Record<string, string> = {
   BACKLOG: 'bg-gray-100 text-gray-700',
   TODO: 'bg-blue-100 text-blue-700',

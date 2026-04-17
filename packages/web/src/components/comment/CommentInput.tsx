@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import type { ProjectMember } from '@/api/projects'
 import TipTapEditor from '@/components/editor/TipTapEditor'
 
-interface Props {
+interface CommentInputProps {
   members: ProjectMember[]
   onSubmit: (content: string) => void
   isSubmitting?: boolean
@@ -17,7 +17,7 @@ function htmlToPlainText(html: string): string {
   return div.textContent || ''
 }
 
-export default function CommentInput({ members, onSubmit, isSubmitting }: Props) {
+export default function CommentInput({ members, onSubmit, isSubmitting }: CommentInputProps) {
   const [content, setContent] = useState('')
   const [showMentions, setShowMentions] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')

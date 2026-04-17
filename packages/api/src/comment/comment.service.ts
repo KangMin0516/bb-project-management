@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { USER_SELECT } from '../common/constants.js';
+import { USER_SELECT, MAX_MENTIONS } from '../common/constants.js';
 import type { CreateCommentDto } from './dto/create-comment.dto.js';
 import type { UpdateCommentDto } from './dto/update-comment.dto.js';
 import { NotificationService } from '../notification/notification.service.js';
@@ -76,8 +76,8 @@ export class CommentService {
       }
 
       // Parse @mentions and notify mentioned users
-      const mentionPattern = /@([\w.]+)/g;
-      const mentions = [...dto.content.matchAll(mentionPattern)].map((m) => m[1]);
+      const mentionPattern = /@([a-zA-Z0-9._-]{2,30})/g;
+      const mentions = [...dto.content.matchAll(mentionPattern)].map((m) => m[1]).slice(0, MAX_MENTIONS);
       if (mentions.length > 0) {
         const mentionedUsers = await this.prisma.user.findMany({
           where: { name: { in: mentions } },

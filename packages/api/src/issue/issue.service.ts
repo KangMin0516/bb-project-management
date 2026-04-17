@@ -12,7 +12,7 @@ import type { BulkDeleteIssueDto } from './dto/bulk-delete-issue.dto.js';
 import type { IssueWhereInput } from '../../generated/prisma/models.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
 import { IssueType } from '../../generated/prisma/enums.js';
-import { USER_SELECT } from '../common/constants.js';
+import { USER_SELECT, ISSUE_MAX_PER_COLUMN } from '../common/constants.js';
 import { NotificationService } from '../notification/notification.service.js';
 
 const ORDER_GAP = 1000;
@@ -312,7 +312,7 @@ export class IssueService {
   async findByStatus(projectId: string, includeArchived = false) {
     // Kanban board: group issues by status with a per-column limit to prevent
     // performance issues on projects with many completed/canceled issues.
-    const MAX_PER_COLUMN = 50;
+    const MAX_PER_COLUMN = ISSUE_MAX_PER_COLUMN;
 
     const statuses: IssueStatus[] = [
       'BACKLOG' as IssueStatus,

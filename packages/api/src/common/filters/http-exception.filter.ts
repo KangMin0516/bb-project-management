@@ -27,12 +27,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         typeof res === 'string'
           ? res
           : ((res as Record<string, unknown>).message as string | string[]);
-    } else if (
-      exception instanceof PrismaClientKnownRequestError &&
-      exception.code === 'P2025'
-    ) {
-      status = HttpStatus.NOT_FOUND;
-      message = 'Record not found';
+    } else if (exception instanceof PrismaClientKnownRequestError) {
+      switch (exception.code) {
+        case 'P2002':
+          status = HttpStatus.CONFLICT;
+          message = 'A record with this value already exists';
+          break;
+        case 'P2003':
+          status = HttpStatus.BAD_REQUEST;
+          message = 'Referenced record does not exist';
+          break;
+        case 'P2025':
+          status = HttpStatus.NOT_FOUND;
+          message = 'Record not found';
+          break;
+      }
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
     }

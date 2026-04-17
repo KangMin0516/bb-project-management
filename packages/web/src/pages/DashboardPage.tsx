@@ -6,6 +6,8 @@ import { issueApi, type Issue } from '@/api/issues'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_ORDER, TYPE_ICONS } from '@/lib/constants'
 import { getDueBadge, isOverdue, todayDateString, isFocusToday } from '@/lib/time'
+import { useToastStore } from '@/stores/toast'
+import { getErrorMessage } from '@/lib/error'
 import { Star, Zap, Clock, CheckCircle2, TrendingDown, Users, GitBranch } from 'lucide-react'
 import BurndownChart from '@/components/dashboard/BurndownChart'
 import WorkloadChart from '@/components/dashboard/WorkloadChart'
@@ -32,7 +34,7 @@ export default function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard', projectId] })
     },
     onError: (err) => {
-      console.error('Failed to toggle focus:', err)
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to toggle focus'), 'error')
     },
   })
 

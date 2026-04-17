@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import type { BurndownPoint } from '@/api/dashboard'
 
-interface Props {
+interface BurndownChartProps {
   data: BurndownPoint[]
 }
 
-export default function BurndownChart({ data }: Props) {
+export default function BurndownChart({ data }: BurndownChartProps) {
   const chart = useMemo(() => {
     if (data.length === 0) return null
 

@@ -4,7 +4,7 @@ import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import MarkdownEditor from '@/components/markdown/MarkdownEditor'
 import { timeAgo } from '@/lib/time'
 
-interface Props {
+interface CommentItemProps {
   comment: Comment
   currentUserId: string
   onUpdate: (commentId: string, content: string) => void
@@ -17,7 +17,7 @@ function renderMentions(content: string): string {
   return content.replace(/(?<!\S)@([a-zA-Z가-힣\d][a-zA-Z가-힣\d\s]*?[a-zA-Z가-힣\d])(?=\s|[.,!?)]|$)/g, '**@$1**')
 }
 
-export default function CommentItem({ comment, currentUserId, onUpdate, onDelete, isUpdating }: Props) {
+export default function CommentItem({ comment, currentUserId, onUpdate, onDelete, isUpdating }: CommentItemProps) {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
   const isOwner = comment.user.id === currentUserId

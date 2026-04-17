@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/lib/constants'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
-interface Props {
+interface SwimlaneRowProps {
   epic: Issue | null
   issues: Record<string, Issue[]>
   projectKey: string
@@ -33,7 +33,7 @@ export default memo(function SwimlaneRow({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
-}: Props) {
+}: SwimlaneRowProps) {
   const totalCount = useMemo(() => {
     let count = 0
     for (const arr of Object.values(issues)) count += arr.length

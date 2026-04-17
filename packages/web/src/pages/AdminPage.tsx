@@ -18,6 +18,7 @@ import {
   UserX,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DEBOUNCE_DELAY } from '@/lib/constants'
 import { useImagePreviewStore } from '@/stores/imagePreview'
 
 const STATUS_TABS = [
@@ -55,7 +56,7 @@ export default function AdminPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    const timer = setTimeout(() => setDebouncedSearch(search), DEBOUNCE_DELAY)
     return () => clearTimeout(timer)
   }, [search])
 
@@ -66,52 +67,50 @@ export default function AdminPage() {
   })
 
   const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-  const toast = (msg: string) => useToastStore.getState().addToast(msg)
-
   const updateUser = useMutation({
     mutationFn: () => userApi.adminUpdate(editingUser!.id, {
       name: editName,
       email: editEmail,
       isSuperuser: editSuperuser,
     }),
-    onSuccess: () => { invalidateUsers(); setEditingUser(null); toast('User updated') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to update user')),
+    onSuccess: () => { invalidateUsers(); setEditingUser(null); useToastStore.getState().addToast('User updated', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update user'), 'error'),
   })
 
   const resetPassword = useMutation({
     mutationFn: () => userApi.adminResetPassword(resetPasswordUser!.id, newPassword),
-    onSuccess: () => { setResetPasswordUser(null); setNewPassword(''); toast('Password reset successfully') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to reset password')),
+    onSuccess: () => { setResetPasswordUser(null); setNewPassword(''); useToastStore.getState().addToast('Password reset successfully', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reset password'), 'error'),
   })
 
   const suspendUser = useMutation({
     mutationFn: (id: string) => userApi.adminSuspend(id),
-    onSuccess: () => { invalidateUsers(); toast('User suspended') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to suspend user')),
+    onSuccess: () => { invalidateUsers(); useToastStore.getState().addToast('User suspended', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to suspend user'), 'error'),
   })
 
   const activateUser = useMutation({
     mutationFn: (id: string) => userApi.adminActivate(id),
-    onSuccess: () => { invalidateUsers(); toast('User activated') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to activate user')),
+    onSuccess: () => { invalidateUsers(); useToastStore.getState().addToast('User activated', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to activate user'), 'error'),
   })
 
   const approveUser = useMutation({
     mutationFn: (id: string) => userApi.approve(id),
-    onSuccess: () => { invalidateUsers(); toast('User approved') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to approve user')),
+    onSuccess: () => { invalidateUsers(); useToastStore.getState().addToast('User approved', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve user'), 'error'),
   })
 
   const rejectUser = useMutation({
     mutationFn: (id: string) => userApi.reject(id),
-    onSuccess: () => { invalidateUsers(); toast('User rejected') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to reject user')),
+    onSuccess: () => { invalidateUsers(); useToastStore.getState().addToast('User rejected', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject user'), 'error'),
   })
 
   const deleteUser = useMutation({
     mutationFn: (id: string) => userApi.adminDelete(id),
-    onSuccess: () => { invalidateUsers(); toast('User deleted') },
-    onError: (err: unknown) => toast(getErrorMessage(err, 'Failed to delete user')),
+    onSuccess: () => { invalidateUsers(); useToastStore.getState().addToast('User deleted', 'success') },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete user'), 'error'),
   })
 
   const startEdit = (u: AdminUser) => {

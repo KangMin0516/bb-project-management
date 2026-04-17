@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NOTIFICATION_LIMIT } from '../common/constants.js';
 
 type NotificationType = 'ASSIGNED' | 'COMMENTED' | 'MENTIONED';
 
@@ -11,7 +12,7 @@ export class NotificationService {
     return this.prisma.notification.findMany({
       where: { userId },
       orderBy: [{ isRead: 'asc' }, { createdAt: 'desc' }],
-      take: 50,
+      take: NOTIFICATION_LIMIT,
     });
   }
 

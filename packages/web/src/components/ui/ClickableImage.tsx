@@ -1,12 +1,12 @@
 import { useImagePreviewStore } from '@/stores/imagePreview'
 
-interface Props {
+interface ClickableImageProps {
   src: string
   alt?: string
   className?: string
 }
 
-export default function ClickableImage({ src, alt = '', className = '' }: Props) {
+export default function ClickableImage({ src, alt = '', className = '' }: ClickableImageProps) {
   const open = useImagePreviewStore((s) => s.open)
 
   return (

@@ -14,7 +14,7 @@ import './editor.css'
 
 const lowlight = createLowlight(common)
 
-interface Props {
+interface TipTapEditorProps {
   content: string
   onChange: (html: string) => void
   placeholder?: string
@@ -105,7 +105,7 @@ export default function TipTapEditor({
   editable = true,
   minHeight = '150px',
   onSubmit,
-}: Props) {
+}: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialContent = useMemo(() => markdownToHtml(content), [])

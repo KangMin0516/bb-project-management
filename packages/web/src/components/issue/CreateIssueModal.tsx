@@ -9,14 +9,14 @@ import TipTapEditor from '@/components/editor/TipTapEditor'
 import { useToastStore } from '@/stores/toast'
 import { getErrorMessage } from '@/lib/error'
 
-interface Props {
+interface CreateIssueModalProps {
   projectId: string
   defaultStatus?: string
   onClose: () => void
   onCreated?: (issueId: string) => void
 }
 
-export default function CreateIssueModal({ projectId, defaultStatus, onClose, onCreated }: Props) {
+export default function CreateIssueModal({ projectId, defaultStatus, onClose, onCreated }: CreateIssueModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()

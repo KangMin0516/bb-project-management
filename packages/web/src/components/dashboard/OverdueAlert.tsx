@@ -4,7 +4,7 @@ import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 import type { OverdueIssue } from '@/api/dashboard'
 import InfoTooltip from '@/components/ui/InfoTooltip'
 
-interface Props {
+interface OverdueAlertProps {
   issues: OverdueIssue[]
   projectKey: string
   projectId: string
@@ -19,7 +19,7 @@ function daysOverdue(dueDate: string): number {
   return Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-export default function OverdueAlert({ issues, projectKey, onIssueClick }: Props) {
+export default function OverdueAlert({ issues, projectKey, onIssueClick }: OverdueAlertProps) {
   if (issues.length === 0) return null
 
   return (

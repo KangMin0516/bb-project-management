@@ -18,13 +18,13 @@ const TIMEZONES = [
   'Europe/London',
 ]
 
-interface Props {
+interface DailyReportSettingsProps {
   projectId: string
   integrationId: string | undefined
   slackConnected: boolean
 }
 
-export default function DailyReportSettings({ projectId, integrationId, slackConnected }: Props) {
+export default function DailyReportSettings({ projectId, integrationId, slackConnected }: DailyReportSettingsProps) {
   const queryClient = useQueryClient()
 
   const { data: config } = useQuery({

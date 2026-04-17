@@ -10,7 +10,7 @@ interface SwimlaneData {
   issues: Record<string, Issue[]>
 }
 
-interface Props {
+interface SwimlaneBoardViewProps {
   board: Record<string, Issue[]>
   projectKey: string
   onIssueClick: (issue: Issue) => void
@@ -34,7 +34,7 @@ export default function SwimlaneBoardView({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
-}: Props) {
+}: SwimlaneBoardViewProps) {
   const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
 
   const { swimlanes } = useMemo(() => {
