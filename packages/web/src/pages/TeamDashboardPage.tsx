@@ -24,6 +24,20 @@ const STATUS_CONFIG: Record<StatusIndicator, { dot: string; label: string; order
   idle: { dot: 'bg-red-500', label: 'Idle', order: 3, tooltip: '24시간 내 활동 없음' },
 }
 
+function Tip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <div className="group/tip relative inline-flex">
+      {children}
+      <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 opacity-0 transition-opacity group-hover/tip:opacity-100">
+        <div className="whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg">
+          {text}
+        </div>
+        <div className="mx-auto h-0 w-0 border-x-4 border-t-4 border-x-transparent border-t-gray-900" />
+      </div>
+    </div>
+  )
+}
+
 export default function TeamDashboardPage() {
   const currentUser = useAuthStore((s) => s.user)
   const [search, setSearch] = useState('')
@@ -81,10 +95,10 @@ export default function TeamDashboardPage() {
 
       {/* KPI Cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard icon={<Users className="h-5 w-5 text-blue-600" />} label="Active Members" value={summary.activeMembers} bg="bg-blue-50" />
-        <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Completed Today" value={summary.completedToday} bg="bg-green-50" />
-        <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-600" />} label="Overdue" value={summary.overdueTotal} bg="bg-red-50" />
-        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600" />} label="Unassigned" value={summary.unassignedTotal} bg="bg-gray-100" />
+        <KpiCard icon={<Users className="h-5 w-5 text-blue-600" />} label="Active Members" tooltip="현재 활성(ACTIVE) 상태인 전체 팀원 수" value={summary.activeMembers} bg="bg-blue-50" />
+        <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Completed Today" tooltip="오늘 DONE으로 변경된 이슈 총 수" value={summary.completedToday} bg="bg-green-50" />
+        <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-600" />} label="Overdue" tooltip="기한이 지난 미완료 이슈 총 수" value={summary.overdueTotal} bg="bg-red-50" />
+        <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100" />
       </div>
 
       {/* Search + Sort */}
@@ -131,20 +145,15 @@ export default function TeamDashboardPage() {
   )
 }
 
-const KPI_TOOLTIPS: Record<string, string> = {
-  'Active Members': '현재 활성(ACTIVE) 상태인 전체 팀원 수',
-  'Completed Today': '오늘 DONE으로 변경된 이슈 총 수',
-  'Overdue': '기한이 지난 미완료 이슈 총 수',
-  'Unassigned': '담당자가 없는 미완료 이슈 총 수',
-}
-
-function KpiCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: string }) {
+function KpiCard({ icon, label, tooltip, value, bg }: { icon: React.ReactNode; label: string; tooltip: string; value: number; bg: string }) {
   return (
-    <div className={cn('rounded-xl border border-gray-200 p-4 cursor-help', bg)} title={KPI_TOOLTIPS[label] ?? label}>
-      <div className="mb-2">{icon}</div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-500">{label}</div>
-    </div>
+    <Tip text={tooltip}>
+      <div className={cn('rounded-xl border border-gray-200 p-4 w-full', bg)}>
+        <div className="mb-2">{icon}</div>
+        <div className="text-2xl font-bold text-gray-900">{value}</div>
+        <div className="text-xs text-gray-500">{label}</div>
+      </div>
+    </Tip>
   )
 }
 
@@ -160,35 +169,33 @@ function MemberCard({ member }: { member: TeamMember }) {
   return (
     <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300 transition">
       {/* Avatar + Status */}
-      <div className="relative shrink-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden">
-          {member.user.avatar ? (
-            <img src={member.user.avatar} alt={member.user.name} className="h-full w-full object-cover" />
-          ) : (
-            member.user.name.charAt(0).toUpperCase()
-          )}
+      <Tip text={config.tooltip}>
+        <div className="relative shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-700 overflow-hidden">
+            {member.user.avatar ? (
+              <img src={member.user.avatar} alt={member.user.name} className="h-full w-full object-cover" />
+            ) : (
+              member.user.name.charAt(0).toUpperCase()
+            )}
+          </div>
+          <span className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white', config.dot)} />
         </div>
-        <span
-          className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white', config.dot)}
-          title={config.label}
-        />
-      </div>
+      </Tip>
 
       {/* Name + Projects */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-semibold text-gray-900">{member.user.name}</span>
-          <span
-            className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium cursor-help', {
+          <Tip text={config.tooltip}>
+            <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
               'bg-green-100 text-green-700': status === 'active',
               'bg-yellow-100 text-yellow-700': status === 'light',
               'bg-red-100 text-red-700': status === 'idle',
               'bg-orange-100 text-orange-700': status === 'overloaded',
-            })}
-            title={config.tooltip}
-          >
-            {config.label}
-          </span>
+            })}>
+              {config.label}
+            </span>
+          </Tip>
         </div>
         <div className="mt-0.5 flex flex-wrap gap-1">
           {member.projects.length > 0 ? (
@@ -207,34 +214,38 @@ function MemberCard({ member }: { member: TeamMember }) {
       <div className="flex items-center gap-3 text-xs">
         <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600" icon="🎯" />
         <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400" icon="📋" />
-        <Stat label="In Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
+        <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600" icon="🔄" />
         <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600" icon="✅" />
         <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600' : 'text-gray-400'} icon="⚠️" />
       </div>
 
       {/* Completion bar */}
-      <div className="w-24 shrink-0 cursor-help" title={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
-        <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
-          <span>{overall.totalActive} active</span>
-          <span>{completionRate}%</span>
+      <Tip text={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
+        <div className="w-24 shrink-0">
+          <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+            <span>{overall.totalActive} active</span>
+            <span>{completionRate}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-gray-100">
+            <div
+              className="h-1.5 rounded-full bg-green-500 transition-all"
+              style={{ width: `${completionRate}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 rounded-full bg-gray-100">
-          <div
-            className="h-1.5 rounded-full bg-green-500 transition-all"
-            style={{ width: `${completionRate}%` }}
-          />
-        </div>
-      </div>
+      </Tip>
     </div>
   )
 }
 
 function Stat({ label, tooltip, value, color, icon }: { label: string; tooltip: string; value: number; color: string; icon?: string }) {
   return (
-    <div className="flex flex-col items-center min-w-[48px] cursor-help" title={tooltip}>
-      <span className="text-[10px] text-gray-400">{icon ?? label.charAt(0)}</span>
-      <span className={cn('text-sm font-semibold', color)}>{value}</span>
-      <span className="text-[9px] text-gray-400 leading-none mt-0.5">{label}</span>
-    </div>
+    <Tip text={tooltip}>
+      <div className="flex flex-col items-center min-w-[48px]">
+        <span className="text-[10px] text-gray-400">{icon ?? label.charAt(0)}</span>
+        <span className={cn('text-sm font-semibold', color)}>{value}</span>
+        <span className="text-[9px] text-gray-400 leading-none mt-0.5">{label}</span>
+      </div>
+    </Tip>
   )
 }
