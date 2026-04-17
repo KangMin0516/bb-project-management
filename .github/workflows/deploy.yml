@@ -126,6 +126,9 @@ jobs:
             fi
             echo "Migrations applied successfully"
 
+            # Clean up leftover containers from `compose run`
+            docker rm -f $(docker ps -aq --filter "name=bbpm-app" --filter "status=exited") 2>/dev/null || true
+
             # Start all services
             echo "Starting all services..."
             if ! $COMPOSE up -d; then
