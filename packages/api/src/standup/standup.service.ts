@@ -661,7 +661,7 @@ export class StandupService {
 
   // ─── Slack-User Mapping ─────────────────────────────────
 
-  async mapSlackUserToSystemUser(
+  private async mapSlackUserToSystemUser(
     slackUserId: string,
     client: WebClient,
   ): Promise<string | null> {
@@ -730,12 +730,18 @@ export class StandupService {
         issue.focusDate <= todayEnd;
       const prefix = isFocus ? '🎯' : '    ';
       const key = `${issue.project.key}-${issue.number}`;
-      const statusLabel =
-        issue.status === IssueStatus.IN_PROGRESS ? 'IN_PROGRESS' : issue.status;
-      return `${prefix} \`${key}\`  ${issue.title}  _${statusLabel}_`;
+      const title =
+        issue.title.length > 50 ? issue.title.slice(0, 50) + '…' : issue.title;
+      return `${prefix} \`${key}\`  ${title}  _${issue.status}_`;
     });
 
-    const text = `📋 *Your Active Issues (${activeIssues.length})*\n${lines.join('\n')}${activeIssues.length >= 15 ? '\n_...and more_' : ''}\n🎯 = Today's Focus`;
+    const parts = [
+      `📋 *Your Active Issues (${activeIssues.length})*`,
+      ...lines,
+    ];
+    if (activeIssues.length >= 15) parts.push('_...and more_');
+    parts.push("🎯 = Today's Focus");
+    const text = parts.join('\n');
 
     await client.chat.postMessage({
       channel: dmChannelId,
