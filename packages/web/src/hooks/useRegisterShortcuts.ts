@@ -8,22 +8,25 @@ export function useRegisterShortcuts(
   const shortcutsRef = useRef(shortcuts)
   shortcutsRef.current = shortcuts
 
+  // Scope lifecycle — push/pop once
+  useEffect(() => {
+    const store = useShortcutsStore.getState()
+    store.pushScope(scope)
+    return () => {
+      useShortcutsStore.getState().popScope(scope)
+    }
+  }, [scope])
+
+  // Re-register shortcuts when handlers/keys change
   useEffect(() => {
     const store = useShortcutsStore.getState()
 
-    // Push scope
-    store.pushScope(scope)
-
-    // Register all shortcuts
     const unregisters = shortcutsRef.current.map((s) =>
       store.register({ ...s, scope }),
     )
 
     return () => {
-      // Unregister all
       unregisters.forEach((unregister) => unregister())
-      // Pop scope
-      useShortcutsStore.getState().popScope(scope)
     }
-  }, [scope])
+  }, [scope, shortcuts])
 }

@@ -4,8 +4,12 @@ import {
   IsBoolean,
   IsUUID,
   IsUrl,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IssueStatus } from '../../../generated/prisma/enums.js';
+
+const VALID_ISSUE_STATUSES = Object.values(IssueStatus);
 
 export class ConnectGitHubDto {
   @ApiProperty({ description: 'GitHub Personal Access Token' })
@@ -18,14 +22,14 @@ export class ConnectGitHubDto {
 }
 
 export class UpdateGitHubConfigDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: VALID_ISSUE_STATUSES })
   @IsOptional()
-  @IsString()
+  @IsIn(VALID_ISSUE_STATUSES)
   onPrOpenStatus?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: VALID_ISSUE_STATUSES })
   @IsOptional()
-  @IsString()
+  @IsIn(VALID_ISSUE_STATUSES)
   onPrMergeStatus?: string;
 
   @ApiPropertyOptional()

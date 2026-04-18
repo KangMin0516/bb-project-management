@@ -205,8 +205,29 @@ export class StandupService {
 
     const client = this.getClient(config.slackIntegration.botToken);
 
+    // Batch-check for existing active reports to avoid N+1 queries
+    const eligibleSlackIds = config.members
+      .filter((m) => !m.isAway)
+      .map((m) => m.slackUserId);
+    const activeReports = await this.prisma.standupReport.findMany({
+      where: {
+        configId: config.id,
+        slackUserId: { in: eligibleSlackIds },
+        status: 'ACTIVE',
+      },
+      select: { slackUserId: true },
+    });
+    const activeSlackIds = new Set(activeReports.map((r) => r.slackUserId));
+
     for (const member of config.members) {
       if (member.isAway) continue;
+
+      if (activeSlackIds.has(member.slackUserId)) {
+        this.logger.warn(
+          `Skipping ${member.slackUserId} — already has active report`,
+        );
+        continue;
+      }
 
       try {
         await this.startReportForUser(client, config, member);
@@ -703,6 +724,8 @@ export class StandupService {
     dmChannelId: string,
     userId: string,
   ) {
+    // Use UTC date range — focusDate is stored as @db.Date (UTC midnight)
+    // This matches the dashboard's date comparison logic
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     const todayEnd = new Date();

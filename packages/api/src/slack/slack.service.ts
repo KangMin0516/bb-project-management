@@ -5,9 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { WebClient } from '@slack/web-api';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { EncryptionService } from '../common/encryption.service.js';
 
 interface ChannelCache {
   channels: { id: string; name: string }[];
@@ -36,35 +36,17 @@ export class SlackService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private encryption: EncryptionService,
   ) {}
 
-  // ─── Encryption ──────────────────────────────────────────
+  // ─── Encryption (delegates to shared EncryptionService) ──
 
   encrypt(text: string): string {
-    const key = this.getEncryptionKey();
-    const iv = randomBytes(16);
-    const cipher = createCipheriv('aes-256-cbc', key, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    return this.encryption.encrypt(text);
   }
 
   decrypt(text: string): string {
-    const key = this.getEncryptionKey();
-    const [ivHex, encrypted] = text.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const decipher = createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  }
-
-  private getEncryptionKey(): Buffer {
-    const keyHex = this.config.get<string>('ENCRYPTION_KEY');
-    if (!keyHex) {
-      throw new Error('ENCRYPTION_KEY environment variable is required');
-    }
-    return Buffer.from(keyHex, 'hex');
+    return this.encryption.decrypt(text);
   }
 
   // ─── OAuth ───────────────────────────────────────────────
