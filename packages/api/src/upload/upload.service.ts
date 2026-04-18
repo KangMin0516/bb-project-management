@@ -25,6 +25,23 @@ const MAX_AVATAR_SIZE = AVATAR_MAX_SIZE;
 const ALLOWED_AVATAR_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_AVATAR_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
+const BLOCKED_ATTACHMENT_EXTS = [
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
+  '.sh', '.bash', '.ps1', '.vbs', '.js', '.wsh', '.wsf',
+  '.html', '.htm', '.svg', '.hta', '.xhtml',
+];
+const BLOCKED_ATTACHMENT_MIMES = [
+  'application/x-msdownload',
+  'application/x-executable',
+  'text/html',
+  'image/svg+xml',
+  'application/hta',
+  'application/javascript',
+  'text/javascript',
+  'application/x-sh',
+  'application/x-msdos-program',
+];
+
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
@@ -168,7 +185,14 @@ export class UploadService {
       throw new BadRequestException('File size exceeds 50MB limit');
     }
 
-    const ext = extname(file.originalname);
+    const ext = extname(file.originalname).toLowerCase();
+    if (BLOCKED_ATTACHMENT_EXTS.includes(ext)) {
+      throw new BadRequestException(`File type ${ext} is not allowed`);
+    }
+    if (BLOCKED_ATTACHMENT_MIMES.includes(file.mimetype)) {
+      throw new BadRequestException(`MIME type ${file.mimetype} is not allowed`);
+    }
+
     const key = `attachments/${randomUUID()}${ext}`;
 
     await this.s3.send(

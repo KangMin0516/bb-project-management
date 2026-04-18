@@ -308,14 +308,23 @@ export class DashboardService {
     );
 
     // Collect close/reopen events sorted by date for sweep algorithm
+    // Track per-issue closed state to only count real reopens
     type Event = { date: Date; delta: number };
     const events: Event[] = [];
+    const issueClosedState = new Map<string, boolean>();
     for (const act of statusActivities) {
+      const wasClosed = issueClosedState.get(act.issueId) ?? false;
       if (closedStatuses.has(act.newValue as IssueStatus)) {
-        events.push({ date: act.createdAt, delta: -1 });
+        if (!wasClosed) {
+          events.push({ date: act.createdAt, delta: -1 });
+        }
+        issueClosedState.set(act.issueId, true);
       } else {
-        // Check if this issue was previously closed (reopen event)
-        events.push({ date: act.createdAt, delta: +1 });
+        if (wasClosed) {
+          // Only count as reopen if previously closed
+          events.push({ date: act.createdAt, delta: +1 });
+        }
+        issueClosedState.set(act.issueId, false);
       }
     }
 
@@ -701,7 +710,7 @@ export class DashboardService {
       _count: { select: { children: true } },
     };
 
-    const [allMyIssues, overdueIssues, projectStats] = await Promise.all([
+    const [allMyIssues, overdueIssues, totalByProject, statusByProject, myByProject] = await Promise.all([
       this.prisma.issue.findMany({
         where: {
           projectId: { in: projectIds },
@@ -736,30 +745,40 @@ export class DashboardService {
         orderBy: { dueDate: 'asc' },
         take: 20,
       }),
-      Promise.all(
-        memberships.map(async (m) => {
-          const [totalIssues, doneIssues, myIssueCount] = await Promise.all([
-            this.prisma.issue.count({ where: { projectId: m.project.id } }),
-            this.prisma.issue.count({
-              where: { projectId: m.project.id, status: IssueStatus.DONE },
-            }),
-            this.prisma.issue.count({
-              where: {
-                projectId: m.project.id,
-                assigneeId: userId,
-                status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
-              },
-            }),
-          ]);
-          return {
-            ...m.project,
-            totalIssues,
-            doneIssues,
-            myIssueCount,
-          };
-        }),
-      ),
+      // Total issues per project (single groupBy instead of N counts)
+      this.prisma.issue.groupBy({
+        by: ['projectId'],
+        where: { projectId: { in: projectIds } },
+        _count: true,
+      }),
+      // Done issues per project
+      this.prisma.issue.groupBy({
+        by: ['projectId'],
+        where: { projectId: { in: projectIds }, status: IssueStatus.DONE },
+        _count: true,
+      }),
+      // My active issues per project
+      this.prisma.issue.groupBy({
+        by: ['projectId'],
+        where: {
+          projectId: { in: projectIds },
+          assigneeId: userId,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        _count: true,
+      }),
     ]);
+
+    // Build project stats from groupBy results
+    const totalMap = new Map(totalByProject.map((r) => [r.projectId, r._count]));
+    const doneMap = new Map(statusByProject.map((r) => [r.projectId, r._count]));
+    const myMap = new Map(myByProject.map((r) => [r.projectId, r._count]));
+    const projectStats = memberships.map((m) => ({
+      ...m.project,
+      totalIssues: totalMap.get(m.project.id) ?? 0,
+      doneIssues: doneMap.get(m.project.id) ?? 0,
+      myIssueCount: myMap.get(m.project.id) ?? 0,
+    }));
 
     const focusIssues = allMyIssues.filter(
       (i) =>

@@ -5,8 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { EncryptionService } from '../common/encryption.service.js';
 import type {
   ConnectGitHubDto,
   UpdateGitHubConfigDto,
@@ -20,39 +21,15 @@ export class GitHubService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private encryption: EncryptionService,
   ) {}
 
-  // ─── Encryption ──────────────────────────────────────────
-
   encrypt(text: string): string {
-    const key = this.getEncryptionKey();
-    const iv = randomBytes(16);
-    const cipher = createCipheriv('aes-256-cbc', key, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    return this.encryption.encrypt(text);
   }
 
   decrypt(text: string): string {
-    const key = this.getEncryptionKey();
-    const parts = text.split(':');
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      throw new BadRequestException('Corrupted encrypted token');
-    }
-    const [ivHex, encrypted] = parts;
-    const iv = Buffer.from(ivHex, 'hex');
-    const decipher = createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  }
-
-  private getEncryptionKey(): Buffer {
-    const keyHex = this.config.get<string>('ENCRYPTION_KEY');
-    if (!keyHex) {
-      throw new Error('ENCRYPTION_KEY environment variable is required');
-    }
-    return Buffer.from(keyHex, 'hex');
+    return this.encryption.decrypt(text);
   }
 
   // ─── GitHub API Helpers ──────────────────────────────────
@@ -132,12 +109,17 @@ export class GitHubService {
     const apiUrl =
       this.config.get<string>('API_URL') ?? 'http://localhost:3000';
 
+    // Mask webhook secret — only show last 4 chars
+    const secret = integration.webhookSecret;
+    const maskedSecret =
+      secret.length > 4 ? '•'.repeat(secret.length - 4) + secret.slice(-4) : secret;
+
     return {
       connected: true,
       id: integration.id,
       ownerLogin: integration.ownerLogin,
       webhookUrl: `${apiUrl}/api/github/webhook/${projectId}`,
-      webhookSecret: integration.webhookSecret,
+      webhookSecret: maskedSecret,
       onPrOpenStatus: integration.onPrOpenStatus,
       onPrMergeStatus: integration.onPrMergeStatus,
       autoLinkEnabled: integration.autoLinkEnabled,

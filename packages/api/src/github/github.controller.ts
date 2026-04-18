@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,6 +10,7 @@ import {
   Post,
   Req,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -24,6 +26,7 @@ import {
   Public,
   type JwtPayload,
 } from '../common/decorators/index.js';
+import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 
 @ApiTags('GitHub')
 @Controller('github')
@@ -43,18 +46,21 @@ export class GitHubController {
 
   @Get('status/:projectId')
   @ApiBearerAuth()
+  @UseGuards(ProjectMemberGuard)
   getStatus(@Param('projectId') projectId: string) {
     return this.githubService.getStatus(projectId);
   }
 
   @Delete('disconnect/:projectId')
   @ApiBearerAuth()
+  @UseGuards(ProjectMemberGuard)
   disconnect(@Param('projectId') projectId: string) {
     return this.githubService.disconnect(projectId);
   }
 
   @Patch('config/:projectId')
   @ApiBearerAuth()
+  @UseGuards(ProjectMemberGuard)
   updateConfig(
     @Param('projectId') projectId: string,
     @Body() dto: UpdateGitHubConfigDto,
@@ -64,6 +70,7 @@ export class GitHubController {
 
   @Get('repos/:projectId')
   @ApiBearerAuth()
+  @UseGuards(ProjectMemberGuard)
   getRepos(@Param('projectId') projectId: string) {
     return this.githubService.getRepos(projectId);
   }
@@ -91,7 +98,7 @@ export class GitHubController {
     const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
     if (!rawBody) {
       this.logger.error('rawBody is not available');
-      return { ok: false };
+      throw new BadRequestException('rawBody is not available');
     }
 
     return this.webhookService.handleWebhook(

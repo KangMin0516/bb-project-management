@@ -29,6 +29,7 @@ import { SlackModule } from './slack/slack.module.js';
 import { GitHubModule } from './github/github.module.js';
 import { ReportModule } from './report/report.module.js';
 import { StandupModule } from './standup/standup.module.js';
+import { CommonModule } from './common/common.module.js';
 import { JwtAuthGuard } from './common/guards/index.js';
 import { AppController } from './app.controller.js';
 
@@ -40,6 +41,7 @@ import { AppController } from './app.controller.js';
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 30 }]),
+    CommonModule,
     PrismaModule,
     AuthModule,
     UserModule,
