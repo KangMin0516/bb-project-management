@@ -23,6 +23,7 @@ import {
   Users,
   User,
   BarChart3,
+  BookOpen,
   Sun,
   Moon,
   Monitor,
@@ -165,6 +166,7 @@ export default function AppLayout() {
       { to: '/admin/dashboard', icon: BarChart3, label: 'Team' },
     ] : []),
     { to: '/profile', icon: User, label: 'Profile' },
+    { to: '/api-docs', icon: BookOpen, label: 'API Docs' },
   ]
 
   const projectNavItems = projectId

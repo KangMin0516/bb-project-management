@@ -79,7 +79,7 @@ export default function BoardPage() {
   const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
   const [filterType, setFilterType] = useState<Set<string>>(new Set())
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
-  const [groupByEpic, setGroupByEpic] = useState(false)
+  const [groupByEpic, setGroupByEpic] = useState(true)
   const [showArchived, setShowArchived] = useState(false)
   const [focusedIssueId, setFocusedIssueId] = useState<string | null>(null)
   const queryClient = useQueryClient()

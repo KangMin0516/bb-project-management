@@ -20,6 +20,7 @@ import StandupSettingsPage from '@/pages/StandupSettingsPage'
 import AdminPage from '@/pages/AdminPage'
 import TeamDashboardPage from '@/pages/TeamDashboardPage'
 import ProfilePage from '@/pages/ProfilePage'
+import ApiDocsPage from '@/pages/ApiDocsPage'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ToastContainer from '@/components/ToastContainer'
 import ImagePreviewModal from '@/components/ui/ImagePreviewModal'
@@ -70,6 +71,7 @@ export default function App() {
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/dashboard" element={<TeamDashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/api-docs" element={<ApiDocsPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/new" element={<NewProjectPage />} />
                 <Route path="/projects/:projectId" element={<DashboardPage />} />
