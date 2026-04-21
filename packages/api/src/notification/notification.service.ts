@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NOTIFICATION_LIMIT } from '../common/constants.js';
 
-type NotificationType = 'ASSIGNED' | 'COMMENTED' | 'MENTIONED';
+type NotificationType = 'ASSIGNED' | 'COMMENTED' | 'MENTIONED' | 'JOIN_APPROVED' | 'JOIN_REJECTED';
 
 @Injectable()
 export class NotificationService {

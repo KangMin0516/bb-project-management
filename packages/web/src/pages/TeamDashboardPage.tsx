@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi, type TeamMember, type TeamStandup } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Users, CheckCircle2, AlertTriangle, Inbox, Search, ArrowUpDown, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import WorkloadHeatmap from '@/components/dashboard/WorkloadHeatmap'
@@ -161,6 +161,7 @@ function KpiCard({ icon, label, tooltip, value, bg }: { icon: React.ReactNode; l
 }
 
 function MemberCard({ member }: { member: TeamMember }) {
+  const navigate = useNavigate()
   const status = getMemberStatus(member)
   const config = STATUS_CONFIG[status]
   const { today, overall } = member
@@ -170,7 +171,9 @@ function MemberCard({ member }: { member: TeamMember }) {
     : 0
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:border-gray-300 dark:border-gray-600 transition">
+    <div
+      onClick={() => navigate(`/admin/members/${member.user.id}`)}
+      className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:border-gray-300 dark:border-gray-600 transition cursor-pointer">
       {/* Avatar + Status */}
       <Tip text={config.tooltip}>
         <div className="relative shrink-0">

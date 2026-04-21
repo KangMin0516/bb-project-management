@@ -680,6 +680,46 @@ export class DashboardService {
     };
   }
 
+  private static readonly MAX_MEMBER_ISSUES = 200;
+
+  async getMemberIssues(userId: string) {
+    const issueInclude = {
+      assignee: { select: USER_SELECT },
+      creator: { select: USER_SELECT },
+      labels: { include: { label: true } },
+      parent: { select: { id: true, number: true, title: true } },
+      project: { select: { id: true, name: true, key: true } },
+      _count: { select: { children: true } },
+    };
+
+    const [user, issues] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, avatar: true },
+      }),
+      this.prisma.issue.findMany({
+        where: {
+          assigneeId: userId,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        include: issueInclude,
+        orderBy: [
+          { dueDate: { sort: 'asc', nulls: 'last' } },
+          { priority: 'asc' },
+          { createdAt: 'desc' },
+        ],
+        take: DashboardService.MAX_MEMBER_ISSUES,
+      }),
+    ]);
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return {
+      user,
+      issues,
+    };
+  }
+
   async getMyGlobalDashboard(userId: string) {
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
