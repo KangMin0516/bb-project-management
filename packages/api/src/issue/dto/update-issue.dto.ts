@@ -49,6 +49,12 @@ export class UpdateIssueDto {
   @IsUUID()
   assigneeId?: string | null;
 
+  @ApiPropertyOptional({ description: 'Reviewer assignee ID, null to clear' })
+  @IsOptional()
+  @ValidateIf((o) => o.reviewerAssigneeId !== null)
+  @IsUUID()
+  reviewerAssigneeId?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((o) => o.parentId !== null)

@@ -18,9 +18,11 @@ export interface Issue {
   updatedAt: string
   projectId: string
   assigneeId: string | null
+  reviewerAssigneeId: string | null
   creatorId: string
   parentId: string | null
   assignee: { id: string; email: string; name: string; avatar: string | null } | null
+  reviewerAssignee: { id: string; email: string; name: string; avatar: string | null } | null
   creator: { id: string; email: string; name: string; avatar: string | null } | null
   labels: { label: { id: string; name: string; color: string } }[]
   components: { component: { id: string; name: string } }[]
@@ -112,6 +114,7 @@ export interface CreateIssuePayload {
   priority?: string
   type?: string
   assigneeId?: string
+  reviewerAssigneeId?: string
   parentId?: string
   dueDate?: string
   labelIds?: string[]
@@ -125,6 +128,7 @@ export interface UpdateIssuePayload {
   priority?: string
   type?: string
   assigneeId?: string | null
+  reviewerAssigneeId?: string | null
   parentId?: string | null
   dueDate?: string | null
   focusDate?: string | null

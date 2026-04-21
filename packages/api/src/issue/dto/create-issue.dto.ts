@@ -44,6 +44,11 @@ export class CreateIssueDto {
   @IsUUID()
   assigneeId?: string;
 
+  @ApiPropertyOptional({ description: 'Reviewer assignee ID' })
+  @IsOptional()
+  @IsUUID()
+  reviewerAssigneeId?: string;
+
   @ApiPropertyOptional({ description: 'Parent issue ID for sub-tasks' })
   @IsOptional()
   @IsUUID()
