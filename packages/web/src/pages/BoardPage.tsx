@@ -394,6 +394,7 @@ export default function BoardPage() {
             onIssueClick={setSelectedIssue}
             onReorder={handleSwimlaneReorder}
             onEpicChange={handleSwimlaneEpicChange}
+            onAddClick={handleAddClick}
             childrenMap={childrenMap}
             expandedIssues={expandedIssues}
             onToggleExpand={handleToggleExpand}
