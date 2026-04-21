@@ -445,6 +445,33 @@ export default function IssueDetailPanel({
             </InlineField>
 
             <InlineField
+              label="Reviewer"
+              fieldId="reviewer"
+              display={
+                <span className={`flex items-center gap-2 ${d.reviewerAssignee ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                  {d.reviewerAssignee ? (
+                    <>
+                      {d.reviewerAssignee.avatar ? (
+                        <img src={d.reviewerAssignee.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-[10px] font-medium text-purple-700">
+                          {d.reviewerAssignee.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      {d.reviewerAssignee.name}
+                    </>
+                  ) : 'No reviewer'}
+                </span>
+              }
+            >
+              <AssigneeDropdown
+                members={members || []}
+                value={d.reviewerAssigneeId || ''}
+                onChange={(id) => updateMutation.mutate({ reviewerAssigneeId: id || null })}
+              />
+            </InlineField>
+
+            <InlineField
               label="Due Date"
               display={
                 d.dueDate

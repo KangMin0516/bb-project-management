@@ -19,6 +19,7 @@ const ORDER_GAP = 1000;
 
 const issueInclude = {
   assignee: { select: USER_SELECT },
+  reviewerAssignee: { select: USER_SELECT },
   creator: { select: USER_SELECT },
   labels: { include: { label: true } },
   components: { include: { component: true } },
@@ -40,6 +41,7 @@ export class IssueService {
     'priority',
     'type',
     'assigneeId',
+    'reviewerAssigneeId',
     'parentId',
     'dueDate',
     'focusDate',
