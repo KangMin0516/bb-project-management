@@ -16,6 +16,7 @@ interface SwimlaneBoardViewProps {
   onIssueClick: (issue: Issue) => void
   onReorder: (issueId: string, status: string, order: number) => void
   onEpicChange?: (issueId: string, newParentId: string | null) => void
+  onAddClick?: (status: string) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void
@@ -29,6 +30,7 @@ export default function SwimlaneBoardView({
   onIssueClick,
   onReorder,
   onEpicChange,
+  onAddClick,
   childrenMap,
   expandedIssues,
   onToggleExpand,
@@ -152,6 +154,7 @@ export default function SwimlaneBoardView({
               isCollapsed={collapsedEpics.has(key)}
               onToggleCollapse={() => toggleCollapse(lane.epic?.id || null)}
               onIssueClick={onIssueClick}
+              onAddClick={onAddClick}
               childrenMap={childrenMap}
               expandedIssues={expandedIssues}
               onToggleExpand={onToggleExpand}

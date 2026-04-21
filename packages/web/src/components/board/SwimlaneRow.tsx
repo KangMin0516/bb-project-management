@@ -5,7 +5,7 @@ import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
 import { cn } from '@/lib/utils'
 import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/lib/constants'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, Plus } from 'lucide-react'
 
 interface SwimlaneRowProps {
   epic: Issue | null
@@ -14,6 +14,7 @@ interface SwimlaneRowProps {
   isCollapsed: boolean
   onToggleCollapse: () => void
   onIssueClick: (issue: Issue) => void
+  onAddClick?: (status: string) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void
@@ -28,6 +29,7 @@ export default memo(function SwimlaneRow({
   isCollapsed,
   onToggleCollapse,
   onIssueClick,
+  onAddClick,
   childrenMap,
   expandedIssues,
   onToggleExpand,
@@ -102,9 +104,20 @@ export default memo(function SwimlaneRow({
                 <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-100 dark:border-gray-700">
                   <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[status])} />
                   <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{STATUS_LABELS[status] || status}</span>
-                  {columnIssues.length > 0 && (
-                    <span className="ml-auto text-[10px] text-gray-400">{columnIssues.length}</span>
-                  )}
+                  <div className="ml-auto flex items-center gap-1">
+                    {columnIssues.length > 0 && (
+                      <span className="text-[10px] text-gray-400">{columnIssues.length}</span>
+                    )}
+                    {onAddClick && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onAddClick(status) }}
+                        className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-300 transition"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <Droppable droppableId={droppableId}>
