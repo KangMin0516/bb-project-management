@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { projectApi } from '@/api/projects'
 import { userApi } from '@/api/users'
 import { componentApi, type Component } from '@/api/components'
-import { Trash2, UserPlus, Pencil } from 'lucide-react'
+import { Trash2, UserPlus, Pencil, Check, X } from 'lucide-react'
 import { slackApi } from '@/api/slack'
 import SlackIntegration from '@/components/settings/SlackIntegration'
 import GitHubIntegration from '@/components/settings/GitHubIntegration'
 import DailyReportSettings from '@/components/settings/DailyReportSettings'
 import { useToastStore } from '@/stores/toast'
 import { useImagePreviewStore } from '@/stores/imagePreview'
+import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/lib/error'
 
 export default function SettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const currentUser = useAuthStore((s) => s.user)
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -46,6 +49,9 @@ export default function SettingsPage() {
     queryFn: () => userApi.list(),
   })
 
+  // Join Requests tab
+  const showRequests = searchParams.get('tab') === 'requests'
+
   // Project update
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -55,6 +61,14 @@ export default function SettingsPage() {
       setDescription(project.description || '')
     }
   }, [project])
+
+  useEffect(() => {
+    if (showRequests) {
+      setTimeout(() => {
+        document.getElementById('requests')?.scrollIntoView({ behavior: 'smooth' })
+      }, 300)
+    }
+  }, [showRequests])
 
   const updateProject = useMutation({
     mutationFn: (data: { name: string; description?: string }) =>
@@ -201,6 +215,42 @@ export default function SettingsPage() {
     },
   })
 
+  // Join Requests (only fetch for ADMIN/PM)
+  const currentMemberRole = members?.find((m) => m.userId === currentUser?.id)?.role
+  const isAdminOrPm = currentMemberRole === 'ADMIN' || currentMemberRole === 'PM' || currentUser?.isSuperuser
+  const { data: joinRequests } = useQuery({
+    queryKey: ['join-requests', projectId],
+    queryFn: () => projectApi.listJoinRequests(projectId!),
+    enabled: !!projectId && isAdminOrPm,
+  })
+
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+
+  const approveRequest = useMutation({
+    mutationFn: (requestId: string) => projectApi.approveJoinRequest(projectId!, requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['join-requests', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['members', projectId] })
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve request'))
+    },
+  })
+
+  const rejectRequest = useMutation({
+    mutationFn: ({ requestId, reason }: { requestId: string; reason?: string }) =>
+      projectApi.rejectJoinRequest(projectId!, requestId, reason ? { reason } : undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['join-requests', projectId] })
+      setRejectingId(null)
+      setRejectReason('')
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject request'))
+    },
+  })
+
   if (!projectId) return null
 
   const memberUserIds = new Set(members?.map((m) => m.userId) || [])
@@ -318,6 +368,90 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      {/* Join Requests */}
+      {(joinRequests && joinRequests.length > 0 || showRequests) && (
+        <section id="requests" className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+          <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Join Requests
+            {joinRequests && joinRequests.length > 0 && (
+              <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
+                {joinRequests.length}
+              </span>
+            )}
+          </h2>
+          {joinRequests && joinRequests.length > 0 ? (
+            <div className="space-y-2">
+              {joinRequests.map((req) => (
+                <div key={req.id} className="flex items-start gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden">
+                    {req.requester?.avatar ? (
+                      <img src={req.requester.avatar} alt={req.requester.name} className="h-full w-full object-cover" />
+                    ) : (
+                      req.requester?.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{req.requester?.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{req.requester?.email}</div>
+                    {req.message && (
+                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 italic">"{req.message}"</div>
+                    )}
+                    <div className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(req.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {rejectingId === req.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="Reason (optional)"
+                        className="w-40 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') rejectRequest.mutate({ requestId: req.id, reason: rejectReason || undefined })
+                        }}
+                      />
+                      <button
+                        onClick={() => rejectRequest.mutate({ requestId: req.id, reason: rejectReason || undefined })}
+                        className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => { setRejectingId(null); setRejectReason('') }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => approveRequest.mutate(req.id)}
+                        disabled={approveRequest.isPending}
+                        className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"
+                        title="Approve"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setRejectingId(req.id)}
+                        className="rounded-lg bg-red-500 p-1.5 text-white hover:bg-red-600"
+                        title="Reject"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 dark:text-gray-500">No pending requests</p>
+          )}
+        </section>
+      )}
 
       {/* Labels */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">

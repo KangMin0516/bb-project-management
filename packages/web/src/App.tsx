@@ -19,6 +19,7 @@ import TimelinePage from '@/pages/TimelinePage'
 import StandupSettingsPage from '@/pages/StandupSettingsPage'
 import AdminPage from '@/pages/AdminPage'
 import TeamDashboardPage from '@/pages/TeamDashboardPage'
+import MemberTasksPage from '@/pages/MemberTasksPage'
 import ProfilePage from '@/pages/ProfilePage'
 import ApiDocsPage from '@/pages/ApiDocsPage'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -70,6 +71,7 @@ export default function App() {
                 <Route path="/standup" element={<StandupSettingsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/dashboard" element={<TeamDashboardPage />} />
+                <Route path="/admin/members/:userId" element={<MemberTasksPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/api-docs" element={<ApiDocsPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />

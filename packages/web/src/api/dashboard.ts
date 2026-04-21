@@ -107,6 +107,11 @@ export interface TeamDashboard {
   }
 }
 
+export interface MemberIssuesResponse {
+  user: { id: string; email: string; name: string; avatar: string | null }
+  issues: (GlobalIssue)[]
+}
+
 export const dashboardApi = {
   getStats: (projectId: string) =>
     api.get<{ data: DashboardStats }>(`/projects/${projectId}/dashboard`).then((r) => r.data.data),
@@ -114,4 +119,6 @@ export const dashboardApi = {
     api.get<{ data: GlobalDashboard }>('/dashboard/my').then((r) => r.data.data),
   getTeamDashboard: () =>
     api.get<{ data: TeamDashboard }>('/dashboard/team').then((r) => r.data.data),
+  getMemberIssues: (userId: string) =>
+    api.get<{ data: MemberIssuesResponse }>(`/dashboard/member/${userId}/issues`).then((r) => r.data.data),
 }

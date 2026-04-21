@@ -37,6 +37,11 @@ export class ProjectController {
     return this.projectService.findAll(user.sub);
   }
 
+  @Get('all')
+  findAllWithJoinStatus(@CurrentUser() user: JwtPayload) {
+    return this.projectService.findAllWithJoinStatus(user.sub);
+  }
+
   @Get(':projectId')
   @UseGuards(ProjectMemberGuard)
   findOne(@Param('projectId') projectId: string) {

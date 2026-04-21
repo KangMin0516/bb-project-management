@@ -81,6 +81,38 @@ export class ProjectService {
     });
   }
 
+  async findAllWithJoinStatus(userId: string) {
+    const projects = await this.prisma.project.findMany({
+      include: {
+        _count: { select: { issues: true, members: true } },
+        members: {
+          where: { userId },
+          select: { id: true, role: true },
+          take: 1,
+        },
+        joinRequests: {
+          where: { requesterId: userId, status: 'PENDING' },
+          select: { id: true, status: true },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      key: p.key,
+      description: p.description,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      _count: p._count,
+      isMember: p.members.length > 0,
+      myRole: p.members[0]?.role ?? null,
+      pendingJoinRequest: p.joinRequests[0] ?? null,
+    }));
+  }
+
   async findOne(idOrKey: string) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrKey);
     const project = await this.prisma.project.findUnique({
