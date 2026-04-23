@@ -425,8 +425,24 @@ export default function IssuesPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{issue.type.replace(/_/g, ' ')}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-500">
-                      {issue.assignee?.name || '-'}
+                    <td className="px-3 py-2">
+                      {issue.assignee ? (
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden"
+                            title={issue.assignee.name}
+                          >
+                            {issue.assignee.avatar ? (
+                              <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
+                            ) : (
+                              issue.assignee.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <span className="truncate text-xs text-gray-600 dark:text-gray-500">{issue.assignee.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       {badge && (

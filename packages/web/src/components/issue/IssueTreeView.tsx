@@ -236,9 +236,25 @@ export default function IssueTreeView({
                                 <span className={cn('justify-self-center rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
                                   {issue.priority}
                                 </span>
-                                <span className="truncate text-xs text-gray-600 dark:text-gray-500 text-right">
-                                  {issue.assignee?.name || '-'}
-                                </span>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {issue.assignee ? (
+                                    <>
+                                      <div
+                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden"
+                                        title={issue.assignee.name}
+                                      >
+                                        {issue.assignee.avatar ? (
+                                          <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                          issue.assignee.name.charAt(0).toUpperCase()
+                                        )}
+                                      </div>
+                                      <span className="truncate text-xs text-gray-600 dark:text-gray-500">{issue.assignee.name}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                                  )}
+                                </div>
                                 <span className="text-right">
                                   {getDueBadge(issue.dueDate) && (
                                     <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', getDueBadge(issue.dueDate)!.className)}>
