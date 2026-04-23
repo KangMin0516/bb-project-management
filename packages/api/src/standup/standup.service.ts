@@ -205,6 +205,20 @@ export class StandupService {
 
     const client = this.getClient(config.slackIntegration.botToken);
 
+    // Auto-expire ACTIVE reports older than 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const { count: expiredCount } = await this.prisma.standupReport.updateMany({
+      where: {
+        configId: config.id,
+        status: 'ACTIVE',
+        createdAt: { lt: twentyFourHoursAgo },
+      },
+      data: { status: 'UNANSWERED', updatedAt: new Date() },
+    });
+    if (expiredCount > 0) {
+      this.logger.log(`Auto-expired ${expiredCount} stale ACTIVE report(s) for ${config.name}`);
+    }
+
     // Batch-check for existing active reports to avoid N+1 queries
     const eligibleSlackIds = config.members
       .filter((m) => !m.isAway)
