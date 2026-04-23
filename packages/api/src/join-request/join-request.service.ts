@@ -21,9 +21,16 @@ export class JoinRequestService {
     private notificationService: NotificationService,
   ) {}
 
-  async create(projectId: string, requesterId: string, dto: CreateJoinRequestDto) {
+  async create(
+    projectId: string,
+    requesterId: string,
+    dto: CreateJoinRequestDto,
+  ) {
     // Resolve project key to UUID if needed
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        projectId,
+      );
     if (!isUuid) {
       const project = await this.prisma.project.findUnique({
         where: { key: projectId },
@@ -106,8 +113,10 @@ export class JoinRequestService {
       },
     });
     if (!request) throw new NotFoundException('요청을 찾을 수 없습니다');
-    if (request.projectId !== projectId) throw new BadRequestException('프로젝트가 일치하지 않습니다');
-    if (request.status !== 'PENDING') throw new BadRequestException('이미 처리된 요청입니다');
+    if (request.projectId !== projectId)
+      throw new BadRequestException('프로젝트가 일치하지 않습니다');
+    if (request.status !== 'PENDING')
+      throw new BadRequestException('이미 처리된 요청입니다');
     return request;
   }
 
@@ -129,7 +138,12 @@ export class JoinRequestService {
         },
       }),
       this.prisma.projectMember.upsert({
-        where: { userId_projectId: { userId: request.requesterId, projectId: request.projectId } },
+        where: {
+          userId_projectId: {
+            userId: request.requesterId,
+            projectId: request.projectId,
+          },
+        },
         create: {
           projectId: request.projectId,
           userId: request.requesterId,
@@ -151,7 +165,12 @@ export class JoinRequestService {
     return updatedRequest;
   }
 
-  async reject(projectId: string, requestId: string, resolvedById: string, dto: RejectJoinRequestDto) {
+  async reject(
+    projectId: string,
+    requestId: string,
+    resolvedById: string,
+    dto: RejectJoinRequestDto,
+  ) {
     const request = await this.findPendingRequest(projectId, requestId);
 
     const updatedRequest = await this.prisma.projectJoinRequest.update({

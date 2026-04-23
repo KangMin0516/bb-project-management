@@ -65,34 +65,43 @@ export class CommentService {
 
       // Notify assignee about new comment
       if (issue.assigneeId && issue.assigneeId !== userId) {
-        this.notificationService.create({
-          type: 'COMMENTED',
-          message: `${actorName} commented on ${issueKey} "${issue.title}"`,
-          userId: issue.assigneeId,
-          issueId,
-          projectId: issue.projectId,
-          actorId: userId,
-        }).catch(() => {});
+        this.notificationService
+          .create({
+            type: 'COMMENTED',
+            message: `${actorName} commented on ${issueKey} "${issue.title}"`,
+            userId: issue.assigneeId,
+            issueId,
+            projectId: issue.projectId,
+            actorId: userId,
+          })
+          .catch(() => {});
       }
 
       // Parse @mentions and notify mentioned users
       const mentionPattern = /@([a-zA-Z0-9._-]{2,30})/g;
-      const mentions = [...dto.content.matchAll(mentionPattern)].map((m) => m[1]).slice(0, MAX_MENTIONS);
+      const mentions = [...dto.content.matchAll(mentionPattern)]
+        .map((m) => m[1])
+        .slice(0, MAX_MENTIONS);
       if (mentions.length > 0) {
         const mentionedUsers = await this.prisma.user.findMany({
           where: { name: { in: mentions } },
           select: { id: true },
         });
         for (const mentionedUser of mentionedUsers) {
-          if (mentionedUser.id !== userId && mentionedUser.id !== issue.assigneeId) {
-            this.notificationService.create({
-              type: 'MENTIONED',
-              message: `${actorName} mentioned you in ${issueKey} "${issue.title}"`,
-              userId: mentionedUser.id,
-              issueId,
-              projectId: issue.projectId,
-              actorId: userId,
-            }).catch(() => {});
+          if (
+            mentionedUser.id !== userId &&
+            mentionedUser.id !== issue.assigneeId
+          ) {
+            this.notificationService
+              .create({
+                type: 'MENTIONED',
+                message: `${actorName} mentioned you in ${issueKey} "${issue.title}"`,
+                userId: mentionedUser.id,
+                issueId,
+                projectId: issue.projectId,
+                actorId: userId,
+              })
+              .catch(() => {});
           }
         }
       }

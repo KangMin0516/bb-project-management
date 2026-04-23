@@ -1,4 +1,10 @@
-import { IsString, IsOptional, MaxLength, IsUUID, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  MaxLength,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateComponentDto {
@@ -19,7 +25,9 @@ export class UpdateComponentDto {
   @IsUUID()
   leadId?: string | null;
 
-  @ApiPropertyOptional({ description: 'Default assignee user ID, null to clear' })
+  @ApiPropertyOptional({
+    description: 'Default assignee user ID, null to clear',
+  })
   @IsOptional()
   @ValidateIf((o) => o.defaultAssigneeId !== null)
   @IsUUID()

@@ -25,7 +25,10 @@ export class ProjectMemberGuard implements CanActivate {
     }
 
     // Resolve project key to UUID if needed
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        projectId,
+      );
     if (!isUuid) {
       const project = await this.prisma.project.findUnique({
         where: { key: projectId },

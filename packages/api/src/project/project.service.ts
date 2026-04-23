@@ -114,7 +114,10 @@ export class ProjectService {
   }
 
   async findOne(idOrKey: string) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrKey);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        idOrKey,
+      );
     const project = await this.prisma.project.findUnique({
       where: isUuid ? { id: idOrKey } : { key: idOrKey },
       include: {

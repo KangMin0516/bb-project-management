@@ -15,10 +15,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
-import {
-  AVATAR_MAX_SIZE,
-  ATTACHMENT_MAX_SIZE,
-} from '../common/constants.js';
+import { AVATAR_MAX_SIZE, ATTACHMENT_MAX_SIZE } from '../common/constants.js';
 
 const MAX_FILE_SIZE = ATTACHMENT_MAX_SIZE;
 const MAX_AVATAR_SIZE = AVATAR_MAX_SIZE;
@@ -26,9 +23,25 @@ const ALLOWED_AVATAR_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_AVATAR_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const BLOCKED_ATTACHMENT_EXTS = [
-  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
-  '.sh', '.bash', '.ps1', '.vbs', '.js', '.wsh', '.wsf',
-  '.html', '.htm', '.svg', '.hta', '.xhtml',
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.msi',
+  '.scr',
+  '.pif',
+  '.sh',
+  '.bash',
+  '.ps1',
+  '.vbs',
+  '.js',
+  '.wsh',
+  '.wsf',
+  '.html',
+  '.htm',
+  '.svg',
+  '.hta',
+  '.xhtml',
 ];
 const BLOCKED_ATTACHMENT_MIMES = [
   'application/x-msdownload',
@@ -190,7 +203,9 @@ export class UploadService {
       throw new BadRequestException(`File type ${ext} is not allowed`);
     }
     if (BLOCKED_ATTACHMENT_MIMES.includes(file.mimetype)) {
-      throw new BadRequestException(`MIME type ${file.mimetype} is not allowed`);
+      throw new BadRequestException(
+        `MIME type ${file.mimetype} is not allowed`,
+      );
     }
 
     const key = `attachments/${randomUUID()}${ext}`;
@@ -238,9 +253,7 @@ export class UploadService {
         .send(new DeleteObjectCommand({ Bucket: this.bucket, Key: s3Key }))
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : String(err);
-          this.logger.warn(
-            `Failed to delete S3 object ${s3Key}: ${message}`,
-          );
+          this.logger.warn(`Failed to delete S3 object ${s3Key}: ${message}`);
         });
     }
 

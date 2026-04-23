@@ -1,7 +1,10 @@
 import type { Issue, User } from '../../../generated/prisma/client.js';
 import { pushMrkdwnBlocks } from './utils.js';
 
-type IssueWithAssignee = Issue & { assignee: User | null; project: { key: string } };
+type IssueWithAssignee = Issue & {
+  assignee: User | null;
+  project: { key: string };
+};
 
 const priorityEmoji: Record<string, string> = {
   HIGH: ':red_circle:',
@@ -71,7 +74,11 @@ export function formatEveningReport(
       return `  ${link}  ${i.title}  :bust_in_silhouette: ${assignee}  ${prio}`;
     });
 
-    pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Still In Progress*`, lines);
+    pushMrkdwnBlocks(
+      blocks,
+      `:arrows_counterclockwise: *Still In Progress*`,
+      lines,
+    );
   }
 
   // Overdue
@@ -90,7 +97,11 @@ export function formatEveningReport(
       return `  ${link}  ${i.title}       :bust_in_silhouette: ${assignee}  :calendar: ${dueStr}`;
     });
 
-    pushMrkdwnBlocks(blocks, `:warning: *Overdue (${overdueIssues.length})*`, lines);
+    pushMrkdwnBlocks(
+      blocks,
+      `:warning: *Overdue (${overdueIssues.length})*`,
+      lines,
+    );
   }
 
   // Overall progress

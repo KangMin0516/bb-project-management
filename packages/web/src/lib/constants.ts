@@ -85,6 +85,25 @@ export const EPIC_STATUS_ORDER: Record<string, number> = {
   CANCELED: 5,
 }
 
+// Standup status config (shared across TeamDashboard and MemberTasks pages)
+export const STANDUP_STATUSES = ['ANSWERED', 'ACTIVE', 'UNANSWERED', 'AWAY', 'CANCELED'] as const
+
+export const STANDUP_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  ANSWERED: { label: 'Answered', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  ACTIVE: { label: 'In Progress', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  UNANSWERED: { label: 'No Response', color: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+  AWAY: { label: 'Away', color: 'text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700' },
+  CANCELED: { label: 'Canceled', color: 'text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700' },
+}
+
+export function getBestStandupStatus(statuses: string[]): string {
+  return statuses.reduce((best, s) => {
+    const order = STANDUP_STATUSES.indexOf(s as typeof STANDUP_STATUSES[number])
+    const bestOrder = STANDUP_STATUSES.indexOf(best as typeof STANDUP_STATUSES[number])
+    return (order !== -1 && (bestOrder === -1 || order < bestOrder)) ? s : best
+  }, statuses[0])
+}
+
 export function calculateDropOrder(
   destIssues: { order?: number }[],
   destIndex: number,

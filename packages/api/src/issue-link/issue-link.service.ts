@@ -135,10 +135,7 @@ export class IssueLinkService {
     const links = await this.prisma.issueLink.findMany({
       where: {
         type: 'BLOCKS',
-        OR: [
-          { sourceIssue: { projectId } },
-          { targetIssue: { projectId } },
-        ],
+        OR: [{ sourceIssue: { projectId } }, { targetIssue: { projectId } }],
       },
       include: {
         sourceIssue: {
@@ -179,7 +176,7 @@ export class IssueLinkService {
       throw new NotFoundException('Link not found');
     }
 
-    const reverseType = REVERSE_TYPE[link.type as IssueLinkType];
+    const reverseType = REVERSE_TYPE[link.type];
 
     await this.prisma.$transaction(async (tx) => {
       await tx.issueLink.delete({ where: { id: linkId } });

@@ -40,10 +40,7 @@ export class JoinRequestController {
   }
 
   @Delete('me/join-requests/:id')
-  cancelRequest(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  cancelRequest(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.joinRequestService.cancel(id, user.sub);
   }
 

@@ -446,10 +446,14 @@ export class IssueService {
 
     // Convert date strings to Date objects for Prisma
     if (data.dueDate !== undefined) {
-      (data as Record<string, unknown>).dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      (data as Record<string, unknown>).dueDate = data.dueDate
+        ? new Date(data.dueDate)
+        : null;
     }
     if (data.focusDate !== undefined) {
-      (data as Record<string, unknown>).focusDate = data.focusDate ? new Date(data.focusDate) : null;
+      (data as Record<string, unknown>).focusDate = data.focusDate
+        ? new Date(data.focusDate)
+        : null;
     }
 
     // Validate hierarchy when type or parentId is being changed
@@ -480,7 +484,8 @@ export class IssueService {
     const LATER_STAGES = ['REVIEW_QA', 'DONE', 'CANCELED'];
     const recheckUpdate =
       data.status && data.status !== existing.status
-        ? data.status === 'IN_PROGRESS' && LATER_STAGES.includes(existing.status)
+        ? data.status === 'IN_PROGRESS' &&
+          LATER_STAGES.includes(existing.status)
           ? { isRecheck: true }
           : data.status !== 'IN_PROGRESS' && existing.isRecheck
             ? { isRecheck: false }
@@ -591,7 +596,8 @@ export class IssueService {
     const LATER_STAGES = ['REVIEW_QA', 'DONE', 'CANCELED'];
     const recheckUpdate =
       existing.status !== targetStatus
-        ? targetStatus === 'IN_PROGRESS' && LATER_STAGES.includes(existing.status)
+        ? targetStatus === 'IN_PROGRESS' &&
+          LATER_STAGES.includes(existing.status)
           ? { isRecheck: true }
           : targetStatus !== 'IN_PROGRESS' && existing.isRecheck
             ? { isRecheck: false }

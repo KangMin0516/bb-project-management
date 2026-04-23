@@ -112,6 +112,32 @@ export interface MemberIssuesResponse {
   issues: (GlobalIssue)[]
 }
 
+export interface MemberActivityEntry {
+  issueId: string
+  issueNumber: number
+  issueTitle: string
+  projectKey: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  createdAt: string
+}
+
+export interface MemberStandupEntry {
+  status: 'ANSWERED' | 'ACTIVE' | 'UNANSWERED' | 'AWAY' | 'CANCELED'
+  configName: string
+  completedAt: string | null
+  answers: { question: string; answer: string }[]
+}
+
+export interface MemberDetailResponse {
+  user: { id: string; email: string; name: string; avatar: string | null }
+  issues: (GlobalIssue)[]
+  todayStats: { focusCount: number; todoCount: number; inProgressCount: number; completedCount: number; overdueCount: number }
+  standup: MemberStandupEntry[]
+  activityLog: { date: string; entries: MemberActivityEntry[] }[]
+}
+
 export const dashboardApi = {
   getStats: (projectId: string) =>
     api.get<{ data: DashboardStats }>(`/projects/${projectId}/dashboard`).then((r) => r.data.data),
@@ -121,4 +147,6 @@ export const dashboardApi = {
     api.get<{ data: TeamDashboard }>('/dashboard/team').then((r) => r.data.data),
   getMemberIssues: (userId: string) =>
     api.get<{ data: MemberIssuesResponse }>(`/dashboard/member/${userId}/issues`).then((r) => r.data.data),
+  getMemberDetail: (userId: string) =>
+    api.get<{ data: MemberDetailResponse }>(`/dashboard/member/${userId}/detail`).then((r) => r.data.data),
 }

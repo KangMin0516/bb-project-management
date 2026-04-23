@@ -62,7 +62,9 @@ export class ReportController {
   private assertAdmin(req: RequestWithMember) {
     if (req.isSuperuser) return;
     if (req.projectMember?.role !== 'ADMIN') {
-      throw new ForbiddenException('Only project admins can modify report config');
+      throw new ForbiddenException(
+        'Only project admins can modify report config',
+      );
     }
   }
 }

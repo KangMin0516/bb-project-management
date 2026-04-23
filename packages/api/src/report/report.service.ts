@@ -136,7 +136,12 @@ export class ReportService {
       orderBy: { dueDate: 'asc' },
     });
 
-    return formatMorningReport(project.name, issues, overdueIssues, this.baseUrl);
+    return formatMorningReport(
+      project.name,
+      issues,
+      overdueIssues,
+      this.baseUrl,
+    );
   }
 
   async generateLunchReport(projectId: string) {

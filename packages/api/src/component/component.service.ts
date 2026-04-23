@@ -62,7 +62,11 @@ export class ComponentService {
     return component;
   }
 
-  async update(projectId: string, componentId: string, dto: UpdateComponentDto) {
+  async update(
+    projectId: string,
+    componentId: string,
+    dto: UpdateComponentDto,
+  ) {
     const component = await this.prisma.component.findUnique({
       where: { id: componentId },
     });

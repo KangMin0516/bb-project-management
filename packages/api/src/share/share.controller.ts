@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, Req, Res, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Req,
+  Res,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Public } from '../common/decorators/index.js';
 import { ShareService } from './share.service.js';
@@ -19,7 +27,10 @@ export class ShareController {
     @Res() res: Response,
   ) {
     const { projectKey, issueNumber } = this.parseIssueKey(issueKey);
-    const issue = await this.shareService.findIssueByKey(projectKey, issueNumber);
+    const issue = await this.shareService.findIssueByKey(
+      projectKey,
+      issueNumber,
+    );
 
     const ua = req.headers['user-agent'] || '';
     if (CRAWLER_UA.test(ua)) {
@@ -33,7 +44,10 @@ export class ShareController {
     res.redirect(302, `/projects/${issue.projectId}/${page}?open=${issue.id}`);
   }
 
-  private parseIssueKey(issueKey: string): { projectKey: string; issueNumber: number } {
+  private parseIssueKey(issueKey: string): {
+    projectKey: string;
+    issueNumber: number;
+  } {
     const dashIdx = issueKey.lastIndexOf('-');
     if (dashIdx <= 0) throw new NotFoundException('Invalid issue key');
 
