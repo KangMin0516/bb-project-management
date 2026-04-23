@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi } from '@/api/dashboard'
+import { dashboardApi, type GlobalIssue } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TYPE_ICONS } from '@/lib/constants'
 import { getDueBadge } from '@/lib/time'
 import { ArrowLeft } from 'lucide-react'
+import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 
 const FILTER_CONFIG: Record<string, { title: string; description: string }> = {
   overdue: { title: 'Overdue Issues', description: 'Due date has passed and not yet completed' },
@@ -22,6 +23,7 @@ export default function TeamIssuesPage() {
   const navigate = useNavigate()
   const currentUser = useAuthStore((s) => s.user)
   const filter = searchParams.get('filter') ?? 'all'
+  const [selectedIssue, setSelectedIssue] = useState<GlobalIssue | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['team-issues', filter],
@@ -112,8 +114,11 @@ export default function TeamIssuesPage() {
                   return (
                     <button
                       key={issue.id}
-                      onClick={() => navigate(`/projects/${project.id}/board`)}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                      onClick={() => setSelectedIssue(issue)}
+                      className={cn(
+                        'flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition',
+                        selectedIssue?.id === issue.id && 'bg-primary-50 dark:bg-primary-900/20',
+                      )}
                     >
                       <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[issue.status])} />
                       <span className="shrink-0 text-xs">{TYPE_ICONS[issue.type] ?? '📌'}</span>
@@ -123,7 +128,6 @@ export default function TeamIssuesPage() {
                       <span className="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-gray-100">
                         {issue.title}
                       </span>
-                      {/* Assignee */}
                       {issue.assignee ? (
                         <span className="hidden sm:inline shrink-0 text-[10px] text-gray-500 dark:text-gray-400">
                           {issue.assignee.name}
@@ -164,6 +168,21 @@ export default function TeamIssuesPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Issue Detail Panel */}
+      {selectedIssue && (
+        <IssueDetailPanel
+          projectId={selectedIssue.project.id}
+          projectKey={selectedIssue.project.key}
+          issue={selectedIssue}
+          context="issues"
+          onClose={() => setSelectedIssue(null)}
+          onNavigate={(issue) => {
+            const found = issueList.find((i) => i.id === issue.id)
+            if (found) setSelectedIssue(found)
+          }}
+        />
       )}
     </div>
   )
