@@ -709,10 +709,20 @@ export class StandupService {
     try {
       const slackUser = await client.users.info({ user: slackUserId });
       const email = slackUser.user?.profile?.email;
-      if (!email) return null;
+      if (!email) {
+        this.logger.warn(
+          `Slack user ${slackUserId} has no email in profile — ensure the bot has users:read.email scope`,
+        );
+        return null;
+      }
 
       const user = await this.prisma.user.findUnique({ where: { email } });
-      if (!user) return null;
+      if (!user) {
+        this.logger.warn(
+          `No system user found for Slack email ${email} (Slack ID: ${slackUserId})`,
+        );
+        return null;
+      }
 
       await this.prisma.user.update({
         where: { id: user.id },
