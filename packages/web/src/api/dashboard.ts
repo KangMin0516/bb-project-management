@@ -138,6 +138,11 @@ export interface MemberDetailResponse {
   activityLog: { date: string; entries: MemberActivityEntry[] }[]
 }
 
+export interface TeamIssuesResponse {
+  filter: string
+  issues: (GlobalIssue)[]
+}
+
 export const dashboardApi = {
   getStats: (projectId: string) =>
     api.get<{ data: DashboardStats }>(`/projects/${projectId}/dashboard`).then((r) => r.data.data),
@@ -145,6 +150,8 @@ export const dashboardApi = {
     api.get<{ data: GlobalDashboard }>('/dashboard/my').then((r) => r.data.data),
   getTeamDashboard: () =>
     api.get<{ data: TeamDashboard }>('/dashboard/team').then((r) => r.data.data),
+  getTeamIssues: (filter: string) =>
+    api.get<{ data: TeamIssuesResponse }>(`/dashboard/team/issues?filter=${filter}`).then((r) => r.data.data),
   getMemberIssues: (userId: string) =>
     api.get<{ data: MemberIssuesResponse }>(`/dashboard/member/${userId}/issues`).then((r) => r.data.data),
   getMemberDetail: (userId: string) =>

@@ -938,6 +938,53 @@ export class DashboardService {
     return { user, issues };
   }
 
+  async getTeamIssues(filter: string) {
+    const { todayStart, todayEnd } = this.getDateRanges();
+    const baseWhere: Record<string, unknown> = {};
+
+    switch (filter) {
+      case 'overdue':
+        baseWhere.dueDate = { lt: todayStart };
+        baseWhere.status = {
+          notIn: [IssueStatus.DONE, IssueStatus.CANCELED],
+        };
+        break;
+      case 'unassigned':
+        baseWhere.assigneeId = null;
+        baseWhere.status = {
+          notIn: [IssueStatus.DONE, IssueStatus.CANCELED],
+        };
+        break;
+      case 'completed_today':
+        baseWhere.status = IssueStatus.DONE;
+        baseWhere.updatedAt = { gte: todayStart, lte: todayEnd };
+        break;
+      case 'in_progress':
+        baseWhere.status = IssueStatus.IN_PROGRESS;
+        break;
+      case 'todo':
+        baseWhere.status = IssueStatus.TODO;
+        break;
+      default:
+        baseWhere.status = {
+          notIn: [IssueStatus.DONE, IssueStatus.CANCELED],
+        };
+    }
+
+    const issues = await this.prisma.issue.findMany({
+      where: baseWhere,
+      include: this.memberIssueInclude,
+      orderBy: [
+        { dueDate: { sort: 'asc', nulls: 'last' } },
+        { priority: 'asc' },
+        { createdAt: 'desc' },
+      ],
+      take: 500,
+    });
+
+    return { filter, issues };
+  }
+
   async getMyGlobalDashboard(userId: string) {
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);

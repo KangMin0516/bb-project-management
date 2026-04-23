@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -19,6 +20,11 @@ export class TeamDashboardController {
   @Get('team')
   getTeamDashboard() {
     return this.dashboardService.getTeamDashboard();
+  }
+
+  @Get('team/issues')
+  getTeamIssues(@Query('filter') filter: string = 'all') {
+    return this.dashboardService.getTeamIssues(filter);
   }
 
   @Get('member/:userId/issues')
