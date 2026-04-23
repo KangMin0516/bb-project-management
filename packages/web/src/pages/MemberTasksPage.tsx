@@ -17,11 +17,40 @@ function formatDateLabel(dateStr: string): string {
   return `${month}/${day} (${dayName})`
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  status: 'Status',
+  assigneeId: 'Assignee',
+  reviewerAssigneeId: 'Reviewer',
+  priority: 'Priority',
+  title: 'Title',
+  description: 'Description',
+  type: 'Type',
+  dueDate: 'Due date',
+  focusDate: 'Focus date',
+  parentId: 'Parent',
+  order: 'Order',
+  created: 'Created',
+}
+
+function formatValue(field: string, value: string | null): string | null {
+  if (!value) return null
+  if (field === 'status') return STATUS_LABELS[value] ?? value
+  if (field === 'priority') return PRIORITY_LABELS[value] ?? value
+  if (field === 'type') {
+    const typeLabels: Record<string, string> = { EPIC: 'Epic', TASK: 'Task', BUG: 'Bug', SUB_TASK: 'Sub-task' }
+    return typeLabels[value] ?? value
+  }
+  return value
+}
+
 function formatFieldChange(field: string, oldValue: string | null, newValue: string | null): string {
-  const label = field === 'status' ? 'status' : field === 'assigneeId' ? 'assignee' : field === 'priority' ? 'priority' : field
-  if (oldValue && newValue) return `${label}: ${oldValue} → ${newValue}`
-  if (newValue) return `${label}: → ${newValue}`
-  if (oldValue) return `${label}: ${oldValue} → (removed)`
+  const label = FIELD_LABELS[field] ?? field
+  if (field === 'created') return 'Issue created'
+  const fmtOld = formatValue(field, oldValue)
+  const fmtNew = formatValue(field, newValue)
+  if (fmtOld && fmtNew) return `${label}: ${fmtOld} → ${fmtNew}`
+  if (fmtNew) return `${label} → ${fmtNew}`
+  if (fmtOld) return `${label}: ${fmtOld} → (removed)`
   return `${label} changed`
 }
 
@@ -257,13 +286,18 @@ function ActivitySection({ activityLog }: { activityLog: MemberDetailResponse['a
                   <div className="space-y-1.5">
                     {entries.map((entry, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="shrink-0 font-mono text-gray-400 dark:text-gray-500">
+                        <span className="shrink-0 font-mono text-primary-600 dark:text-primary-400">
                           {entry.projectKey}-{entry.issueNumber}
                         </span>
-                        <span className="text-gray-700 dark:text-gray-300">
-                          {formatFieldChange(entry.field, entry.oldValue, entry.newValue)}
+                        <span className="min-w-0 flex-1">
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {formatFieldChange(entry.field, entry.oldValue, entry.newValue)}
+                          </span>
+                          <span className="ml-1.5 text-gray-400 dark:text-gray-500 truncate">
+                            {entry.issueTitle}
+                          </span>
                         </span>
-                        <span className="ml-auto shrink-0 text-[10px] text-gray-400">
+                        <span className="shrink-0 text-[10px] text-gray-400">
                           {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>

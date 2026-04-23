@@ -780,7 +780,7 @@ export class DashboardService {
         completedCount: completedToday,
       },
       standup: this.formatStandupReports(standupReports),
-      activityLog: this.groupActivitiesByDate(recentActivities),
+      activityLog: await this.groupActivitiesByDate(recentActivities),
     };
   }
 
@@ -836,7 +836,7 @@ export class DashboardService {
     }));
   }
 
-  private groupActivitiesByDate(
+  private async groupActivitiesByDate(
     activities: {
       createdAt: Date;
       field: string;
@@ -850,6 +850,36 @@ export class DashboardService {
       };
     }[],
   ) {
+    // Collect all user IDs referenced in assignee changes
+    const userIds = new Set<string>();
+    for (const a of activities) {
+      if (
+        (a.field === 'assigneeId' || a.field === 'reviewerAssigneeId') &&
+        (a.oldValue || a.newValue)
+      ) {
+        if (a.oldValue) userIds.add(a.oldValue);
+        if (a.newValue) userIds.add(a.newValue);
+      }
+    }
+
+    // Resolve user IDs to names
+    const userNameMap = new Map<string, string>();
+    if (userIds.size > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: [...userIds] } },
+        select: { id: true, name: true },
+      });
+      for (const u of users) userNameMap.set(u.id, u.name);
+    }
+
+    const resolveValue = (field: string, value: string | null) => {
+      if (!value) return null;
+      if (field === 'assigneeId' || field === 'reviewerAssigneeId') {
+        return userNameMap.get(value) ?? value;
+      }
+      return value;
+    };
+
     const byDate = new Map<
       string,
       {
@@ -872,8 +902,8 @@ export class DashboardService {
         issueTitle: a.issue.title,
         projectKey: a.issue.project.key,
         field: a.field,
-        oldValue: a.oldValue,
-        newValue: a.newValue,
+        oldValue: resolveValue(a.field, a.oldValue),
+        newValue: resolveValue(a.field, a.newValue),
         createdAt: a.createdAt.toISOString(),
       });
     }
