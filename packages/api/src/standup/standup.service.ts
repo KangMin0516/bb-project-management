@@ -970,24 +970,36 @@ export class StandupService {
     const todayEnd = new Date();
     todayEnd.setUTCHours(23, 59, 59, 999);
 
-    const activeIssues = await this.prisma.issue.findMany({
-      where: {
-        assigneeId: userId,
-        status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
-      },
-      include: { project: { select: { key: true, name: true } } },
-      orderBy: [
-        { project: { name: 'asc' } },
-        { status: 'asc' },
-        { focusDate: { sort: 'desc', nulls: 'last' } },
-      ],
-    });
+    const [activeIssues, completedToday] = await Promise.all([
+      this.prisma.issue.findMany({
+        where: {
+          assigneeId: userId,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+        include: { project: { select: { key: true, name: true } } },
+        orderBy: [
+          { project: { name: 'asc' } },
+          { status: 'asc' },
+          { focusDate: { sort: 'desc', nulls: 'last' } },
+        ],
+      }),
+      this.prisma.issue.findMany({
+        where: {
+          assigneeId: userId,
+          status: IssueStatus.DONE,
+          updatedAt: { gte: todayStart, lte: todayEnd },
+        },
+        include: { project: { select: { key: true, name: true } } },
+        orderBy: [{ project: { name: 'asc' } }, { updatedAt: 'desc' }],
+      }),
+    ]);
 
-    if (activeIssues.length === 0) return;
+    if (activeIssues.length === 0 && completedToday.length === 0) return;
 
     // Group by project → status
-    const grouped = new Map<string, Map<string, typeof activeIssues>>();
-    for (const issue of activeIssues) {
+    const allIssues = [...activeIssues, ...completedToday];
+    const grouped = new Map<string, Map<string, typeof allIssues>>();
+    for (const issue of allIssues) {
       const projName = issue.project.name;
       if (!grouped.has(projName)) grouped.set(projName, new Map());
       const statusMap = grouped.get(projName)!;
@@ -995,8 +1007,9 @@ export class StandupService {
       statusMap.get(issue.status)!.push(issue);
     }
 
-    const statusOrder = ['IN_PROGRESS', 'TODO', 'BACKLOG'];
-    const parts = [`📋 *Your Active Issues (${activeIssues.length})*`];
+    const statusOrder = ['IN_PROGRESS', 'TODO', 'BACKLOG', 'DONE'];
+    const totalCount = allIssues.length;
+    const parts = [`📋 *Your Issues (${totalCount})*`];
 
     for (const [projName, statusMap] of grouped) {
       parts.push(`\n*${projName}*`);
@@ -1006,13 +1019,14 @@ export class StandupService {
           (statusOrder.indexOf(b) === -1 ? 99 : statusOrder.indexOf(b)),
       );
       for (const status of sortedStatuses) {
-        parts.push(`  _${status}_`);
+        const statusLabel = status === 'DONE' ? '✅ DONE TODAY' : status;
+        parts.push(`  _${statusLabel}_`);
         for (const issue of statusMap.get(status)!) {
           const isFocus =
             issue.focusDate &&
             issue.focusDate >= todayStart &&
             issue.focusDate <= todayEnd;
-          const prefix = isFocus ? '🎯' : '      ';
+          const prefix = status === 'DONE' ? '✅' : isFocus ? '🎯' : '      ';
           const key = `${issue.project.key}-${issue.number}`;
           const title =
             issue.title.length > 50
@@ -1023,7 +1037,7 @@ export class StandupService {
       }
     }
 
-    parts.push("\n🎯 = Today's Focus");
+    parts.push('\n🎯 = Today\'s Focus  ✅ = Completed Today');
     const text = parts.join('\n');
 
     await client.chat.postMessage({
