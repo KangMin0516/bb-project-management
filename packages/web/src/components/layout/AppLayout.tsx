@@ -31,6 +31,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import CommandPalette from '@/components/search/CommandPalette'
+import QuickIssueModal from '@/components/issue/QuickIssueModal'
 import NotificationBell from '@/components/notification/NotificationBell'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
@@ -51,6 +52,7 @@ export default function AppLayout() {
   const [showProjects, setShowProjects] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [quickIssueOpen, setQuickIssueOpen] = useState(false)
   const location = useLocation()
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -64,6 +66,13 @@ export default function AppLayout() {
       label: 'Open command palette',
       category: 'Global' as const,
       handler: () => setCommandPaletteOpen((prev) => !prev),
+    },
+    {
+      id: 'global-quick-issue',
+      keys: 'mod+n',
+      label: 'Quick issue create',
+      category: 'Global' as const,
+      handler: () => setQuickIssueOpen((prev) => !prev),
     },
     {
       id: 'global-help',
@@ -83,6 +92,8 @@ export default function AppLayout() {
         const store = useShortcutsStore.getState()
         if (store.helpModalOpen) {
           store.setHelpModalOpen(false)
+        } else if (quickIssueOpen) {
+          setQuickIssueOpen(false)
         } else if (commandPaletteOpen) {
           setCommandPaletteOpen(false)
         }
@@ -123,7 +134,7 @@ export default function AppLayout() {
       category: 'Navigation' as const,
       handler: () => { if (projectId) navigate(`/projects/${projectId}/specs`) },
     },
-  ], [projectId, navigate, commandPaletteOpen])
+  ], [projectId, navigate, commandPaletteOpen, quickIssueOpen])
 
   useRegisterShortcuts('global', globalShortcuts)
 
@@ -380,6 +391,7 @@ export default function AppLayout() {
       </main>
 
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      {quickIssueOpen && <QuickIssueModal onClose={() => setQuickIssueOpen(false)} />}
       <ShortcutsHelpModal />
     </div>
   )
