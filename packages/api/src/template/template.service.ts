@@ -32,9 +32,7 @@ export class TemplateService {
     });
     if (!template) throw new NotFoundException('Template not found');
     if (template.creatorId !== userId) {
-      throw new ForbiddenException(
-        'Only the creator can modify this template',
-      );
+      throw new ForbiddenException('Only the creator can modify this template');
     }
     return template;
   }

@@ -681,9 +681,10 @@ export class DashboardService {
   }
 
   private static readonly MAX_MEMBER_ISSUES = 200;
+  private static readonly MAX_RECENT_ACTIVITIES = 500;
 
-  async getMemberIssues(userId: string) {
-    const issueInclude = {
+  private get memberIssueInclude() {
+    return {
       assignee: { select: USER_SELECT },
       creator: { select: USER_SELECT },
       labels: { include: { label: true } },
@@ -691,7 +692,197 @@ export class DashboardService {
       project: { select: { id: true, name: true, key: true } },
       _count: { select: { children: true } },
     };
+  }
 
+  async getMemberDetail(userId: string) {
+    const { todayStart, todayEnd, sevenDaysAgo } = this.getDateRanges();
+
+    // Step 1: Fetch user first (needed for slackUserId)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        slackUserId: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Step 2: Fetch issues, activities, completedToday, and standup in parallel
+    const [issues, recentActivities, completedToday, standupReports] =
+      await Promise.all([
+        this.prisma.issue.findMany({
+          where: {
+            assigneeId: userId,
+            status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          },
+          include: this.memberIssueInclude,
+          orderBy: [
+            { dueDate: { sort: 'asc', nulls: 'last' } },
+            { priority: 'asc' },
+            { createdAt: 'desc' },
+          ],
+          take: DashboardService.MAX_MEMBER_ISSUES,
+        }),
+        this.prisma.activity.findMany({
+          where: { userId, createdAt: { gte: sevenDaysAgo } },
+          include: {
+            issue: {
+              select: {
+                id: true,
+                number: true,
+                title: true,
+                project: { select: { id: true, name: true, key: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: DashboardService.MAX_RECENT_ACTIVITIES,
+        }),
+        this.prisma.activity.count({
+          where: {
+            userId,
+            field: 'status',
+            newValue: IssueStatus.DONE,
+            createdAt: { gte: todayStart, lte: todayEnd },
+          },
+        }),
+        user.slackUserId
+          ? this.prisma.standupReport.findMany({
+              where: {
+                slackUserId: user.slackUserId,
+                createdAt: { gte: todayStart, lte: todayEnd },
+              },
+              include: {
+                answers: {
+                  include: { question: true },
+                  orderBy: { order: 'asc' },
+                },
+                config: { select: { name: true } },
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          : Promise.resolve([]),
+      ]);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      },
+      issues,
+      todayStats: {
+        ...this.computeTodayStats(issues, todayStart, todayEnd),
+        completedCount: completedToday,
+      },
+      standup: this.formatStandupReports(standupReports),
+      activityLog: this.groupActivitiesByDate(recentActivities),
+    };
+  }
+
+  private getDateRanges() {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
+    sevenDaysAgo.setUTCHours(0, 0, 0, 0);
+    return { todayStart, todayEnd, sevenDaysAgo };
+  }
+
+  private computeTodayStats(
+    issues: {
+      focusDate: Date | null;
+      status: IssueStatus;
+      dueDate: Date | null;
+    }[],
+    todayStart: Date,
+    todayEnd: Date,
+  ) {
+    return {
+      focusCount: issues.filter(
+        (i) =>
+          i.focusDate && i.focusDate >= todayStart && i.focusDate <= todayEnd,
+      ).length,
+      todoCount: issues.filter((i) => i.status === IssueStatus.TODO).length,
+      inProgressCount: issues.filter(
+        (i) => i.status === IssueStatus.IN_PROGRESS,
+      ).length,
+      overdueCount: issues.filter((i) => i.dueDate && i.dueDate < todayStart)
+        .length,
+    };
+  }
+
+  private formatStandupReports(
+    reports: {
+      status: string;
+      config: { name: string };
+      updatedAt: Date | null;
+      answers: { answer: string | null; question: { text: string } }[];
+    }[],
+  ) {
+    return reports.map((r) => ({
+      status: r.status,
+      configName: r.config.name,
+      completedAt: r.updatedAt?.toISOString() ?? null,
+      answers: r.answers
+        .filter((a) => a.answer)
+        .map((a) => ({ question: a.question.text, answer: a.answer! })),
+    }));
+  }
+
+  private groupActivitiesByDate(
+    activities: {
+      createdAt: Date;
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+      issue: {
+        id: string;
+        number: number;
+        title: string;
+        project: { key: string };
+      };
+    }[],
+  ) {
+    const byDate = new Map<
+      string,
+      {
+        issueId: string;
+        issueNumber: number;
+        issueTitle: string;
+        projectKey: string;
+        field: string;
+        oldValue: string | null;
+        newValue: string | null;
+        createdAt: string;
+      }[]
+    >();
+    for (const a of activities) {
+      const dateKey = a.createdAt.toISOString().slice(0, 10);
+      if (!byDate.has(dateKey)) byDate.set(dateKey, []);
+      byDate.get(dateKey)!.push({
+        issueId: a.issue.id,
+        issueNumber: a.issue.number,
+        issueTitle: a.issue.title,
+        projectKey: a.issue.project.key,
+        field: a.field,
+        oldValue: a.oldValue,
+        newValue: a.newValue,
+        createdAt: a.createdAt.toISOString(),
+      });
+    }
+    return [...byDate.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, entries]) => ({ date, entries }));
+  }
+
+  async getMemberIssues(userId: string) {
     const [user, issues] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -702,7 +893,7 @@ export class DashboardService {
           assigneeId: userId,
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
         },
-        include: issueInclude,
+        include: this.memberIssueInclude,
         orderBy: [
           { dueDate: { sort: 'asc', nulls: 'last' } },
           { priority: 'asc' },
@@ -714,10 +905,7 @@ export class DashboardService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    return {
-      user,
-      issues,
-    };
+    return { user, issues };
   }
 
   async getMyGlobalDashboard(userId: string) {
@@ -750,7 +938,13 @@ export class DashboardService {
       _count: { select: { children: true } },
     };
 
-    const [allMyIssues, overdueIssues, totalByProject, statusByProject, myByProject] = await Promise.all([
+    const [
+      allMyIssues,
+      overdueIssues,
+      totalByProject,
+      statusByProject,
+      myByProject,
+    ] = await Promise.all([
       this.prisma.issue.findMany({
         where: {
           projectId: { in: projectIds },
@@ -810,8 +1004,12 @@ export class DashboardService {
     ]);
 
     // Build project stats from groupBy results
-    const totalMap = new Map(totalByProject.map((r) => [r.projectId, r._count]));
-    const doneMap = new Map(statusByProject.map((r) => [r.projectId, r._count]));
+    const totalMap = new Map(
+      totalByProject.map((r) => [r.projectId, r._count]),
+    );
+    const doneMap = new Map(
+      statusByProject.map((r) => [r.projectId, r._count]),
+    );
     const myMap = new Map(myByProject.map((r) => [r.projectId, r._count]));
     const projectStats = memberships.map((m) => ({
       ...m.project,

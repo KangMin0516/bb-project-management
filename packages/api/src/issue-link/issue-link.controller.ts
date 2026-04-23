@@ -35,10 +35,7 @@ export class IssueLinkController {
   }
 
   @Delete(':linkId')
-  remove(
-    @Param('linkId') linkId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  remove(@Param('linkId') linkId: string, @CurrentUser() user: JwtPayload) {
     return this.issueLinkService.remove(linkId, user.sub);
   }
 }

@@ -5,7 +5,11 @@ import { TeamDashboardController } from './team-dashboard.controller.js';
 import { DashboardService } from './dashboard.service.js';
 
 @Module({
-  controllers: [DashboardController, GlobalDashboardController, TeamDashboardController],
+  controllers: [
+    DashboardController,
+    GlobalDashboardController,
+    TeamDashboardController,
+  ],
   providers: [DashboardService],
 })
 export class DashboardModule {}

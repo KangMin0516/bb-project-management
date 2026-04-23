@@ -60,7 +60,8 @@ export class SlackService {
     const state = this.encrypt(JSON.stringify({ userId, exp: expiry }));
     const encodedState = encodeURIComponent(state);
 
-    const scopes = 'chat:write,chat:write.customize,channels:read,groups:read,users:read,im:write,im:history';
+    const scopes =
+      'chat:write,chat:write.customize,channels:read,groups:read,users:read,im:write,im:history';
     return (
       `https://slack.com/oauth/v2/authorize` +
       `?client_id=${clientId}` +

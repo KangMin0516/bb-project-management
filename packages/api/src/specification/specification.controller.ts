@@ -83,9 +83,15 @@ export class SpecificationController {
     @Param('specId') specId: string,
     @Res() res: Response,
   ) {
-    const { filename, content } = await this.service.exportOne(projectId, specId);
+    const { filename, content } = await this.service.exportOne(
+      projectId,
+      specId,
+    );
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}.md"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(filename)}.md"`,
+    );
     res.send(content);
   }
 

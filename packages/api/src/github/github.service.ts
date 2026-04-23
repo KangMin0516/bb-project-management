@@ -112,7 +112,9 @@ export class GitHubService {
     // Mask webhook secret — only show last 4 chars
     const secret = integration.webhookSecret;
     const maskedSecret =
-      secret.length > 4 ? '•'.repeat(secret.length - 4) + secret.slice(-4) : secret;
+      secret.length > 4
+        ? '•'.repeat(secret.length - 4) + secret.slice(-4)
+        : secret;
 
     return {
       connected: true,

@@ -8,7 +8,9 @@ export class UpdateProfileDto {
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ example: 'https://s3.amazonaws.com/bucket/avatars/user.jpg' })
+  @ApiPropertyOptional({
+    example: 'https://s3.amazonaws.com/bucket/avatars/user.jpg',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)

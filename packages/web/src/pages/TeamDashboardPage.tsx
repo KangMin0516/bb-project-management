@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, type TeamMember, type TeamStandup } from '@/api/dashboard'
+import { dashboardApi, type TeamMember, type StandupReportEntry } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Users, CheckCircle2, AlertTriangle, Inbox, Search, ArrowUpDown, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import WorkloadHeatmap from '@/components/dashboard/WorkloadHeatmap'
+import { STANDUP_STATUS_CONFIG, getBestStandupStatus } from '@/lib/constants'
 
 type StatusIndicator = 'active' | 'light' | 'idle' | 'overloaded'
 type SortKey = 'status' | 'name' | 'active' | 'overdue'
@@ -49,6 +50,19 @@ export default function TeamDashboardPage() {
     refetchInterval: 60_000,
     enabled: !!currentUser?.isSuperuser,
   })
+
+  // Build standup map: systemUser.id → reports[]
+  const standupByUserId = useMemo(() => {
+    if (!data?.standup?.reports) return new Map<string, StandupReportEntry[]>()
+    const map = new Map<string, StandupReportEntry[]>()
+    for (const r of data.standup.reports) {
+      if (!r.systemUser) continue
+      const uid = r.systemUser.id
+      if (!map.has(uid)) map.set(uid, [])
+      map.get(uid)!.push(r)
+    }
+    return map
+  }, [data])
 
   const members = useMemo(() => {
     if (!data) return []
@@ -101,9 +115,6 @@ export default function TeamDashboardPage() {
         <KpiCard icon={<Inbox className="h-5 w-5 text-gray-600 dark:text-gray-400" />} label="Unassigned" tooltip="담당자가 없는 미완료 이슈 총 수" value={summary.unassignedTotal} bg="bg-gray-100 dark:bg-gray-700" />
       </div>
 
-      {/* Standup Section */}
-      {data.standup.total > 0 && <StandupSection standup={data.standup} />}
-
       {/* Search + Sort */}
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
@@ -135,7 +146,7 @@ export default function TeamDashboardPage() {
       {/* Member Cards */}
       <div className="mb-6 space-y-2">
         {members.map((m) => (
-          <MemberCard key={m.user.id} member={m} />
+          <MemberCard key={m.user.id} member={m} standupReports={standupByUserId.get(m.user.id)} />
         ))}
         {members.length === 0 && (
           <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No members found</p>
@@ -160,8 +171,9 @@ function KpiCard({ icon, label, tooltip, value, bg }: { icon: React.ReactNode; l
   )
 }
 
-function MemberCard({ member }: { member: TeamMember }) {
+function MemberCard({ member, standupReports }: { member: TeamMember; standupReports?: StandupReportEntry[] }) {
   const navigate = useNavigate()
+  const [expanded, setExpanded] = useState(false)
   const status = getMemberStatus(member)
   const config = STATUS_CONFIG[status]
   const { today, overall } = member
@@ -170,76 +182,146 @@ function MemberCard({ member }: { member: TeamMember }) {
     ? Math.round((overall.doneHistorical / overall.totalHistorical) * 100)
     : 0
 
+  // Determine best standup status for this member
+  const standupStatus = useMemo(() => {
+    if (!standupReports || standupReports.length === 0) return null
+    return getBestStandupStatus(standupReports.map((r) => r.status))
+  }, [standupReports])
+
+  const standupCfg = standupStatus ? STANDUP_STATUS_CONFIG[standupStatus] : null
+  const hasAnswers = standupReports?.some((r) => r.status === 'ANSWERED' && r.answers.length > 0)
+
+  const handleCardClick = () => {
+    navigate(`/admin/members/${member.user.id}`)
+  }
+
+  const handleExpandToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpanded(!expanded)
+  }
+
   return (
-    <div
-      onClick={() => navigate(`/admin/members/${member.user.id}`)}
-      className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 hover:border-gray-300 dark:border-gray-600 transition cursor-pointer">
-      {/* Avatar + Status */}
-      <Tip text={config.tooltip}>
-        <div className="relative shrink-0">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-sm font-medium text-primary-700 dark:text-primary-300 overflow-hidden">
-            {member.user.avatar ? (
-              <img src={member.user.avatar} alt={member.user.name} className="h-full w-full object-cover" />
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition">
+      <div
+        onClick={handleCardClick}
+        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
+      >
+        {/* Avatar + Status */}
+        <Tip text={config.tooltip}>
+          <div className="relative shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-sm font-medium text-primary-700 dark:text-primary-300 overflow-hidden">
+              {member.user.avatar ? (
+                <img src={member.user.avatar} alt={member.user.name} className="h-full w-full object-cover" />
+              ) : (
+                member.user.name.charAt(0).toUpperCase()
+              )}
+            </div>
+            <span className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-800', config.dot)} />
+          </div>
+        </Tip>
+
+        {/* Name + Projects + Standup badge */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{member.user.name}</span>
+            <Tip text={config.tooltip}>
+              <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
+                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': status === 'active',
+                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': status === 'light',
+                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': status === 'idle',
+                'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400': status === 'overloaded',
+              })}>
+                {config.label}
+              </span>
+            </Tip>
+            {/* Standup badge */}
+            {standupCfg && hasAnswers ? (
+              <button
+                onClick={handleExpandToggle}
+                className={cn(
+                  'flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium cursor-pointer hover:opacity-80',
+                  standupCfg.bgColor,
+                  standupCfg.color,
+                )}
+              >
+                <MessageSquare className="h-2.5 w-2.5" />
+                {standupCfg.label}
+                {expanded
+                  ? <ChevronDown className="h-2.5 w-2.5" />
+                  : <ChevronRight className="h-2.5 w-2.5" />}
+              </button>
+            ) : standupCfg ? (
+              <span className={cn(
+                'flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                standupCfg.bgColor,
+                standupCfg.color,
+              )}>
+                <MessageSquare className="h-2.5 w-2.5" />
+                {standupCfg.label}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {member.projects.length > 0 ? (
+              member.projects.map((p) => (
+                <span key={p.id} className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                  {p.key} <span className="text-gray-400 dark:text-gray-500">{p.role}</span>
+                </span>
+              ))
             ) : (
-              member.user.name.charAt(0).toUpperCase()
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">no projects</span>
             )}
           </div>
-          <span className={cn('absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-800', config.dot)} />
         </div>
-      </Tip>
 
-      {/* Name + Projects */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{member.user.name}</span>
-          <Tip text={config.tooltip}>
-            <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', {
-              'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': status === 'active',
-              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': status === 'light',
-              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': status === 'idle',
-              'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400': status === 'overloaded',
-            })}>
-              {config.label}
-            </span>
-          </Tip>
+        {/* Today Stats */}
+        <div className="flex items-center gap-3 text-xs">
+          <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600 dark:text-amber-400" icon="🎯" />
+          <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400 dark:text-blue-300" icon="📋" />
+          <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600 dark:text-blue-400" icon="🔄" />
+          <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600 dark:text-green-400" icon="✅" />
+          <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'} icon="⚠️" />
         </div>
-        <div className="mt-0.5 flex flex-wrap gap-1">
-          {member.projects.length > 0 ? (
-            member.projects.map((p) => (
-              <span key={p.id} className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                {p.key} <span className="text-gray-400 dark:text-gray-500">{p.role}</span>
-              </span>
-            ))
-          ) : (
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">no projects</span>
-          )}
-        </div>
+
+        {/* Completion bar */}
+        <Tip text={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
+          <div className="w-24 shrink-0">
+            <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+              <span>{overall.totalActive} active</span>
+              <span>{completionRate}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
+              <div
+                className="h-1.5 rounded-full bg-green-500 transition-all"
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
+          </div>
+        </Tip>
       </div>
 
-      {/* Today Stats */}
-      <div className="flex items-center gap-3 text-xs">
-        <Stat label="Focus" tooltip="오늘 포커스로 설정된 이슈 수" value={today.focusCount} color="text-amber-600 dark:text-amber-400" icon="🎯" />
-        <Stat label="Todo" tooltip="할 일(TODO) 상태인 이슈 수" value={today.todoCount} color="text-blue-400 dark:text-blue-300" icon="📋" />
-        <Stat label="Progress" tooltip="현재 진행 중(IN_PROGRESS)인 이슈 수" value={today.inProgressCount} color="text-blue-600 dark:text-blue-400" icon="🔄" />
-        <Stat label="Done" tooltip="오늘 완료(DONE)한 이슈 수" value={today.completedCount} color="text-green-600 dark:text-green-400" icon="✅" />
-        <Stat label="Overdue" tooltip="기한이 지난 미완료 이슈 수" value={today.overdueCount} color={today.overdueCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'} icon="⚠️" />
-      </div>
-
-      {/* Completion bar */}
-      <Tip text={`활성 이슈 ${overall.totalActive}개 / 전체 ${overall.totalHistorical}개 중 ${overall.doneHistorical}개 완료 (${completionRate}%)`}>
-        <div className="w-24 shrink-0">
-          <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
-            <span>{overall.totalActive} active</span>
-            <span>{completionRate}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
-            <div
-              className="h-1.5 rounded-full bg-green-500 transition-all"
-              style={{ width: `${completionRate}%` }}
-            />
+      {/* Expanded standup Q&A */}
+      {expanded && hasAnswers && standupReports && (
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3">
+          <div className="ml-14 space-y-3">
+            {standupReports.filter((r) => r.status === 'ANSWERED' && r.answers.length > 0).map((r) => (
+              <div key={r.configName}>
+                {standupReports.length > 1 && (
+                  <div className="mb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">{r.configName}</div>
+                )}
+                <div className="space-y-2">
+                  {r.answers.map((a, aIdx) => (
+                    <div key={aIdx} className="text-xs">
+                      <div className="font-medium text-gray-500 dark:text-gray-400">{a.question}</div>
+                      <div className="mt-0.5 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{a.answer}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </Tip>
+      )}
     </div>
   )
 }
@@ -253,131 +335,5 @@ function Stat({ label, tooltip, value, color, icon }: { label: string; tooltip: 
         <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-none mt-0.5">{label}</span>
       </div>
     </Tip>
-  )
-}
-
-const STANDUP_STATUS_CONFIG: Record<string, { label: string; color: string; order: number }> = {
-  ANSWERED: { label: 'Answered', color: 'text-green-600', order: 0 },
-  ACTIVE: { label: 'In Progress', color: 'text-yellow-600', order: 1 },
-  UNANSWERED: { label: 'No Response', color: 'text-red-500', order: 2 },
-  AWAY: { label: 'Away', color: 'text-gray-400', order: 3 },
-  CANCELED: { label: 'Canceled', color: 'text-gray-400', order: 4 },
-}
-
-function StandupSection({ standup }: { standup: TeamStandup }) {
-  const [open, setOpen] = useState(true)
-  const [expandedUser, setExpandedUser] = useState<string | null>(null)
-
-  // Group reports by slackUsername
-  const grouped = useMemo(() => {
-    const map = new Map<string, typeof standup.reports>()
-    for (const r of standup.reports) {
-      const key = r.slackUsername
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(r)
-    }
-    // Sort users: best status first (ANSWERED < ACTIVE < UNANSWERED < AWAY < CANCELED)
-    return [...map.entries()].sort((a, b) => {
-      const bestA = Math.min(...a[1].map((r) => STANDUP_STATUS_CONFIG[r.status]?.order ?? 9))
-      const bestB = Math.min(...b[1].map((r) => STANDUP_STATUS_CONFIG[r.status]?.order ?? 9))
-      return bestA - bestB
-    })
-  }, [standup])
-
-  return (
-    <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
-      >
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-primary-600" />
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Today's Standup</span>
-          <span className="rounded-full bg-primary-100 dark:bg-primary-900 px-2 py-0.5 text-[11px] font-medium text-primary-700 dark:text-primary-300">
-            {standup.answered}/{standup.total}
-          </span>
-        </div>
-        {open ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-      </button>
-
-      {open && (
-        <div className="border-t border-gray-100 dark:border-gray-700">
-          {grouped.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-gray-400">No standup reports today</p>
-          ) : (
-            <div className="divide-y divide-gray-50 dark:divide-gray-700">
-              {grouped.map(([username, reports]) => {
-                const isExpanded = expandedUser === username
-                const bestStatus = reports.reduce((best, r) => {
-                  const order = STANDUP_STATUS_CONFIG[r.status]?.order ?? 9
-                  return order < (STANDUP_STATUS_CONFIG[best]?.order ?? 9) ? r.status : best
-                }, reports[0].status)
-                const bestCfg = STANDUP_STATUS_CONFIG[bestStatus] ?? STANDUP_STATUS_CONFIG.UNANSWERED
-                const hasAnyAnswers = reports.some((r) => r.status === 'ANSWERED' && r.answers.length > 0)
-                const sysUser = reports[0].systemUser
-                const displayName = sysUser?.name ?? username
-
-                return (
-                  <div key={username} className="px-4 py-2.5">
-                    <button
-                      onClick={() => hasAnyAnswers && setExpandedUser(isExpanded ? null : username)}
-                      className={cn('flex w-full items-center gap-3 text-left', hasAnyAnswers && 'cursor-pointer')}
-                    >
-                      {hasAnyAnswers && (
-                        isExpanded
-                          ? <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
-                          : <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
-                      )}
-                      {!hasAnyAnswers && <span className="w-3 shrink-0" />}
-                      {sysUser?.avatar ? (
-                        <img src={sysUser.avatar} alt={displayName} className="h-5 w-5 shrink-0 rounded-full object-cover" />
-                      ) : (
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[10px] font-medium text-primary-700 dark:text-primary-300">
-                          {displayName.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
-                      <span className={cn('text-[11px] font-medium', bestCfg.color)}>{bestCfg.label}</span>
-                      <div className="flex items-center gap-1">
-                        {reports.map((r) => (
-                          <span key={r.configName} className="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">
-                            {r.configName}
-                          </span>
-                        ))}
-                      </div>
-                      {reports.some((r) => r.status === 'ANSWERED' && r.completedAt) && (
-                        <span className="ml-auto text-[10px] text-gray-400">
-                          {new Date(reports.find((r) => r.status === 'ANSWERED' && r.completedAt)!.completedAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </button>
-
-                    {isExpanded && hasAnyAnswers && (
-                      <div className="ml-6 mt-2 space-y-3">
-                        {reports.filter((r) => r.status === 'ANSWERED' && r.answers.length > 0).map((r) => (
-                          <div key={r.configName}>
-                            {reports.length > 1 && (
-                              <div className="mb-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">{r.configName}</div>
-                            )}
-                            <div className="space-y-2">
-                              {r.answers.map((a, aIdx) => (
-                                <div key={aIdx} className="text-xs">
-                                  <div className="font-medium text-gray-500 dark:text-gray-400">{a.question}</div>
-                                  <div className="mt-0.5 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{a.answer}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   )
 }

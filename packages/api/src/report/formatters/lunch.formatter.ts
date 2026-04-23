@@ -1,4 +1,8 @@
-import type { Activity, Issue, User } from '../../../generated/prisma/client.js';
+import type {
+  Activity,
+  Issue,
+  User,
+} from '../../../generated/prisma/client.js';
 import { pushMrkdwnBlocks } from './utils.js';
 
 type ActivityWithRelations = Activity & {
@@ -67,7 +71,11 @@ export function formatLunchReport(
     }
   }
 
-  pushMrkdwnBlocks(blocks, `:arrows_counterclockwise: *Changes Today (${relevant.length})*`, lines);
+  pushMrkdwnBlocks(
+    blocks,
+    `:arrows_counterclockwise: *Changes Today (${relevant.length})*`,
+    lines,
+  );
 
   // Summary line
   blocks.push({ type: 'divider' });
