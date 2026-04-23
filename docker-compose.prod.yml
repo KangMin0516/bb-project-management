@@ -67,6 +67,7 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}
       - FRONTEND_URL=${FRONTEND_URL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
