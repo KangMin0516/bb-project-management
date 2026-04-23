@@ -760,34 +760,55 @@ export class StandupService {
         assigneeId: userId,
         status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
       },
-      include: { project: { select: { key: true } } },
+      include: { project: { select: { key: true, name: true } } },
       orderBy: [
-        { focusDate: { sort: 'desc', nulls: 'last' } },
+        { project: { name: 'asc' } },
         { status: 'asc' },
+        { focusDate: { sort: 'desc', nulls: 'last' } },
       ],
-      take: 15,
     });
 
     if (activeIssues.length === 0) return;
 
-    const lines = activeIssues.map((issue) => {
-      const isFocus =
-        issue.focusDate &&
-        issue.focusDate >= todayStart &&
-        issue.focusDate <= todayEnd;
-      const prefix = isFocus ? '🎯' : '    ';
-      const key = `${issue.project.key}-${issue.number}`;
-      const title =
-        issue.title.length > 50 ? issue.title.slice(0, 50) + '…' : issue.title;
-      return `${prefix} \`${key}\`  ${title}  _${issue.status}_`;
-    });
+    // Group by project → status
+    const grouped = new Map<
+      string,
+      Map<string, typeof activeIssues>
+    >();
+    for (const issue of activeIssues) {
+      const projName = issue.project.name;
+      if (!grouped.has(projName)) grouped.set(projName, new Map());
+      const statusMap = grouped.get(projName)!;
+      if (!statusMap.has(issue.status)) statusMap.set(issue.status, []);
+      statusMap.get(issue.status)!.push(issue);
+    }
 
-    const parts = [
-      `📋 *Your Active Issues (${activeIssues.length})*`,
-      ...lines,
-    ];
-    if (activeIssues.length >= 15) parts.push('_...and more_');
-    parts.push("🎯 = Today's Focus");
+    const statusOrder = ['IN_PROGRESS', 'TODO', 'BACKLOG'];
+    const parts = [`📋 *Your Active Issues (${activeIssues.length})*`];
+
+    for (const [projName, statusMap] of grouped) {
+      parts.push(`\n*${projName}*`);
+      const sortedStatuses = [...statusMap.keys()].sort(
+        (a, b) => (statusOrder.indexOf(a) === -1 ? 99 : statusOrder.indexOf(a))
+               - (statusOrder.indexOf(b) === -1 ? 99 : statusOrder.indexOf(b)),
+      );
+      for (const status of sortedStatuses) {
+        parts.push(`  _${status}_`);
+        for (const issue of statusMap.get(status)!) {
+          const isFocus =
+            issue.focusDate &&
+            issue.focusDate >= todayStart &&
+            issue.focusDate <= todayEnd;
+          const prefix = isFocus ? '🎯' : '      ';
+          const key = `${issue.project.key}-${issue.number}`;
+          const title =
+            issue.title.length > 50 ? issue.title.slice(0, 50) + '…' : issue.title;
+          parts.push(`${prefix} \`${key}\`  ${title}`);
+        }
+      }
+    }
+
+    parts.push("\n🎯 = Today's Focus");
     const text = parts.join('\n');
 
     await client.chat.postMessage({
