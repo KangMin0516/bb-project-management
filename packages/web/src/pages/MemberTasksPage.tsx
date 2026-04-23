@@ -19,20 +19,10 @@ export default function MemberTasksPage() {
     enabled: !!userId && !!currentUser?.isSuperuser,
   })
 
-  if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
-
-  if (isLoading || !data) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
-      </div>
-    )
-  }
-
-  const { user, issues } = data
-
-  // Group issues by project
+  const issues = data?.issues
+  // Group issues by project — must be called before early returns (Rules of Hooks)
   const grouped = useMemo(() => {
+    if (!issues) return []
     const map = new Map<string, { project: { id: string; name: string; key: string }; issues: typeof issues }>()
     for (const issue of issues) {
       const proj = issue.project
@@ -43,6 +33,18 @@ export default function MemberTasksPage() {
     }
     return [...map.values()].sort((a, b) => b.issues.length - a.issues.length)
   }, [issues])
+
+  if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+      </div>
+    )
+  }
+
+  const { user } = data
 
   return (
     <div className="p-6">
