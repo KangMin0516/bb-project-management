@@ -689,7 +689,7 @@ export default function IssueDetailPanel({
             </div>
 
             {/* Sub-tasks */}
-            <div>
+            {issue.type !== 'SUB_TASK' && <div>
               <span className="block text-xs font-medium text-gray-500 mb-1">
                 Sub-tasks {detail && detail.children.length > 0 ? `(${detail.children.length})` : ''}
               </span>
@@ -759,7 +759,7 @@ export default function IssueDetailPanel({
                   + Add sub-task
                 </button>
               )}
-            </div>
+            </div>}
 
             {/* Links (merged from Links tab) */}
             {detail && (
