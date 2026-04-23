@@ -2,6 +2,10 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { WebClient } from '@slack/web-api';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SlackService } from '../slack/slack.service.js';
+import {
+  QuickIssueService,
+  type ParsedIssue,
+} from '../quick-issue/quick-issue.service.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
 import { CreateConfigDto } from './dto/create-config.dto.js';
@@ -16,6 +20,7 @@ export class StandupService {
   constructor(
     private prisma: PrismaService,
     private slackService: SlackService,
+    private quickIssueService: QuickIssueService,
   ) {}
 
   // ─── Question CRUD ────────────────────────────────────────
@@ -216,7 +221,9 @@ export class StandupService {
       data: { status: 'UNANSWERED', updatedAt: new Date() },
     });
     if (expiredCount > 0) {
-      this.logger.log(`Auto-expired ${expiredCount} stale ACTIVE report(s) for ${config.name}`);
+      this.logger.log(
+        `Auto-expired ${expiredCount} stale ACTIVE report(s) for ${config.name}`,
+      );
     }
 
     // Batch-check for existing active reports to avoid N+1 queries
@@ -678,6 +685,214 @@ export class StandupService {
     }
   }
 
+  // ─── Quick Issue from Slack DM ─────────────────────────────
+
+  async handleQuickIssue(slackUserId: string, channel: string, text: string) {
+    const integration = await this.prisma.slackIntegration.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!integration) return;
+
+    const client = this.getClient(integration.botToken);
+
+    // Map Slack user to system user
+    const userId = await this.mapSlackUserToSystemUser(slackUserId, client);
+    if (!userId) {
+      await client.chat.postMessage({
+        channel,
+        text: '❌ Your Slack account is not linked to a system account. Please ensure your Slack email matches your system email.',
+      });
+      return;
+    }
+
+    try {
+      const result = await this.quickIssueService.parse(text, userId);
+
+      if (result.needsProjectSelection && result.projectCandidates) {
+        // Show project selection
+        const options = result.projectCandidates.map((p) => ({
+          text: { type: 'plain_text' as const, text: `${p.name} (${p.key})` },
+          value: JSON.stringify({ projectId: p.id, text }),
+        }));
+
+        await client.chat.postMessage({
+          channel,
+          text: '📋 프로젝트를 선택해주세요:',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '📋 *프로젝트를 선택해주세요:*',
+              },
+            },
+            {
+              type: 'actions',
+              elements: [
+                {
+                  type: 'static_select',
+                  action_id: 'qi_select_project',
+                  placeholder: {
+                    type: 'plain_text',
+                    text: 'Select a project...',
+                  },
+                  options,
+                },
+              ],
+            },
+          ],
+        });
+        return;
+      }
+
+      if (result.parsed) {
+        await this.sendQuickIssuePreview(client, channel, result.parsed);
+      }
+    } catch (err) {
+      this.logger.error(
+        'Quick issue creation failed',
+        err instanceof Error ? err.stack : String(err),
+      );
+      await client.chat.postMessage({
+        channel,
+        text: '❌ 이슈 생성 중 오류가 발생했습니다.',
+      });
+    }
+  }
+
+  async handleQuickIssueAction(
+    action: {
+      action_id: string;
+      selected_option?: { value: string };
+      value?: string;
+      block_id?: string;
+    },
+    slackUserId: string,
+  ) {
+    const integration = await this.prisma.slackIntegration.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!integration) return;
+
+    const client = this.getClient(integration.botToken);
+
+    const userId = await this.mapSlackUserToSystemUser(slackUserId, client);
+    if (!userId) return;
+
+    // Open DM channel
+    const dm = await client.conversations.open({ users: slackUserId });
+    const channel = dm.channel?.id;
+    if (!channel) return;
+
+    if (action.action_id === 'qi_select_project') {
+      // User selected a project from dropdown
+      const data = JSON.parse(action.selected_option?.value ?? '{}') as {
+        projectId: string;
+        text: string;
+      };
+
+      const result = await this.quickIssueService.parse(
+        data.text,
+        userId,
+        data.projectId,
+      );
+
+      if (result.parsed) {
+        await this.sendQuickIssuePreview(client, channel, result.parsed);
+      }
+    } else if (action.action_id === 'qi_confirm') {
+      // User confirmed issue creation
+      const data = JSON.parse(action.value ?? '{}') as Parameters<
+        typeof this.quickIssueService.create
+      >[0];
+
+      try {
+        const { issueKey } = await this.quickIssueService.create(data, userId);
+        await client.chat.postMessage({
+          channel,
+          text: `✅ 이슈가 생성되었습니다: *${issueKey}* — ${data.title}`,
+        });
+      } catch (err) {
+        this.logger.error(
+          'Quick issue confirm failed',
+          err instanceof Error ? err.message : String(err),
+        );
+        await client.chat.postMessage({
+          channel,
+          text: '❌ 이슈 생성에 실패했습니다.',
+        });
+      }
+    } else if (action.action_id === 'qi_cancel') {
+      await client.chat.postMessage({
+        channel,
+        text: '🚫 이슈 생성이 취소되었습니다.',
+      });
+    }
+  }
+
+  private async sendQuickIssuePreview(
+    client: WebClient,
+    channel: string,
+    parsed: ParsedIssue,
+  ) {
+    // Truncate description to stay within Slack's 2000-char value limit
+    const desc = parsed.description?.slice(0, 500) ?? '';
+    const confirmValue = JSON.stringify({
+      projectId: parsed.projectId,
+      title: parsed.title.slice(0, 500),
+      description: desc,
+      type: parsed.type,
+      priority: parsed.priority,
+      status: parsed.status,
+      assigneeId: parsed.assigneeId,
+    });
+
+    const fields = [
+      `*프로젝트:* ${parsed.projectName} (${parsed.projectKey})`,
+      `*제목:* ${parsed.title}`,
+      `*타입:* ${parsed.type} | *우선순위:* ${parsed.priority} | *상태:* ${parsed.status}`,
+    ];
+    if (parsed.description) {
+      fields.push(`*설명:* ${parsed.description}`);
+    }
+    if (parsed.assigneeName) {
+      fields.push(`*담당자:* ${parsed.assigneeName}`);
+    }
+
+    await client.chat.postMessage({
+      channel,
+      text: `📝 이슈 프리뷰`,
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `📝 *이슈 프리뷰*\n\n${fields.join('\n')}`,
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              action_id: 'qi_confirm',
+              text: { type: 'plain_text', text: '✅ 생성' },
+              style: 'primary',
+              value: confirmValue,
+            },
+            {
+              type: 'button',
+              action_id: 'qi_cancel',
+              text: { type: 'plain_text', text: '❌ 취소' },
+              style: 'danger',
+              value: 'cancel',
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   // ─── Helpers ──────────────────────────────────────────────
 
   private getClient(encryptedToken: string): WebClient {
@@ -771,10 +986,7 @@ export class StandupService {
     if (activeIssues.length === 0) return;
 
     // Group by project → status
-    const grouped = new Map<
-      string,
-      Map<string, typeof activeIssues>
-    >();
+    const grouped = new Map<string, Map<string, typeof activeIssues>>();
     for (const issue of activeIssues) {
       const projName = issue.project.name;
       if (!grouped.has(projName)) grouped.set(projName, new Map());
@@ -789,8 +1001,9 @@ export class StandupService {
     for (const [projName, statusMap] of grouped) {
       parts.push(`\n*${projName}*`);
       const sortedStatuses = [...statusMap.keys()].sort(
-        (a, b) => (statusOrder.indexOf(a) === -1 ? 99 : statusOrder.indexOf(a))
-               - (statusOrder.indexOf(b) === -1 ? 99 : statusOrder.indexOf(b)),
+        (a, b) =>
+          (statusOrder.indexOf(a) === -1 ? 99 : statusOrder.indexOf(a)) -
+          (statusOrder.indexOf(b) === -1 ? 99 : statusOrder.indexOf(b)),
       );
       for (const status of sortedStatuses) {
         parts.push(`  _${status}_`);
@@ -802,7 +1015,9 @@ export class StandupService {
           const prefix = isFocus ? '🎯' : '      ';
           const key = `${issue.project.key}-${issue.number}`;
           const title =
-            issue.title.length > 50 ? issue.title.slice(0, 50) + '…' : issue.title;
+            issue.title.length > 50
+              ? issue.title.slice(0, 50) + '…'
+              : issue.title;
           parts.push(`${prefix} \`${key}\`  ${title}`);
         }
       }

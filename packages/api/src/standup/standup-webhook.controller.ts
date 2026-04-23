@@ -7,6 +7,8 @@ import type { Request, Response } from 'express';
 import { Public } from '../common/decorators/index.js';
 import { StandupService } from './standup.service.js';
 
+const ISSUE_CMD = /^[/!](issue)\s+/i;
+
 interface SlackMessageEvent {
   type: string;
   subtype?: string;
@@ -27,6 +29,7 @@ interface SlackEventBody {
 
 interface SlackInteractionPayload {
   type: string;
+  user?: { id: string };
   actions?: {
     action_id: string;
     selected_option?: { value: string };
@@ -78,6 +81,17 @@ export class StandupWebhookController {
           !event.bot_id &&
           event.channel_type === 'im'
         ) {
+          // Check for /issue or !issue command
+          if (ISSUE_CMD.test(event.text)) {
+            const issueText = event.text.replace(ISSUE_CMD, '').trim();
+            await this.standupService.handleQuickIssue(
+              event.user,
+              event.channel,
+              issueText,
+            );
+            return;
+          }
+
           // Regular DM message (user reply)
           await this.standupService.processMessage({
             user: event.user,
@@ -130,7 +144,14 @@ export class StandupWebhookController {
 
       if (payload?.type === 'block_actions') {
         for (const action of payload.actions ?? []) {
-          await this.standupService.handleAction(action);
+          if (action.action_id?.startsWith('qi_') && payload.user?.id) {
+            await this.standupService.handleQuickIssueAction(
+              action,
+              payload.user.id,
+            );
+          } else {
+            await this.standupService.handleAction(action);
+          }
         }
       }
     } catch (err) {
