@@ -6,13 +6,16 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReportService } from './report.service.js';
+import { MgmtDigestService } from './mgmt-digest.service.js';
 import { UpdateReportConfigDto } from './dto/update-report-config.dto.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
+import { SuperuserGuard } from '../common/guards/superuser.guard.js';
 
 interface RequestWithMember {
   projectMember?: { role: string };
@@ -21,17 +24,21 @@ interface RequestWithMember {
 
 @ApiTags('Reports')
 @ApiBearerAuth()
-@Controller('projects/:projectId/report-config')
-@UseGuards(ProjectMemberGuard)
+@Controller()
 export class ReportController {
-  constructor(private reportService: ReportService) {}
+  constructor(
+    private reportService: ReportService,
+    private mgmtDigestService: MgmtDigestService,
+  ) {}
 
-  @Get()
+  @Get('projects/:projectId/report-config')
+  @UseGuards(ProjectMemberGuard)
   getConfig(@Param('projectId') projectId: string) {
     return this.reportService.getConfig(projectId);
   }
 
-  @Put()
+  @Put('projects/:projectId/report-config')
+  @UseGuards(ProjectMemberGuard)
   upsertConfig(
     @Param('projectId') projectId: string,
     @Body() dto: UpdateReportConfigDto,
@@ -41,7 +48,8 @@ export class ReportController {
     return this.reportService.upsertConfig(projectId, dto);
   }
 
-  @Post('test/:type')
+  @Post('projects/:projectId/report-config/test/:type')
+  @UseGuards(ProjectMemberGuard)
   async testSend(
     @Param('projectId') projectId: string,
     @Param('type') type: string,
@@ -56,6 +64,19 @@ export class ReportController {
       projectId,
       type as 'morning' | 'lunch' | 'evening',
     );
+    return { sent: true };
+  }
+
+  @Get('reports/digest/test')
+  @UseGuards(SuperuserGuard)
+  async testDigest(@Query('type') type: string) {
+    const validTypes = ['morning', 'evening'] as const;
+    if (!validTypes.includes(type as (typeof validTypes)[number])) {
+      throw new ForbiddenException(
+        'Invalid digest type. Use morning or evening.',
+      );
+    }
+    await this.mgmtDigestService.sendDigest(type as 'morning' | 'evening');
     return { sent: true };
   }
 

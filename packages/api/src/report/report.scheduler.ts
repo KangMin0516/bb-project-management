@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ReportService } from './report.service.js';
+import { MgmtDigestService } from './mgmt-digest.service.js';
 
 @Injectable()
 export class ReportScheduler {
@@ -10,6 +11,7 @@ export class ReportScheduler {
   constructor(
     private prisma: PrismaService,
     private reportService: ReportService,
+    private mgmtDigestService: MgmtDigestService,
   ) {}
 
   @Cron('0 * * * * *') // Every minute at :00
@@ -155,6 +157,32 @@ export class ReportScheduler {
           err instanceof Error ? err.stack : String(err),
         );
       }
+    }
+  }
+
+  // ─── Management Digest ────────────────────────────────────
+
+  @Cron('0 30 7 * * 1-5', { timeZone: 'Asia/Seoul' })
+  async sendMorningDigest() {
+    try {
+      await this.mgmtDigestService.sendDigest('morning');
+    } catch (err) {
+      this.logger.error(
+        'Failed to send morning management digest',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
+  @Cron('0 30 17 * * 1-5', { timeZone: 'Asia/Seoul' })
+  async sendEveningDigest() {
+    try {
+      await this.mgmtDigestService.sendDigest('evening');
+    } catch (err) {
+      this.logger.error(
+        'Failed to send evening management digest',
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 }

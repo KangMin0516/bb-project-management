@@ -68,6 +68,8 @@ services:
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}
       - FRONTEND_URL=${FRONTEND_URL:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - MGMT_DIGEST_ENABLED=${MGMT_DIGEST_ENABLED:-false}
+      - MGMT_DIGEST_CHANNEL_ID=${MGMT_DIGEST_CHANNEL_ID:-}
     depends_on:
       db:
         condition: service_healthy
