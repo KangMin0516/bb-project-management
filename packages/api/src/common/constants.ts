@@ -1,5 +1,5 @@
 // ── Limits ──────────────────────────────────────────
-export const ISSUE_MAX_PER_COLUMN = 50;
+export const ISSUE_MAX_PER_COLUMN = 200;
 export const AVATAR_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 export const ATTACHMENT_MAX_SIZE = 50 * 1024 * 1024; // 50 MB
 export const NOTIFICATION_LIMIT = 50;
