@@ -336,7 +336,11 @@ export class IssueService {
           where: {
             projectId,
             status,
-            ...(!includeArchived && { archivedAt: null }),
+            // SUB_TASKs render inline on parent cards, so include archived
+            // ones to keep parent child counts accurate.
+            ...(!includeArchived && {
+              OR: [{ archivedAt: null }, { type: IssueType.SUB_TASK }],
+            }),
           },
           include: issueInclude,
           orderBy: { order: 'asc' },
