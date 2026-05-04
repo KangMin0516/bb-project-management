@@ -23,7 +23,7 @@ const issueInclude = {
   creator: { select: USER_SELECT },
   labels: { include: { label: true } },
   components: { include: { component: true } },
-  parent: { select: { id: true, number: true, title: true } },
+  parent: { select: { id: true, number: true, title: true, type: true } },
   _count: { select: { children: true } },
 } as const;
 

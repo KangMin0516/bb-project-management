@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
-import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS } from '@/lib/constants'
+import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
@@ -500,11 +500,11 @@ export default function IssueDetailPanel({
 
             {d.type !== 'EPIC' && (
             <InlineField
-              label="Epic"
+              label={d.type === 'SUB_TASK' ? 'Parent' : 'Epic'}
               display={
                 d.parent
-                  ? <span className="text-gray-700">⚡ #{d.parent.number} {d.parent.title}</span>
-                  : <span className="text-gray-400 italic">No epic</span>
+                  ? <span className="text-gray-700">{TYPE_ICONS[d.parent.type] || '⚡'} #{d.parent.number} {d.parent.title}</span>
+                  : <span className="text-gray-400 italic">{d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}</span>
               }
             >
               <select
@@ -513,7 +513,7 @@ export default function IssueDetailPanel({
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                 autoFocus
               >
-                <option value="">No epic</option>
+                <option value="">{d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}</option>
                 {(epics || []).filter((ep) => ep.id !== issue.id).map((ep) => (
                   <option key={ep.id} value={ep.id}>⚡ #{ep.number} {ep.title}</option>
                 ))}

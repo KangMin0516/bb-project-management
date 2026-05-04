@@ -26,7 +26,7 @@ export interface Issue {
   creator: { id: string; email: string; name: string; avatar: string | null } | null
   labels: { label: { id: string; name: string; color: string } }[]
   components: { component: { id: string; name: string } }[]
-  parent: { id: string; number: number; title: string } | null
+  parent: { id: string; number: number; title: string; type: string } | null
   _count: { children: number }
 }
 
