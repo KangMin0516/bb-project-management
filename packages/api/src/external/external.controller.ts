@@ -83,4 +83,29 @@ export class ExternalController {
     const window = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 90) : 7;
     return this.externalService.getDigest(projectKey, window);
   }
+
+  @Get('projects/:projectKey/specs')
+  listSpecs(
+    @Param('projectKey') projectKey: string,
+    @Query('category') category?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.externalService.listSpecs(projectKey, category, status);
+  }
+
+  @Get('projects/:projectKey/specs/:specId')
+  getSpec(
+    @Param('projectKey') projectKey: string,
+    @Param('specId') specId: string,
+  ) {
+    return this.externalService.getSpec(projectKey, specId);
+  }
+
+  @Get('projects/:projectKey/specs/:specId/markdown')
+  getSpecMarkdown(
+    @Param('projectKey') projectKey: string,
+    @Param('specId') specId: string,
+  ) {
+    return this.externalService.getSpecMarkdown(projectKey, specId);
+  }
 }

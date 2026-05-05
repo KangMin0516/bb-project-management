@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { IssueService } from '../issue/issue.service.js';
+import { SpecificationService } from '../specification/specification.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
@@ -17,6 +18,7 @@ export class ExternalService {
   constructor(
     private prisma: PrismaService,
     private issueService: IssueService,
+    private specificationService: SpecificationService,
   ) {}
 
   async createIssue(dto: ExternalCreateIssueDto, creatorId: string) {
@@ -363,6 +365,36 @@ export class ExternalService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async listSpecs(projectKey: string, category?: string, status?: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.specificationService.findAll(project.id, { category, status });
+  }
+
+  async getSpec(projectKey: string, specId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.specificationService.findOne(project.id, specId);
+  }
+
+  async getSpecMarkdown(projectKey: string, specId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.specificationService.exportOne(project.id, specId);
   }
 }
 
