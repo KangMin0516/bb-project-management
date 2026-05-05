@@ -58,7 +58,11 @@ export interface IssueSpecLink {
   spec: { id: string; title: string; status: string; category: string | null }
 }
 
-export interface IssueDetail extends Issue {
+export interface IssueDetail extends Omit<Issue, 'parent'> {
+  parent: {
+    id: string; number: number; title: string; type: string
+    parent: { id: string; number: number; title: string; type: string } | null
+  } | null
   children: {
     id: string; number: number; title: string; status: string; priority: string
     assignee: { id: string; email: string; name: string; avatar: string | null } | null

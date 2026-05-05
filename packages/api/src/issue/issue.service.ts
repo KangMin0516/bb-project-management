@@ -360,6 +360,17 @@ export class IssueService {
       where: { id: issueId },
       include: {
         ...issueInclude,
+        parent: {
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            type: true,
+            parent: {
+              select: { id: true, number: true, title: true, type: true },
+            },
+          },
+        },
         children: {
           include: {
             assignee: { select: USER_SELECT },

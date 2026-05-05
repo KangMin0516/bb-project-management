@@ -306,21 +306,26 @@ export default function IssueDetailPanel({
             </div>
           </div>
           {detail?.parent && (
-            <p className="mt-1 text-xs text-gray-400">
-              <button
-                onClick={() => {
-                  const parent = detail.parent!
-                  issueApi.get(projectId, parent.id).then(
-                    (fullIssue) => onNavigate(fullIssue),
-                    (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
-                  )
-                }}
-                className="hover:text-primary-600 hover:underline"
-              >
-                #{detail.parent.number} {detail.parent.title}
-              </button>
-              <span className="mx-1">&gt;</span>
-              <span>#{d.number} {d.title}</span>
+            <p className="mt-1 text-xs text-gray-400 flex flex-wrap items-center gap-x-1">
+              {[detail.parent.parent, detail.parent].filter(Boolean).map((ancestor, idx, arr) => (
+                <span key={ancestor!.id} className="flex items-center gap-x-1">
+                  <button
+                    onClick={() => {
+                      issueApi.get(projectId, ancestor!.id).then(
+                        (fullIssue) => onNavigate(fullIssue),
+                        (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+                      )
+                    }}
+                    title={ancestor!.title}
+                    className="hover:text-primary-600 hover:underline"
+                  >
+                    {TYPE_ICONS[ancestor!.type] || ''} {projectKey}-{ancestor!.number}
+                  </button>
+                  {idx < arr.length - 1 && <span className="text-gray-300">/</span>}
+                </span>
+              ))}
+              <span className="text-gray-300">/</span>
+              <span title={d.title}>{TYPE_ICONS[d.type] || ''} {projectKey}-{d.number}</span>
             </p>
           )}
           {editingTitle ? (
