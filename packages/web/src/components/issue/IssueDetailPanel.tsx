@@ -306,9 +306,9 @@ export default function IssueDetailPanel({
             </div>
           </div>
           {detail?.parent && (
-            <p className="mt-1 text-xs text-gray-400 flex flex-wrap items-center gap-x-1">
+            <p className="mt-1 text-xs text-gray-400 flex items-center gap-x-1 min-w-0">
               {[detail.parent.parent, detail.parent].filter(Boolean).map((ancestor, idx, arr) => (
-                <span key={ancestor!.id} className="flex items-center gap-x-1">
+                <span key={ancestor!.id} className="flex items-center gap-x-1 min-w-0">
                   <button
                     onClick={() => {
                       issueApi.get(projectId, ancestor!.id).then(
@@ -317,15 +317,19 @@ export default function IssueDetailPanel({
                       )
                     }}
                     title={ancestor!.title}
-                    className="hover:text-primary-600 hover:underline"
+                    className="flex items-center gap-x-1 min-w-0 max-w-[200px] hover:text-primary-600 hover:underline"
                   >
-                    {TYPE_ICONS[ancestor!.type] || ''} {projectKey}-{ancestor!.number}
+                    <span className="shrink-0">{TYPE_ICONS[ancestor!.type] || ''} #{ancestor!.number}</span>
+                    <span className="truncate">{ancestor!.title}</span>
                   </button>
-                  {idx < arr.length - 1 && <span className="text-gray-300">/</span>}
+                  {idx < arr.length - 1 && <span className="text-gray-300 shrink-0">/</span>}
                 </span>
               ))}
-              <span className="text-gray-300">/</span>
-              <span title={d.title}>{TYPE_ICONS[d.type] || ''} {projectKey}-{d.number}</span>
+              <span className="text-gray-300 shrink-0">/</span>
+              <span title={d.title} className="flex items-center gap-x-1 min-w-0 max-w-[200px]">
+                <span className="shrink-0">{TYPE_ICONS[d.type] || ''} #{d.number}</span>
+                <span className="truncate">{d.title}</span>
+              </span>
             </p>
           )}
           {editingTitle ? (
