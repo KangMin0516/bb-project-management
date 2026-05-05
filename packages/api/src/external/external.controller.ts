@@ -73,4 +73,14 @@ export class ExternalController {
       limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
     );
   }
+
+  @Get('projects/:projectKey/digest')
+  getDigest(
+    @Param('projectKey') projectKey: string,
+    @Query('days') days?: string,
+  ) {
+    const parsed = days ? parseInt(days, 10) : 7;
+    const window = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 90) : 7;
+    return this.externalService.getDigest(projectKey, window);
+  }
 }
