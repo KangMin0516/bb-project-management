@@ -265,10 +265,7 @@ export default function IssueDetailPanel({
       >
         {/* Header */}
         <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-sm text-gray-400">
-              {issue.number ? `#${issue.number}` : ''}
-            </span>
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => copyIssueLink(projectKey, d.number, context)}
@@ -363,6 +360,7 @@ export default function IssueDetailPanel({
                 setEditingTitle(true)
               }}
             >
+              <span className="font-mono text-base text-gray-400 mr-2 align-middle">#{d.number}</span>
               {d.title}
             </h2>
           )}
