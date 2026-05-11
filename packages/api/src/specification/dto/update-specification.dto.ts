@@ -4,6 +4,8 @@ import {
   MaxLength,
   IsOptional,
   IsEnum,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { SpecStatus } from '../../../generated/prisma/enums.js';
@@ -31,4 +33,13 @@ export class UpdateSpecificationDto {
   @IsOptional()
   @IsEnum(SpecStatus)
   status?: SpecStatus;
+
+  @ApiPropertyOptional({
+    description: 'Absolute display order within the project. Lower comes first.',
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
 }

@@ -2,6 +2,8 @@ import {
   IsString,
   IsOptional,
   IsEnum,
+  IsInt,
+  Min,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -31,4 +33,10 @@ export class ExternalUpdateSpecDto {
   @IsOptional()
   @IsEnum(SpecStatus)
   status?: SpecStatus;
+
+  @ApiPropertyOptional({ description: 'Absolute display order (>=0)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
 }

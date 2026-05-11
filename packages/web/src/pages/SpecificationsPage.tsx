@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { specApi, type SpecStatus } from '@/api/specifications'
+import { specApi, type SpecStatus, type SpecListItem } from '@/api/specifications'
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { projectApi } from '@/api/projects'
 import SpecContent, { type SpecContentHandle } from '@/components/spec/SpecContent'
 import SpecCommentPanel from '@/components/spec/SpecCommentPanel'
@@ -83,6 +84,56 @@ export default function SpecificationsPage() {
     },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete specification')),
   })
+
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!projectId) return
+    const { source, destination } = result
+    if (!destination) return
+    if (source.droppableId !== destination.droppableId) return
+    if (source.index === destination.index) return
+
+    const category = source.droppableId
+    const current = specs ?? []
+    const sameCat = current.filter((s) => (s.category || 'Uncategorized') === category)
+    const reordered = [...sameCat]
+    const [moved] = reordered.splice(source.index, 1)
+    reordered.splice(destination.index, 0, moved)
+
+    // Optimistic cache update — reinsert reordered items at the first matching slot
+    queryClient.setQueryData<SpecListItem[]>(['specifications', projectId], (old) => {
+      if (!old) return old
+      const newByOrder = reordered.map((s, i) => ({ ...s, order: i }))
+      const newIds = new Set(newByOrder.map((s) => s.id))
+      const result: SpecListItem[] = []
+      let inserted = false
+      for (const s of old) {
+        const cat = s.category || 'Uncategorized'
+        if (cat === category) {
+          if (!inserted) {
+            result.push(...newByOrder)
+            inserted = true
+          }
+          continue
+        }
+        if (!newIds.has(s.id)) result.push(s)
+      }
+      if (!inserted) result.push(...newByOrder)
+      return result
+    })
+
+    // Persist new order (PATCH only items whose order changed)
+    Promise.all(
+      reordered.map((spec, idx) =>
+        spec.order === idx ? null : specApi.update(projectId, spec.id, { order: idx }),
+      ),
+    )
+      .catch((err: unknown) => {
+        useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder'))
+      })
+      .finally(() => {
+        queryClient.invalidateQueries({ queryKey: ['specifications', projectId] })
+      })
+  }, [projectId, specs, queryClient])
 
   // Scroll to section after detail loads (from URL params or navigation)
   useEffect(() => {
@@ -197,46 +248,71 @@ export default function SpecificationsPage() {
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
               </div>
             ) : (
-              [...grouped.entries()].map(([category, items]) => {
-                const isCollapsed = collapsedCategories.has(category)
-                return (
-                  <div key={category} className="mb-1">
-                    <button
-                      onClick={() => setCollapsedCategories((prev) => {
-                        const next = new Set(prev)
-                        if (next.has(category)) next.delete(category)
-                        else next.add(category)
-                        return next
-                      })}
-                      className="flex w-full items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-600 dark:text-gray-500"
-                    >
-                      <ChevronRight className={cn('h-3 w-3 transition-transform', !isCollapsed && 'rotate-90')} />
-                      <span className="flex-1 text-left">{category}</span>
-                      <span className="text-[9px] font-normal normal-case tracking-normal">{items!.length}</span>
-                    </button>
-                    {!isCollapsed && items!.map((spec) => (
+              <DragDropContext onDragEnd={handleDragEnd}>
+                {[...grouped.entries()].map(([category, items]) => {
+                  const isCollapsed = collapsedCategories.has(category)
+                  return (
+                    <div key={category} className="mb-1">
                       <button
-                        key={spec.id}
-                        onClick={() => { setSelectedId(spec.id); setFilterSection(null); setEditingContent(false) }}
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition',
-                          selectedId === spec.id
-                            ? 'bg-primary-50 text-primary-700'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900',
-                        )}
+                        onClick={() => setCollapsedCategories((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(category)) next.delete(category)
+                          else next.add(category)
+                          return next
+                        })}
+                        className="flex w-full items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-600 dark:text-gray-500"
                       >
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
-                        <span className="flex-1 truncate">{spec.title}</span>
-                        {spec._count.comments > 0 && (
-                          <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[9px] font-medium text-amber-600">
-                            {spec._count.comments}
-                          </span>
-                        )}
+                        <ChevronRight className={cn('h-3 w-3 transition-transform', !isCollapsed && 'rotate-90')} />
+                        <span className="flex-1 text-left">{category}</span>
+                        <span className="text-[9px] font-normal normal-case tracking-normal">{items!.length}</span>
                       </button>
-                    ))}
-                  </div>
-                )
-              })
+                      {!isCollapsed && (
+                        <Droppable droppableId={category}>
+                          {(dropProvided, dropSnapshot) => (
+                            <div
+                              ref={dropProvided.innerRef}
+                              {...dropProvided.droppableProps}
+                              className={cn(
+                                'rounded transition-colors',
+                                dropSnapshot.isDraggingOver && 'bg-primary-50/40 dark:bg-primary-900/20',
+                              )}
+                            >
+                              {items!.map((spec, idx) => (
+                                <Draggable key={spec.id} draggableId={spec.id} index={idx}>
+                                  {(dragProvided, dragSnapshot) => (
+                                    <div
+                                      ref={dragProvided.innerRef}
+                                      {...dragProvided.draggableProps}
+                                      {...dragProvided.dragHandleProps}
+                                      onClick={() => { setSelectedId(spec.id); setFilterSection(null); setEditingContent(false) }}
+                                      className={cn(
+                                        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition cursor-pointer',
+                                        selectedId === spec.id
+                                          ? 'bg-primary-50 text-primary-700'
+                                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900',
+                                        dragSnapshot.isDragging && 'shadow-lg ring-1 ring-primary-300 bg-white dark:bg-gray-800',
+                                      )}
+                                    >
+                                      <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                                      <span className="flex-1 truncate">{spec.title}</span>
+                                      {spec._count.comments > 0 && (
+                                        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[9px] font-medium text-amber-600">
+                                          {spec._count.comments}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {dropProvided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      )}
+                    </div>
+                  )
+                })}
+              </DragDropContext>
             )}
             {!isLoading && (!specs || specs.length === 0) && (
               <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No specifications yet</p>

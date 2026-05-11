@@ -67,7 +67,11 @@ export const specApi = {
   create: (projectId: string, data: { title: string; content: string; category?: string; status?: SpecStatus }) =>
     api.post<{ data: SpecDetail }>(`/projects/${projectId}/specifications`, data).then((r) => r.data.data),
 
-  update: (projectId: string, specId: string, data: { title?: string; content?: string; category?: string; status?: SpecStatus }) =>
+  update: (
+    projectId: string,
+    specId: string,
+    data: { title?: string; content?: string; category?: string; status?: SpecStatus; order?: number },
+  ) =>
     api.patch<{ data: SpecDetail }>(`/projects/${projectId}/specifications/${specId}`, data).then((r) => r.data.data),
 
   delete: (projectId: string, specId: string) =>

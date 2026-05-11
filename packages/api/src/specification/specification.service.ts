@@ -209,6 +209,7 @@ export class SpecificationService {
           ...(dto.content !== undefined && { content: dto.content }),
           ...(dto.category !== undefined && { category: dto.category }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.order !== undefined && { order: dto.order }),
         },
         include: { creator: { select: USER_SELECT } },
       });
