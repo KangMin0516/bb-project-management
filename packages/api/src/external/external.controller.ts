@@ -13,6 +13,8 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { ExternalService } from './external.service.js';
 import { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
+import { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
+import { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import {
   Public,
@@ -107,5 +109,23 @@ export class ExternalController {
     @Param('specId') specId: string,
   ) {
     return this.externalService.getSpecMarkdown(projectKey, specId);
+  }
+
+  @Post('projects/:projectKey/specs')
+  createSpec(
+    @Param('projectKey') projectKey: string,
+    @Body() dto: ExternalCreateSpecDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.externalService.createSpec(projectKey, dto, user.sub);
+  }
+
+  @Patch('projects/:projectKey/specs/:specId')
+  updateSpec(
+    @Param('projectKey') projectKey: string,
+    @Param('specId') specId: string,
+    @Body() dto: ExternalUpdateSpecDto,
+  ) {
+    return this.externalService.updateSpec(projectKey, specId, dto);
   }
 }

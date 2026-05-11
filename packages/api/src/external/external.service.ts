@@ -8,7 +8,9 @@ import { IssueService } from '../issue/issue.service.js';
 import { SpecificationService } from '../specification/specification.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
-import type { IssueStatus } from '../../generated/prisma/enums.js';
+import type { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
+import type { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
+import { SpecStatus, type IssueStatus } from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
 
 const TERMINAL_STATUSES = new Set<string>(['DONE', 'CANCELED']);
@@ -395,6 +397,41 @@ export class ExternalService {
     if (!project)
       throw new NotFoundException(`Project "${projectKey}" not found`);
     return this.specificationService.exportOne(project.id, specId);
+  }
+
+  async createSpec(
+    projectKey: string,
+    dto: ExternalCreateSpecDto,
+    creatorId: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    return this.specificationService.create(project.id, creatorId, {
+      title: dto.title,
+      content: dto.content,
+      category: dto.category,
+      status: dto.status ?? SpecStatus.DRAFT,
+    });
+  }
+
+  async updateSpec(
+    projectKey: string,
+    specId: string,
+    dto: ExternalUpdateSpecDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    return this.specificationService.update(project.id, specId, dto);
   }
 }
 
