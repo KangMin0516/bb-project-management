@@ -73,6 +73,8 @@ export default function TimelinePage() {
   const filteredIssues = useMemo(() => {
     const searchLower = search.toLowerCase()
     return allIssues.filter((issue) => {
+      // Hide CANCELED unless user explicitly opts in via the Status filter
+      if (issue.status === 'CANCELED' && !filterStatus.has('CANCELED')) return false
       if (filterStatus.size > 0 && !filterStatus.has(issue.status)) return false
       if (filterPriority.size > 0 && !filterPriority.has(issue.priority)) return false
       if (filterType.size > 0 && !filterType.has(issue.type)) return false

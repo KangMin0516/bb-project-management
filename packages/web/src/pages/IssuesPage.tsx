@@ -186,6 +186,10 @@ export default function IssuesPage() {
         issue.components?.some((ic) => filters.components.has(ic.component.id))
       )
     }
+    // Hide CANCELED unless user explicitly opts in via the Status filter
+    if (!filters.status.has('CANCELED')) {
+      items = items.filter((issue) => issue.status !== 'CANCELED')
+    }
     // Multi-select status/priority/type (server only handles single values)
     if (filters.status.size > 1) {
       items = items.filter((issue) => filters.status.has(issue.status))

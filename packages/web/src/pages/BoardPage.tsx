@@ -46,6 +46,8 @@ function matchesFilters(
     (components.size === 0 || issue.components?.some((ic) => components.has(ic.component.id))) &&
     (!epicId || issue.id === epicId || issue.parentId === epicId) &&
     (!search || issue.title.toLowerCase().includes(searchLower) || String(issue.number).includes(search)) &&
+    // Hide CANCELED unless user explicitly opts in via the Status filter
+    (issue.status !== 'CANCELED' || status.has('CANCELED')) &&
     (status.size === 0 || status.has(issue.status)) &&
     (priority.size === 0 || priority.has(issue.priority)) &&
     (type.size === 0 || type.has(issue.type))
