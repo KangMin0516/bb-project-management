@@ -6,10 +6,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { IssueService } from '../issue/issue.service.js';
 import { SpecificationService } from '../specification/specification.service.js';
+import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import type { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import type { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
+import type { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
 import { SpecStatus, type IssueStatus } from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
 
@@ -21,7 +23,31 @@ export class ExternalService {
     private prisma: PrismaService,
     private issueService: IssueService,
     private specificationService: SpecificationService,
+    private issueSpecLinkService: IssueSpecLinkService,
   ) {}
+
+  private async resolveProjectAndIssue(
+    projectKey: string,
+    issueNumber: number,
+  ): Promise<{ projectId: string; issueId: string }> {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    const issue = await this.prisma.issue.findUnique({
+      where: {
+        projectId_number: { projectId: project.id, number: issueNumber },
+      },
+      select: { id: true },
+    });
+    if (!issue)
+      throw new NotFoundException(
+        `Issue ${projectKey}-${issueNumber} not found`,
+      );
+    return { projectId: project.id, issueId: issue.id };
+  }
 
   async createIssue(dto: ExternalCreateIssueDto, creatorId: string) {
     const project = await this.prisma.project.findUnique({
@@ -432,6 +458,38 @@ export class ExternalService {
       throw new NotFoundException(`Project "${projectKey}" not found`);
 
     return this.specificationService.update(project.id, specId, dto);
+  }
+
+  async createIssueSpecLink(
+    projectKey: string,
+    issueNumber: number,
+    dto: ExternalCreateIssueSpecLinkDto,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    return this.issueSpecLinkService.create(projectId, issueId, dto);
+  }
+
+  async listIssueSpecLinks(projectKey: string, issueNumber: number) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    return this.issueSpecLinkService.findByIssue(projectId, issueId);
+  }
+
+  async deleteIssueSpecLink(
+    projectKey: string,
+    issueNumber: number,
+    linkId: string,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    return this.issueSpecLinkService.remove(projectId, issueId, linkId);
   }
 }
 

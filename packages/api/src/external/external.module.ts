@@ -4,9 +4,10 @@ import { ExternalService } from './external.service.js';
 import { ApiKeyModule } from '../api-key/api-key.module.js';
 import { IssueModule } from '../issue/issue.module.js';
 import { SpecificationModule } from '../specification/specification.module.js';
+import { IssueSpecLinkModule } from '../issue-spec-link/issue-spec-link.module.js';
 
 @Module({
-  imports: [ApiKeyModule, IssueModule, SpecificationModule],
+  imports: [ApiKeyModule, IssueModule, SpecificationModule, IssueSpecLinkModule],
   controllers: [ExternalController],
   providers: [ExternalService],
 })

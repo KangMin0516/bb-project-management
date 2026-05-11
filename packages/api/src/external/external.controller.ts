@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -15,6 +16,7 @@ import { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
+import { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import {
   Public,
@@ -127,5 +129,39 @@ export class ExternalController {
     @Body() dto: ExternalUpdateSpecDto,
   ) {
     return this.externalService.updateSpec(projectKey, specId, dto);
+  }
+
+  @Post('issues/:projectKey/:issueNumber/spec-links')
+  createIssueSpecLink(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() dto: ExternalCreateIssueSpecLinkDto,
+  ) {
+    return this.externalService.createIssueSpecLink(
+      projectKey,
+      issueNumber,
+      dto,
+    );
+  }
+
+  @Get('issues/:projectKey/:issueNumber/spec-links')
+  listIssueSpecLinks(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+  ) {
+    return this.externalService.listIssueSpecLinks(projectKey, issueNumber);
+  }
+
+  @Delete('issues/:projectKey/:issueNumber/spec-links/:linkId')
+  deleteIssueSpecLink(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Param('linkId') linkId: string,
+  ) {
+    return this.externalService.deleteIssueSpecLink(
+      projectKey,
+      issueNumber,
+      linkId,
+    );
   }
 }
