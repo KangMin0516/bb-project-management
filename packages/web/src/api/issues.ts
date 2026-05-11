@@ -11,6 +11,7 @@ export interface Issue {
   type: string
   order: number
   isRecheck: boolean
+  startDate: string | null
   dueDate: string | null
   focusDate: string | null
   archivedAt: string | null
@@ -120,6 +121,7 @@ export interface CreateIssuePayload {
   assigneeId?: string
   reviewerAssigneeId?: string
   parentId?: string
+  startDate?: string
   dueDate?: string
   labelIds?: string[]
   componentIds?: string[]
@@ -134,6 +136,7 @@ export interface UpdateIssuePayload {
   assigneeId?: string | null
   reviewerAssigneeId?: string | null
   parentId?: string | null
+  startDate?: string | null
   dueDate?: string | null
   focusDate?: string | null
   order?: number

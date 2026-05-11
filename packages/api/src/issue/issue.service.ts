@@ -43,6 +43,7 @@ export class IssueService {
     'assigneeId',
     'reviewerAssigneeId',
     'parentId',
+    'startDate',
     'dueDate',
     'focusDate',
   ] as const;
@@ -460,6 +461,11 @@ export class IssueService {
     const { labelIds, componentIds, ...data } = dto;
 
     // Convert date strings to Date objects for Prisma
+    if (data.startDate !== undefined) {
+      (data as Record<string, unknown>).startDate = data.startDate
+        ? new Date(data.startDate)
+        : null;
+    }
     if (data.dueDate !== undefined) {
       (data as Record<string, unknown>).dueDate = data.dueDate
         ? new Date(data.dueDate)

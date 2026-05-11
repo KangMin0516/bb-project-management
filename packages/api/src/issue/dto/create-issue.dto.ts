@@ -54,6 +54,11 @@ export class CreateIssueDto {
   @IsUUID()
   parentId?: string;
 
+  @ApiPropertyOptional({ description: 'Start date (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
   @ApiPropertyOptional({ description: 'Due date (ISO 8601)' })
   @IsOptional()
   @IsDateString()

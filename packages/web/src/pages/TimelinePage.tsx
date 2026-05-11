@@ -89,8 +89,8 @@ export default function TimelinePage() {
     let latest = new Date(now.getTime() + 30 * DAY_MS)
 
     filteredIssues.forEach((issue) => {
-      const created = startOfDay(new Date(issue.createdAt))
-      if (created < earliest) earliest = created
+      const begin = startOfDay(new Date(issue.startDate ?? issue.createdAt))
+      if (begin < earliest) earliest = begin
       if (issue.dueDate) {
         const due = startOfDay(new Date(issue.dueDate))
         if (due > latest) latest = due
@@ -249,16 +249,22 @@ export default function TimelinePage() {
       const range = endDate.getTime() - startDate.getTime()
       if (range === 0) return { left: '0%', width: '2px' }
 
-      const created = startOfDay(new Date(issue.createdAt))
-      const leftPct = ((created.getTime() - startDate.getTime()) / range) * 100
+      // Bar start = planned startDate if set, else falls back to createdAt
+      const begin = startOfDay(new Date(issue.startDate ?? issue.createdAt))
+      const leftPct = ((begin.getTime() - startDate.getTime()) / range) * 100
 
-      if (!issue.dueDate) {
-        // Dot (no due date) - render as a small marker
+      // If neither startDate nor dueDate is set → dot (placeholder)
+      if (!issue.dueDate && !issue.startDate) {
         return { left: `${Math.max(0, Math.min(leftPct, 99.5))}%`, width: '8px', minWidth: '8px' }
       }
 
+      // If only startDate is set (no dueDate), draw a thin bar from start of width 8px-ish
+      if (!issue.dueDate) {
+        return { left: `${Math.max(0, leftPct)}%`, width: '8px', minWidth: '8px' }
+      }
+
       const due = startOfDay(new Date(issue.dueDate))
-      const widthPct = ((due.getTime() - created.getTime()) / range) * 100
+      const widthPct = ((due.getTime() - begin.getTime()) / range) * 100
 
       return {
         left: `${Math.max(0, leftPct)}%`,
@@ -668,9 +674,11 @@ export default function TimelinePage() {
             )}
           </div>
           <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
-            {formatDate(new Date(hoveredIssueData.createdAt))}
+            {formatDate(new Date(hoveredIssueData.startDate ?? hoveredIssueData.createdAt))}
             {hoveredIssueData.dueDate && ` — ${formatDate(new Date(hoveredIssueData.dueDate))}`}
-            {!hoveredIssueData.dueDate && ' (no due date)'}
+            {!hoveredIssueData.startDate && !hoveredIssueData.dueDate && ' (no dates set)'}
+            {hoveredIssueData.startDate && !hoveredIssueData.dueDate && ' (no due date)'}
+            {!hoveredIssueData.startDate && hoveredIssueData.dueDate && ' (no start date)'}
           </div>
         </div>
       )}

@@ -90,6 +90,8 @@ export class ExternalService {
         type: dto.type,
         assigneeId,
         parentId: dto.parentId,
+        startDate: dto.startDate,
+        dueDate: dto.dueDate,
         labelIds,
       },
       creatorId,
@@ -144,6 +146,9 @@ export class ExternalService {
         status: dto.status,
         priority: dto.priority,
         assigneeId,
+        parentId: dto.parentId,
+        startDate: dto.startDate,
+        dueDate: dto.dueDate,
       },
       userId,
     );

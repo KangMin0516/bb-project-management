@@ -479,6 +479,33 @@ export default function IssueDetailPanel({
             </InlineField>
 
             <InlineField
+              label="Start Date"
+              display={
+                d.startDate
+                  ? <span className="text-gray-700">{new Date(d.startDate).toLocaleDateString()}</span>
+                  : <span className="text-gray-400 italic">No start date</span>
+              }
+            >
+              <div className="flex items-center gap-1">
+                <input
+                  type="date"
+                  value={d.startDate ? d.startDate.slice(0, 10) : ''}
+                  onChange={(e) => updateMutation.mutate({ startDate: e.target.value ? `${e.target.value}T00:00:00.000Z` : null })}
+                  className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  autoFocus
+                />
+                {d.startDate && (
+                  <button
+                    onClick={() => updateMutation.mutate({ startDate: null })}
+                    className="text-gray-400 hover:text-gray-600 text-sm px-1"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </InlineField>
+
+            <InlineField
               label="Due Date"
               display={
                 d.dueDate

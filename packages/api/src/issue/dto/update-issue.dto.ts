@@ -66,6 +66,12 @@ export class UpdateIssueDto {
   @IsInt()
   order?: number;
 
+  @ApiPropertyOptional({ description: 'Start date (ISO 8601), null to clear' })
+  @IsOptional()
+  @ValidateIf((o) => o.startDate !== null)
+  @IsDateString()
+  startDate?: string | null;
+
   @ApiPropertyOptional({ description: 'Due date (ISO 8601), null to clear' })
   @IsOptional()
   @ValidateIf((o) => o.dueDate !== null)
