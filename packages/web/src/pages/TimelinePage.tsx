@@ -7,8 +7,17 @@ import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import { SearchInput, DropdownFilters, AssigneeAvatars, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
 import { STATUS_COLORS, STATUS_BAR_COLORS, STATUS_LABELS, TYPE_ICONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
-type GroupBy = 'type' | 'assignee'
+type GroupBy = 'epic' | 'type' | 'assignee'
+
+const NO_EPIC_KEY = '__no_epic__'
+
+type EpicGroup = {
+  key: string
+  epic: Issue | null
+  children: Issue[]
+}
 
 const DAY_MS = 86400000
 
@@ -24,7 +33,8 @@ function startOfDay(d: Date): Date {
 export default function TimelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-  const [groupBy, setGroupBy] = useState<GroupBy>('type')
+  const [groupBy, setGroupBy] = useState<GroupBy>('epic')
+  const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
   const [hoveredIssue, setHoveredIssue] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -108,9 +118,91 @@ export default function TimelinePage() {
     return { startDate: start, endDate: end, totalDays: total, weeks: weekMarkers }
   }, [filteredIssues])
 
-  // Group issues
+  // Lookup table for parent traversal (includes filtered-out issues so EPIC linkage survives filters)
+  const issueMap = useMemo(() => {
+    const map = new Map<string, Issue>()
+    for (const issue of allIssues) map.set(issue.id, issue)
+    return map
+  }, [allIssues])
+
+  // EPIC-mode grouping: walk parentId chain to find ancestor EPIC
+  const epicGroups = useMemo<EpicGroup[]>(() => {
+    if (groupBy !== 'epic') return []
+    const groupMap = new Map<string, EpicGroup>()
+
+    // Pre-create groups for every EPIC visible after filtering
+    for (const issue of filteredIssues) {
+      if (issue.type === 'EPIC' && !groupMap.has(issue.id)) {
+        groupMap.set(issue.id, { key: issue.id, epic: issue, children: [] })
+      }
+    }
+
+    // Assign non-EPIC issues to their nearest ancestor EPIC
+    for (const issue of filteredIssues) {
+      if (issue.type === 'EPIC') continue
+      let cur: Issue | undefined = issue
+      let foundEpicId: string | null = null
+      const seen = new Set<string>()
+      while (cur && cur.parentId && !seen.has(cur.parentId)) {
+        seen.add(cur.parentId)
+        const parent = issueMap.get(cur.parentId)
+        if (!parent) break
+        if (parent.type === 'EPIC') {
+          foundEpicId = parent.id
+          break
+        }
+        cur = parent
+      }
+      if (foundEpicId) {
+        let g = groupMap.get(foundEpicId)
+        if (!g) {
+          // EPIC exists in dataset but got filtered out — still surface its bucket
+          const epic = issueMap.get(foundEpicId) ?? null
+          g = { key: foundEpicId, epic, children: [] }
+          groupMap.set(foundEpicId, g)
+        }
+        g.children.push(issue)
+      } else {
+        if (!groupMap.has(NO_EPIC_KEY)) {
+          groupMap.set(NO_EPIC_KEY, { key: NO_EPIC_KEY, epic: null, children: [] })
+        }
+        groupMap.get(NO_EPIC_KEY)!.children.push(issue)
+      }
+    }
+
+    // Drop empty EPIC groups (epic visible but no children AND epic filtered out somehow)
+    const ordered = [...groupMap.values()].filter((g) => g.epic || g.children.length > 0)
+
+    // EPIC groups first by createdAt asc; "No Epic" bucket last
+    ordered.sort((a, b) => {
+      if (a.key === NO_EPIC_KEY) return 1
+      if (b.key === NO_EPIC_KEY) return -1
+      const at = a.epic ? new Date(a.epic.createdAt).getTime() : 0
+      const bt = b.epic ? new Date(b.epic.createdAt).getTime() : 0
+      return at - bt
+    })
+
+    for (const g of ordered) {
+      g.children.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      )
+    }
+    return ordered
+  }, [filteredIssues, issueMap, groupBy])
+
+  const toggleEpicCollapse = useCallback((key: string) => {
+    setCollapsedEpics((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  // Group issues (for 'type' and 'assignee' modes; 'epic' uses epicGroups instead)
   const groups = useMemo(() => {
     const grouped = new Map<string, Issue[]>()
+    if (groupBy === 'epic') return grouped
 
     if (groupBy === 'type') {
       const typeOrder = ['EPIC', 'TASK', 'BUG', 'SUB_TASK']
@@ -204,6 +296,36 @@ export default function TimelinePage() {
   const LABEL_WIDTH = 280
   const ROW_HEIGHT = 36
 
+  type TimelineRow =
+    | { kind: 'epic'; epic: Issue; childCount: number; collapsed: boolean }
+    | { kind: 'no-epic'; childCount: number; collapsed: boolean }
+    | { kind: 'group'; label: string; count: number }
+    | { kind: 'issue'; issue: Issue; indent: number }
+
+  const displayRows: TimelineRow[] = (() => {
+    const rows: TimelineRow[] = []
+    if (groupBy === 'epic') {
+      for (const g of epicGroups) {
+        const collapseKey = g.epic ? g.epic.id : NO_EPIC_KEY
+        const collapsed = collapsedEpics.has(collapseKey)
+        if (g.epic) {
+          rows.push({ kind: 'epic', epic: g.epic, childCount: g.children.length, collapsed })
+        } else {
+          rows.push({ kind: 'no-epic', childCount: g.children.length, collapsed })
+        }
+        if (!collapsed) {
+          for (const issue of g.children) rows.push({ kind: 'issue', issue, indent: 1 })
+        }
+      }
+    } else {
+      for (const [label, items] of groups) {
+        rows.push({ kind: 'group', label, count: items.length })
+        for (const issue of items) rows.push({ kind: 'issue', issue, indent: 0 })
+      }
+    }
+    return rows
+  })()
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -215,6 +337,15 @@ export default function TimelinePage() {
         <div className="flex items-center gap-3">
           {/* Group by toggle */}
           <div className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 p-0.5">
+            <button
+              onClick={() => setGroupBy('epic')}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                groupBy === 'epic' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
+              )}
+            >
+              By Epic
+            </button>
             <button
               onClick={() => setGroupBy('type')}
               className={cn(
@@ -282,36 +413,81 @@ export default function TimelinePage() {
               <div className="h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 flex items-center">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Issues</span>
               </div>
-              {/* Issue rows */}
-              {[...groups.entries()].map(([groupName, issues]) => (
-                <div key={groupName}>
-                  {/* Group header */}
-                  <div
-                    className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-3"
-                    style={{ height: ROW_HEIGHT }}
-                  >
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      {groupBy === 'type' ? `${TYPE_ICONS[groupName] || ''} ${groupName.replace(/_/g, ' ')}` : groupName}
-                    </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">({issues.length})</span>
-                  </div>
-                  {/* Issue rows */}
-                  {issues.map((issue) => (
+              {/* Rows */}
+              {displayRows.map((row, idx) => {
+                if (row.kind === 'group') {
+                  return (
                     <div
-                      key={issue.id}
-                      className="flex items-center border-b border-gray-100 dark:border-gray-700 px-3 cursor-pointer hover:bg-gray-50 dark:bg-gray-900 transition-colors"
+                      key={`group-${row.label}-${idx}`}
+                      className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-3"
                       style={{ height: ROW_HEIGHT }}
-                      onClick={() => setSelectedIssue(issue)}
                     >
-                      <div className={cn('h-2 w-2 shrink-0 rounded-full mr-2', STATUS_COLORS[issue.status])} />
-                      <span className="text-xs font-mono text-gray-400 dark:text-gray-500 mr-1.5 shrink-0">
-                        {project?.key}-{issue.number}
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        {groupBy === 'type' ? `${TYPE_ICONS[row.label] || ''} ${row.label.replace(/_/g, ' ')}` : row.label}
                       </span>
-                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{issue.title}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">({row.count})</span>
                     </div>
-                  ))}
-                </div>
-              ))}
+                  )
+                }
+                if (row.kind === 'no-epic') {
+                  const Chev = row.collapsed ? ChevronRight : ChevronDown
+                  return (
+                    <button
+                      key={`no-epic-${idx}`}
+                      onClick={() => toggleEpicCollapse(NO_EPIC_KEY)}
+                      className="flex w-full items-center gap-1.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      <Chev className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        No Epic
+                      </span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">({row.childCount})</span>
+                    </button>
+                  )
+                }
+                if (row.kind === 'epic') {
+                  const Chev = row.collapsed ? ChevronRight : ChevronDown
+                  const e = row.epic
+                  return (
+                    <div
+                      key={`epic-${e.id}`}
+                      className="flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-700 bg-primary-50/40 dark:bg-primary-900/20 px-1.5 cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                      style={{ height: ROW_HEIGHT }}
+                      onClick={() => setSelectedIssue(e)}
+                    >
+                      <button
+                        onClick={(ev) => { ev.stopPropagation(); toggleEpicCollapse(e.id) }}
+                        className="shrink-0 rounded p-0.5 hover:bg-primary-100 dark:hover:bg-primary-800/40"
+                      >
+                        <Chev className="h-3.5 w-3.5 text-primary-700 dark:text-primary-300" />
+                      </button>
+                      <div className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[e.status])} />
+                      <span className="text-xs font-mono text-primary-700 dark:text-primary-300 shrink-0">
+                        {project?.key}-{e.number}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate flex-1">{e.title}</span>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 shrink-0">{row.childCount}</span>
+                    </div>
+                  )
+                }
+                // issue row
+                const issue = row.issue
+                return (
+                  <div
+                    key={issue.id}
+                    className="flex items-center border-b border-gray-100 dark:border-gray-700 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                    style={{ height: ROW_HEIGHT, paddingLeft: 12 + row.indent * 18 }}
+                    onClick={() => setSelectedIssue(issue)}
+                  >
+                    <div className={cn('h-2 w-2 shrink-0 rounded-full mr-2', STATUS_COLORS[issue.status])} />
+                    <span className="text-xs font-mono text-gray-400 dark:text-gray-500 mr-1.5 shrink-0">
+                      {project?.key}-{issue.number}
+                    </span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{issue.title}</span>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Right: Timeline chart (scrollable) */}
@@ -343,73 +519,113 @@ export default function TimelinePage() {
                   )}
                 </div>
 
-                {/* Rows with bars */}
-                {[...groups.entries()].map(([groupName, issues]) => (
-                  <div key={groupName}>
-                    {/* Group header row */}
+                {/* Rows with bars (mirrors displayRows from the left panel) */}
+                {displayRows.map((row, idx) => {
+                  // Plain header row (group / no-epic) — gray, no bar
+                  if (row.kind === 'group' || row.kind === 'no-epic') {
+                    return (
+                      <div
+                        key={`hdr-${idx}`}
+                        className="relative border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80"
+                        style={{ height: ROW_HEIGHT }}
+                      >
+                        {weeks.map((week, i) => (
+                          <div
+                            key={i}
+                            className="absolute top-0 h-full w-px bg-gray-200 dark:bg-gray-600/60"
+                            style={{ left: `${week.offset}%` }}
+                          />
+                        ))}
+                      </div>
+                    )
+                  }
+
+                  // EPIC row — render with epic's own bar, stronger styling
+                  if (row.kind === 'epic') {
+                    const epic = row.epic
+                    const barStyle = getBarStyle(epic)
+                    const isDot = !epic.dueDate
+                    return (
+                      <div
+                        key={`epicrow-${epic.id}`}
+                        className="relative border-b border-gray-200 dark:border-gray-700 bg-primary-50/40 dark:bg-primary-900/20"
+                        style={{ height: ROW_HEIGHT }}
+                      >
+                        {weeks.map((week, i) => (
+                          <div
+                            key={i}
+                            className="absolute top-0 h-full w-px bg-gray-200 dark:bg-gray-600/60"
+                            style={{ left: `${week.offset}%` }}
+                          />
+                        ))}
+                        {todayOffset >= 0 && todayOffset <= 100 && (
+                          <div
+                            className="absolute top-0 h-full w-px bg-red-400 z-[1]"
+                            style={{ left: `${todayOffset}%` }}
+                          />
+                        )}
+                        <div
+                          className={cn(
+                            'absolute top-1/2 -translate-y-1/2 cursor-pointer transition-all hover:brightness-110 hover:shadow-md z-[2] ring-1 ring-primary-300 dark:ring-primary-600',
+                            isDot ? 'rounded-full h-3.5' : 'rounded-md h-5',
+                            STATUS_BAR_COLORS[epic.status] || 'bg-gray-400/80',
+                          )}
+                          style={{
+                            left: barStyle.left,
+                            width: barStyle.width,
+                            minWidth: barStyle.minWidth,
+                          }}
+                          onClick={() => setSelectedIssue(epic)}
+                          onMouseEnter={(e) => handleBarMouseEnter(e, epic.id)}
+                          onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                          onMouseLeave={handleBarMouseLeave}
+                        />
+                      </div>
+                    )
+                  }
+
+                  // Regular issue bar row
+                  const issue = row.issue
+                  const barStyle = getBarStyle(issue)
+                  const isDot = !issue.dueDate
+                  return (
                     <div
-                      className="relative border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80"
+                      key={issue.id}
+                      className="relative border-b border-gray-100 dark:border-gray-700"
                       style={{ height: ROW_HEIGHT }}
                     >
-                      {/* Vertical week lines in group header */}
                       {weeks.map((week, i) => (
                         <div
                           key={i}
-                          className="absolute top-0 h-full w-px bg-gray-200 dark:bg-gray-600/60"
+                          className="absolute top-0 h-full w-px bg-gray-100 dark:bg-gray-700"
                           style={{ left: `${week.offset}%` }}
                         />
                       ))}
-                    </div>
-
-                    {/* Issue bar rows */}
-                    {issues.map((issue) => {
-                      const barStyle = getBarStyle(issue)
-                      const isDot = !issue.dueDate
-                      return (
+                      {todayOffset >= 0 && todayOffset <= 100 && (
                         <div
-                          key={issue.id}
-                          className="relative border-b border-gray-100 dark:border-gray-700"
-                          style={{ height: ROW_HEIGHT }}
-                        >
-                          {/* Vertical week lines */}
-                          {weeks.map((week, i) => (
-                            <div
-                              key={i}
-                              className="absolute top-0 h-full w-px bg-gray-100 dark:bg-gray-700"
-                              style={{ left: `${week.offset}%` }}
-                            />
-                          ))}
-
-                          {/* Today marker */}
-                          {todayOffset >= 0 && todayOffset <= 100 && (
-                            <div
-                              className="absolute top-0 h-full w-px bg-red-400 z-[1]"
-                              style={{ left: `${todayOffset}%` }}
-                            />
-                          )}
-
-                          {/* Issue bar */}
-                          <div
-                            className={cn(
-                              'absolute top-1/2 -translate-y-1/2 cursor-pointer transition-all hover:brightness-110 hover:shadow-md z-[2]',
-                              isDot ? 'rounded-full h-3' : 'rounded-md h-5',
-                              STATUS_BAR_COLORS[issue.status] || 'bg-gray-400/80',
-                            )}
-                            style={{
-                              left: barStyle.left,
-                              width: barStyle.width,
-                              minWidth: barStyle.minWidth,
-                            }}
-                            onClick={() => setSelectedIssue(issue)}
-                            onMouseEnter={(e) => handleBarMouseEnter(e, issue.id)}
-                            onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
-                            onMouseLeave={handleBarMouseLeave}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
+                          className="absolute top-0 h-full w-px bg-red-400 z-[1]"
+                          style={{ left: `${todayOffset}%` }}
+                        />
+                      )}
+                      <div
+                        className={cn(
+                          'absolute top-1/2 -translate-y-1/2 cursor-pointer transition-all hover:brightness-110 hover:shadow-md z-[2]',
+                          isDot ? 'rounded-full h-3' : 'rounded-md h-5',
+                          STATUS_BAR_COLORS[issue.status] || 'bg-gray-400/80',
+                        )}
+                        style={{
+                          left: barStyle.left,
+                          width: barStyle.width,
+                          minWidth: barStyle.minWidth,
+                        }}
+                        onClick={() => setSelectedIssue(issue)}
+                        onMouseEnter={(e) => handleBarMouseEnter(e, issue.id)}
+                        onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={handleBarMouseLeave}
+                      />
+                    </div>
+                  )
+                })}
 
                 {/* Today line spanning full height */}
                 {todayOffset >= 0 && todayOffset <= 100 && (
