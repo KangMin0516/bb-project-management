@@ -24,6 +24,7 @@ import {
   User,
   BarChart3,
   BookOpen,
+  ChartGantt,
   Sun,
   Moon,
   Monitor,
@@ -186,6 +187,7 @@ export default function AppLayout() {
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/lists`, icon: List, label: 'Lists' },
+        { to: `/projects/${projectId}/timeline`, icon: ChartGantt, label: 'Timeline' },
         { to: `/projects/${projectId}/credentials`, icon: Shield, label: 'Credentials' },
         { to: `/projects/${projectId}/settings`, icon: Settings, label: 'Settings' },
       ]
