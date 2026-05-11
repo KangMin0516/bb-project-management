@@ -409,14 +409,15 @@ export default function TimelinePage() {
             <p className="text-sm">Try adjusting your filters or create some issues first.</p>
           </div>
         ) : (
-          <div className="flex h-full">
-            {/* Left: Issue labels (fixed) */}
+          <div ref={scrollRef} className="h-full overflow-auto">
+            <div className="flex">
+            {/* Left: Issue labels (vertical scroll inherited from outer; sticky-left when chart scrolls horizontally) */}
             <div
-              className="shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              className="shrink-0 sticky left-0 z-10 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
               style={{ width: LABEL_WIDTH }}
             >
-              {/* Header spacer */}
-              <div className="h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 flex items-center">
+              {/* Header spacer — stays at top during vertical scroll */}
+              <div className="sticky top-0 z-20 h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 flex items-center">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Issues</span>
               </div>
               {/* Rows */}
@@ -496,8 +497,8 @@ export default function TimelinePage() {
               })}
             </div>
 
-            {/* Right: Timeline chart (scrollable) */}
-            <div className="flex-1 overflow-auto" ref={scrollRef}>
+            {/* Right: Timeline chart — flexes; minWidth on inner triggers outer's horizontal scroll */}
+            <div className="flex-1 min-w-0">
               <div className="relative" style={{ minWidth: Math.max(800, totalDays * 12) }}>
                 {/* Week headers */}
                 <div className="sticky top-0 z-10 h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
@@ -641,6 +642,7 @@ export default function TimelinePage() {
                   />
                 )}
               </div>
+            </div>
             </div>
           </div>
         )}
