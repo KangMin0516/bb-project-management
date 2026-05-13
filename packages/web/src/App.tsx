@@ -24,8 +24,8 @@ import MemberTasksPage from '@/pages/MemberTasksPage'
 import ProfilePage from '@/pages/ProfilePage'
 import ApiDocsPage from '@/pages/ApiDocsPage'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import ToastContainer from '@/components/ToastContainer'
 import ImagePreviewModal from '@/components/ui/ImagePreviewModal'
+import { Toaster } from 'sonner'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,7 +93,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </ErrorBoundary>
-      <ToastContainer />
+      <Toaster position="bottom-right" richColors />
       <ImagePreviewModal />
     </QueryClientProvider>
   )

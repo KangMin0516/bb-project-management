@@ -1,1 +1,1 @@
-export type ShareContext = 'board' | 'issues'
+export type { ShareContext } from "@/shared/types"
