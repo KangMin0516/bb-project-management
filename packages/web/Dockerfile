@@ -12,17 +12,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/web/package.json packages/web/
 COPY packages/shared/package.json packages/shared/
 
-# CLI flags pin pnpm fetch behaviour explicitly. Earlier attempts via .npmrc
-# were silently ignored. The BuildKit cache mount keeps the pnpm store across
-# builds so slow-registry pain is paid once, not per push.
+# Fetch tuning lives in .npmrc (copied above). The BuildKit cache mount keeps
+# the pnpm store across builds so slow-registry pain is paid once, not per push.
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
     corepack enable pnpm && \
-    pnpm install --frozen-lockfile \
-      --config.fetch-timeout=600000 \
-      --config.fetch-retries=5 \
-      --config.fetch-retry-mintimeout=10000 \
-      --config.fetch-retry-maxtimeout=60000 \
-      --config.network-concurrency=4
+    pnpm install --frozen-lockfile
 
 COPY packages/shared packages/shared
 COPY packages/web packages/web
