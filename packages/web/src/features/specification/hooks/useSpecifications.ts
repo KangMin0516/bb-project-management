@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type SpecStatus } from '@/features/specification/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { specRepository } from '@/features/specification/repository'
 
 /**
  * Bundles the project's spec list + (optionally) one spec detail. Each

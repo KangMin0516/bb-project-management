@@ -45,15 +45,21 @@ export default function SettingsPage() {
 
   const { data: allUsers } = useQuery({ queryKey: ['users'], queryFn: () => userRepository.search() })
 
-  const members = useProjectMembers(projectId ?? '')
-  const labels = useProjectLabels(projectId ?? '')
-  const components = useProjectComponents(projectId ?? '')
+  // The URL param is the project KEY (e.g. "PITB"). Mutations require the
+  // UUID id (the backend's PATCH/DELETE endpoints don't accept keys), so we
+  // resolve it from the loaded project and fall back to the key for queries
+  // (those accept either via projectService.findOne's id-or-key resolver).
+  const resolvedId = project?.id ?? projectId ?? ''
+
+  const members = useProjectMembers(resolvedId)
+  const labels = useProjectLabels(resolvedId)
+  const components = useProjectComponents(resolvedId)
 
   const currentMember = members.members?.find((m) => m.userId === currentUser?.id)
   const isAdminOrPm = currentMember?.role === 'ADMIN' || currentMember?.role === 'PM' || !!currentUser?.isSuperuser
 
-  const joinRequests = useJoinRequests(projectId ?? '', isAdminOrPm)
-  const projectMutations = useProjectMutations(projectId ?? '', () => navigate('/'))
+  const joinRequests = useJoinRequests(resolvedId, isAdminOrPm)
+  const projectMutations = useProjectMutations(resolvedId, () => navigate('/'))
 
   // Deep-link to the requests section (?tab=requests) — scroll once visible.
   useEffect(() => {

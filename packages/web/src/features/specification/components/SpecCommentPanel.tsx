@@ -6,6 +6,7 @@ import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { MessageSquare, Check, Reply, Trash2, X } from 'lucide-react'
 import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
+import { specRepository } from '@/features/specification/repository'
 
 interface SpecCommentPanelProps {
   projectId: string
