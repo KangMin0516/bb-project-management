@@ -1,0 +1,42 @@
+# Timeline View Changelog
+
+> Gantt-style per-project timeline that groups issues by parent EPIC with collapsible task subtrees. Displays `startDate` → `dueDate` bars on a horizontal date ruler, with synced vertical scrolling between the left (issue list) and right (bar canvas) panes.
+
+## Owns
+
+- **Frontend-only feature** (no dedicated backend module — reuses `GET /api/projects/:projectId/issues` with `archivedAt=null` and sorts client-side).
+- **Page**: `packages/web/src/pages/TimelinePage.tsx`
+- **Related data**: `issues.start_date`, `issues.due_date`, `issues.parent_id`, `issues.type` (used to identify EPIC parents)
+
+## Surface
+
+- Route: `/projects/:projectId/timeline`
+- Sidebar link: visible on every project (after `8f61f09`).
+
+## Timeline
+
+### 2026-05-12 — Hide CANCELED by default (d2f3ed0)
+**Changed.** Timeline (along with Board and Lists) now filters out `CANCELED` issues by default. Toggle to include them via the toolbar.
+- Source: `packages/web/src/pages/TimelinePage.tsx`.
+
+### 2026-05-12 — Sync left/right vertical scroll (51afae5)
+**Fixed.** Wheel-scrolling the right (bar canvas) pane left the left (issue list) pane stationary, breaking the visual row alignment. Wired a shared `scrollTop` so both panes scroll in lock-step. Both directions.
+- Source: `packages/web/src/pages/TimelinePage.tsx`.
+
+### 2026-05-11 — `Issue.startDate` for planned start (10c6920)
+**Added.** Surfaces `start_date` on the Timeline ruler. A bar now spans `[startDate, dueDate]` rather than `[today, dueDate]` if start is set. Issues without `startDate` fall back to the previous behavior.
+- Source: `packages/web/src/pages/TimelinePage.tsx`; see also [`issue-changelog.md`](./issue-changelog.md#2026-05-11--issuestartdate-for-planned-start-10c6920-schema-20260511135935_add_issue_start_date).
+
+### 2026-05-11 — Group by EPIC with collapsible subtrees (53cdbbb)
+**Added.** The left pane now groups every non-EPIC issue under its parent EPIC (one level only — sub-tasks of a task still group under that task's EPIC). Each EPIC row has a chevron to collapse its subtree. Orphan tasks (no EPIC parent) cluster under a synthetic "(no epic)" group at the bottom.
+- Source: `packages/web/src/pages/TimelinePage.tsx`.
+
+### 2026-05-11 — Timeline link in project sidebar (8f61f09)
+**Added.** Sidebar nav entry to `/projects/:projectId/timeline`. Previously only reachable via direct URL.
+- Source: `packages/web/src/components/layout/`.
+
+## Open questions / known issues
+
+- **No drag-to-edit dates.** Dates are read-only on the timeline; users edit via the issue detail panel and the timeline re-renders.
+- **Hard ruler granularity.** Day-level. No week/month zoom yet.
+- **Dependency visualization.** `issue_links` of type `BLOCKS` are stored but not rendered as arrows between bars yet — feature flagged for a later iteration.
