@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -17,19 +17,19 @@ export function useJoinRequests(projectId: string, enabled: boolean) {
 
   const requestsQuery = useQuery({
     queryKey: ['join-requests', projectId],
-    queryFn: () => projectApi.listJoinRequests(projectId),
+    queryFn: () => projectRepository.listJoinRequests(projectId),
     enabled: !!projectId && enabled,
   })
 
   const approve = useMutation({
-    mutationFn: (requestId: string) => projectApi.approveJoinRequest(projectId, requestId),
+    mutationFn: (requestId: string) => projectRepository.approveJoinRequest(projectId, requestId),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve request')),
   })
 
   const reject = useMutation({
     mutationFn: ({ requestId, reason }: { requestId: string; reason?: string }) =>
-      projectApi.rejectJoinRequest(projectId, requestId, reason ? { reason } : undefined),
+      projectRepository.rejectJoinRequest(projectId, requestId, reason ? { reason } : undefined),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject request')),
   })

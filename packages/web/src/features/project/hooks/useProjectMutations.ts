@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -12,13 +12,13 @@ export function useProjectMutations(projectId: string, onDeleted?: () => void) {
   const queryClient = useQueryClient()
 
   const update = useMutation({
-    mutationFn: (data: { name: string; description?: string }) => projectApi.update(projectId, data),
+    mutationFn: (data: { name: string; description?: string }) => projectRepository.update(projectId, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update project')),
   })
 
   const remove = useMutation({
-    mutationFn: () => projectApi.delete(projectId),
+    mutationFn: () => projectRepository.remove(projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       onDeleted?.()

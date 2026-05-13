@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { userApi } from '@/entities/user/api'
+import { userRepository } from '@/entities/user/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -20,49 +20,49 @@ export function useAdminUsers({ status, search, enabled }: UseAdminUsersOptions)
 
   const list = useQuery({
     queryKey: ['admin-users', status, search],
-    queryFn: () => userApi.adminList({ status: status || undefined, search: search || undefined }),
+    queryFn: () => userRepository.admin.list({ status: status || undefined, search: search || undefined }),
     enabled,
   })
 
   const approve = useMutation({
-    mutationFn: (id: string) => userApi.approve(id),
+    mutationFn: (id: string) => userRepository.approve(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User approved', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve user'), 'error'),
   })
 
   const reject = useMutation({
-    mutationFn: (id: string) => userApi.reject(id),
+    mutationFn: (id: string) => userRepository.reject(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User rejected', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject user'), 'error'),
   })
 
   const suspend = useMutation({
-    mutationFn: (id: string) => userApi.adminSuspend(id),
+    mutationFn: (id: string) => userRepository.admin.suspend(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User suspended', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to suspend user'), 'error'),
   })
 
   const activate = useMutation({
-    mutationFn: (id: string) => userApi.adminActivate(id),
+    mutationFn: (id: string) => userRepository.admin.activate(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User activated', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to activate user'), 'error'),
   })
 
   const remove = useMutation({
-    mutationFn: (id: string) => userApi.adminDelete(id),
+    mutationFn: (id: string) => userRepository.admin.remove(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User deleted', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete user'), 'error'),
   })
 
   const update = useMutation({
     mutationFn: (data: { id: string; name: string; email: string; isSuperuser: boolean }) =>
-      userApi.adminUpdate(data.id, { name: data.name, email: data.email, isSuperuser: data.isSuperuser }),
+      userRepository.admin.update(data.id, { name: data.name, email: data.email, isSuperuser: data.isSuperuser }),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User updated', 'success') },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update user'), 'error'),
   })
 
   const resetPassword = useMutation({
-    mutationFn: (data: { id: string; newPassword: string }) => userApi.adminResetPassword(data.id, data.newPassword),
+    mutationFn: (data: { id: string; newPassword: string }) => userRepository.admin.resetPassword(data.id, data.newPassword),
     onSuccess: () => useToastStore.getState().addToast('Password reset successfully', 'success'),
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reset password'), 'error'),
   })

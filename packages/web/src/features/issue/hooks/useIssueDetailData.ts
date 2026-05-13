@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { projectApi } from '@/features/project/api'
 import { componentApi } from '@/features/project/component-api'
 
@@ -14,7 +14,7 @@ import { componentApi } from '@/features/project/component-api'
 export function useIssueDetailData(projectId: string, issueId: string, skipEpics: boolean) {
   const detailQuery = useQuery({
     queryKey: ['issue', projectId, issueId],
-    queryFn: () => issueApi.get(projectId, issueId),
+    queryFn: () => issueRepository.findOne(projectId, issueId),
   })
 
   const membersQuery = useQuery({
@@ -34,8 +34,7 @@ export function useIssueDetailData(projectId: string, issueId: string, skipEpics
 
   const epicsQuery = useQuery({
     queryKey: ['issues', projectId, 'epics'],
-    queryFn: () => issueApi.list(projectId, { type: 'EPIC', limit: '200' }),
-    select: (data) => data.items,
+    queryFn: () => issueRepository.findEpicsInProject(projectId),
     enabled: !skipEpics,
   })
 

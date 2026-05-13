@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { projectApi } from '@/features/project/api'
 
 export function useBoardData(projectId: string, showArchived: boolean) {
@@ -11,7 +11,7 @@ export function useBoardData(projectId: string, showArchived: boolean) {
 
   const boardQuery = useQuery({
     queryKey: ['board', projectId, showArchived],
-    queryFn: () => issueApi.board(projectId, showArchived ? { includeArchived: true } : undefined),
+    queryFn: () => issueRepository.findBoardLayout(projectId, showArchived),
     enabled: !!projectId,
   })
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -14,25 +14,25 @@ export function useProjectMembers(projectId: string) {
 
   const membersQuery = useQuery({
     queryKey: ['members', projectId],
-    queryFn: () => projectApi.listMembers(projectId),
+    queryFn: () => projectRepository.listMembers(projectId),
     enabled: !!projectId,
   })
 
   const add = useMutation({
-    mutationFn: (data: { userId: string; role: string }) => projectApi.addMember(projectId, data),
+    mutationFn: (data: { userId: string; role: string }) => projectRepository.addMember(projectId, data),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to add member')),
   })
 
   const remove = useMutation({
-    mutationFn: (memberId: string) => projectApi.removeMember(projectId, memberId),
+    mutationFn: (memberId: string) => projectRepository.removeMember(projectId, memberId),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove member')),
   })
 
   const updateRole = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
-      projectApi.updateMember(projectId, memberId, { role }),
+      projectRepository.updateMember(projectId, memberId, { role }),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role')),
   })
