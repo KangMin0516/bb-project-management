@@ -1,25 +1,36 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { projectApi } from '@/features/project/api'
 import { userApi } from '@/entities/user/api'
-import { componentApi, type Component } from '@/features/project/component-api'
-import { Trash2, UserPlus, Pencil, Check, X } from 'lucide-react'
 import { slackApi } from '@/features/integrations/slack/api'
+import { useAuthStore } from '@/features/auth/store'
+import { useProjectMembers } from '@/features/project/hooks/useProjectMembers'
+import { useProjectLabels } from '@/features/project/hooks/useProjectLabels'
+import { useProjectComponents } from '@/features/project/hooks/useProjectComponents'
+import { useJoinRequests } from '@/features/project/hooks/useJoinRequests'
+import { useProjectMutations } from '@/features/project/hooks/useProjectMutations'
+import GeneralSection from '@/features/project/components/settings/GeneralSection'
+import MembersSection from '@/features/project/components/settings/MembersSection'
+import JoinRequestsSection from '@/features/project/components/settings/JoinRequestsSection'
+import LabelsSection from '@/features/project/components/settings/LabelsSection'
+import ComponentsSection from '@/features/project/components/settings/ComponentsSection'
+import DangerZoneSection from '@/features/project/components/settings/DangerZoneSection'
 import SlackIntegration from '@/features/integrations/slack/components/SlackIntegration'
 import GitHubIntegration from '@/features/integrations/github/components/GitHubIntegration'
 import DailyReportSettings from '@/features/report/components/DailyReportSettings'
-import { useToastStore } from '@/shared/lib/toast'
-import { useImagePreviewStore } from '@/shared/lib/imagePreview'
-import { useAuthStore } from '@/features/auth/store'
-import { getErrorMessage } from '@/shared/lib/error'
 
+/**
+ * Project settings composition root. Each section owns its own state + UI;
+ * page only wires data hooks to sections and resolves admin permission.
+ */
 export default function SettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const currentUser = useAuthStore((s) => s.user)
+
+  const showRequests = searchParams.get('tab') === 'requests'
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -32,639 +43,74 @@ export default function SettingsPage() {
     queryFn: slackApi.getStatus,
   })
 
-  const { data: members } = useQuery({
-    queryKey: ['members', projectId],
-    queryFn: () => projectApi.listMembers(projectId!),
-    enabled: !!projectId,
-  })
+  const { data: allUsers } = useQuery({ queryKey: ['users'], queryFn: () => userApi.list() })
 
-  const { data: labels } = useQuery({
-    queryKey: ['labels', projectId],
-    queryFn: () => projectApi.listLabels(projectId!),
-    enabled: !!projectId,
-  })
+  const members = useProjectMembers(projectId ?? '')
+  const labels = useProjectLabels(projectId ?? '')
+  const components = useProjectComponents(projectId ?? '')
 
-  const { data: users } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => userApi.list(),
-  })
+  const currentMember = members.members?.find((m) => m.userId === currentUser?.id)
+  const isAdminOrPm = currentMember?.role === 'ADMIN' || currentMember?.role === 'PM' || !!currentUser?.isSuperuser
 
-  // Join Requests tab
-  const showRequests = searchParams.get('tab') === 'requests'
+  const joinRequests = useJoinRequests(projectId ?? '', isAdminOrPm)
+  const projectMutations = useProjectMutations(projectId ?? '', () => navigate('/'))
 
-  // Project update
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  useEffect(() => {
-    if (project) {
-      setName(project.name)
-      setDescription(project.description || '')
-    }
-  }, [project])
-
+  // Deep-link to the requests section (?tab=requests) — scroll once visible.
   useEffect(() => {
     if (showRequests) {
-      setTimeout(() => {
-        document.getElementById('requests')?.scrollIntoView({ behavior: 'smooth' })
-      }, 300)
+      const id = setTimeout(() => document.getElementById('requests')?.scrollIntoView({ behavior: 'smooth' }), 300)
+      return () => clearTimeout(id)
     }
   }, [showRequests])
 
-  const updateProject = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      projectApi.update(projectId!, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update project'))
-    },
-  })
-
-  const deleteProject = useMutation({
-    mutationFn: () => projectApi.delete(projectId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      navigate('/')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete project'))
-    },
-  })
-
-  // Members
-  const [addUserId, setAddUserId] = useState('')
-  const [addRole, setAddRole] = useState('DEVELOPER')
-
-  const addMember = useMutation({
-    mutationFn: () => projectApi.addMember(projectId!, { userId: addUserId, role: addRole }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members', projectId] })
-      setAddUserId('')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to add member'))
-    },
-  })
-
-  const removeMember = useMutation({
-    mutationFn: (memberId: string) => projectApi.removeMember(projectId!, memberId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove member'))
-    },
-  })
-
-  const updateRole = useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
-      projectApi.updateMember(projectId!, memberId, { role }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['members', projectId] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role'))
-    },
-  })
-
-  // Components
-  const { data: components } = useQuery({
-    queryKey: ['components', projectId],
-    queryFn: () => componentApi.list(projectId!),
-    enabled: !!projectId,
-  })
-
-  const [newComponentName, setNewComponentName] = useState('')
-  const [newComponentDesc, setNewComponentDesc] = useState('')
-  const [newComponentLead, setNewComponentLead] = useState('')
-  const [newComponentDefaultAssignee, setNewComponentDefaultAssignee] = useState('')
-  const [editingComponent, setEditingComponent] = useState<Component | null>(null)
-  const [editComponentName, setEditComponentName] = useState('')
-  const [editComponentDesc, setEditComponentDesc] = useState('')
-  const [editComponentLead, setEditComponentLead] = useState('')
-  const [editComponentDefaultAssignee, setEditComponentDefaultAssignee] = useState('')
-
-  const createComponent = useMutation({
-    mutationFn: () =>
-      componentApi.create(projectId!, {
-        name: newComponentName,
-        description: newComponentDesc || undefined,
-        leadId: newComponentLead || undefined,
-        defaultAssigneeId: newComponentDefaultAssignee || undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['components', projectId] })
-      setNewComponentName('')
-      setNewComponentDesc('')
-      setNewComponentLead('')
-      setNewComponentDefaultAssignee('')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create component'))
-    },
-  })
-
-  const updateComponent = useMutation({
-    mutationFn: () =>
-      componentApi.update(projectId!, editingComponent!.id, {
-        name: editComponentName,
-        description: editComponentDesc || undefined,
-        leadId: editComponentLead || null,
-        defaultAssigneeId: editComponentDefaultAssignee || null,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['components', projectId] })
-      setEditingComponent(null)
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update component'))
-    },
-  })
-
-  const deleteComponent = useMutation({
-    mutationFn: (componentId: string) => componentApi.delete(projectId!, componentId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['components', projectId] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete component'))
-    },
-  })
-
-  const startEditComponent = (comp: Component) => {
-    setEditingComponent(comp)
-    setEditComponentName(comp.name)
-    setEditComponentDesc(comp.description || '')
-    setEditComponentLead(comp.leadId || '')
-    setEditComponentDefaultAssignee(comp.defaultAssigneeId || '')
-  }
-
-  // Labels
-  const [newLabel, setNewLabel] = useState('')
-  const [newLabelColor, setNewLabelColor] = useState('#6366f1')
-
-  const createLabel = useMutation({
-    mutationFn: () => projectApi.createLabel(projectId!, { name: newLabel, color: newLabelColor }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['labels', projectId] })
-      setNewLabel('')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create label'))
-    },
-  })
-
-  const seedLabels = useMutation({
-    mutationFn: () => projectApi.seedLabels(projectId!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['labels', projectId] }),
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels'))
-    },
-  })
-
-  // Join Requests (only fetch for ADMIN/PM)
-  const currentMemberRole = members?.find((m) => m.userId === currentUser?.id)?.role
-  const isAdminOrPm = currentMemberRole === 'ADMIN' || currentMemberRole === 'PM' || currentUser?.isSuperuser
-  const { data: joinRequests } = useQuery({
-    queryKey: ['join-requests', projectId],
-    queryFn: () => projectApi.listJoinRequests(projectId!),
-    enabled: !!projectId && isAdminOrPm,
-  })
-
-  const [rejectingId, setRejectingId] = useState<string | null>(null)
-  const [rejectReason, setRejectReason] = useState('')
-
-  const approveRequest = useMutation({
-    mutationFn: (requestId: string) => projectApi.approveJoinRequest(projectId!, requestId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['join-requests', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['members', projectId] })
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve request'))
-    },
-  })
-
-  const rejectRequest = useMutation({
-    mutationFn: ({ requestId, reason }: { requestId: string; reason?: string }) =>
-      projectApi.rejectJoinRequest(projectId!, requestId, reason ? { reason } : undefined),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['join-requests', projectId] })
-      setRejectingId(null)
-      setRejectReason('')
-    },
-    onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject request'))
-    },
-  })
-
   if (!projectId) return null
-
-  const memberUserIds = new Set(members?.map((m) => m.userId) || [])
-  const availableUsers = users?.filter((u) => !memberUserIds.has(u.id)) || []
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6">
       <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Project Settings</h1>
 
-      {/* General */}
-      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">General</h2>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Project Key</label>
-            <input
-              value={project?.key || ''}
-              disabled
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm text-gray-400 dark:text-gray-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-              rows={2}
-            />
-          </div>
-          <button
-            onClick={() => updateProject.mutate({ name, description: description || undefined })}
-            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-          >
-            Save
-          </button>
-        </div>
-      </section>
+      <GeneralSection project={project} onSave={(data) => projectMutations.update.mutate(data)} />
 
-      {/* Members */}
-      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Members</h2>
-        <div className="space-y-2">
-          {members?.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
-              <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden ${m.user.avatar ? 'cursor-pointer hover:ring-2 hover:ring-primary-300 transition' : ''}`}
-                onClick={() => m.user.avatar && useImagePreviewStore.getState().open(m.user.avatar, m.user.name)}
-              >
-                {m.user.avatar ? (
-                  <img src={m.user.avatar} alt={m.user.name} className="h-full w-full object-cover" />
-                ) : (
-                  m.user.name.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.user.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{m.user.email}</div>
-              </div>
-              <select
-                value={m.role}
-                onChange={(e) => updateRole.mutate({ memberId: m.id, role: e.target.value })}
-                className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none"
-              >
-                <option value="ADMIN">Admin</option>
-                <option value="PM">PM</option>
-                <option value="DEVELOPER">Developer</option>
-              </select>
-              <button
-                onClick={() => removeMember.mutate(m.id)}
-                className="text-gray-400 dark:text-gray-500 hover:text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-        {availableUsers.length > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <select
-              value={addUserId}
-              onChange={(e) => setAddUserId(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-            >
-              <option value="">Select user...</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-              ))}
-            </select>
-            <select
-              value={addRole}
-              onChange={(e) => setAddRole(e.target.value)}
-              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-            >
-              <option value="ADMIN">Admin</option>
-              <option value="PM">PM</option>
-              <option value="DEVELOPER">Developer</option>
-            </select>
-            <button
-              onClick={() => addUserId && addMember.mutate()}
-              disabled={!addUserId}
-              className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              <UserPlus className="h-4 w-4" />
-              Add
-            </button>
-          </div>
-        )}
-      </section>
+      <MembersSection
+        members={members.members}
+        allUsers={allUsers}
+        onAdd={(data) => members.add.mutate(data)}
+        onRemove={(memberId) => members.remove.mutate(memberId)}
+        onUpdateRole={(memberId, role) => members.updateRole.mutate({ memberId, role })}
+      />
 
-      {/* Join Requests */}
-      {(joinRequests && joinRequests.length > 0 || showRequests) && (
-        <section id="requests" className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-          <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Join Requests
-            {joinRequests && joinRequests.length > 0 && (
-              <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
-                {joinRequests.length}
-              </span>
-            )}
-          </h2>
-          {joinRequests && joinRequests.length > 0 ? (
-            <div className="space-y-2">
-              {joinRequests.map((req) => (
-                <div key={req.id} className="flex items-start gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 overflow-hidden">
-                    {req.requester?.avatar ? (
-                      <img src={req.requester.avatar} alt={req.requester.name} className="h-full w-full object-cover" />
-                    ) : (
-                      req.requester?.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{req.requester?.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{req.requester?.email}</div>
-                    {req.message && (
-                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 italic">"{req.message}"</div>
-                    )}
-                    <div className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                      {new Date(req.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  {rejectingId === req.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="Reason (optional)"
-                        className="w-40 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') rejectRequest.mutate({ requestId: req.id, reason: rejectReason || undefined })
-                        }}
-                      />
-                      <button
-                        onClick={() => rejectRequest.mutate({ requestId: req.id, reason: rejectReason || undefined })}
-                        className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => { setRejectingId(null); setRejectReason('') }}
-                        className="text-xs text-gray-400 hover:text-gray-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => approveRequest.mutate(req.id)}
-                        disabled={approveRequest.isPending}
-                        className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"
-                        title="Approve"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setRejectingId(req.id)}
-                        className="rounded-lg bg-red-500 p-1.5 text-white hover:bg-red-600"
-                        title="Reject"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 dark:text-gray-500">No pending requests</p>
-          )}
-        </section>
-      )}
+      <JoinRequestsSection
+        requests={joinRequests.requests}
+        forceShow={showRequests}
+        onApprove={(id) => joinRequests.approve.mutate(id)}
+        onReject={(requestId, reason) => joinRequests.reject.mutate({ requestId, reason })}
+        isApproving={joinRequests.approve.isPending}
+      />
 
-      {/* Labels */}
-      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Labels</h2>
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {labels?.map((l) => (
-            <span
-              key={l.id}
-              className="rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{ backgroundColor: l.color + '20', color: l.color }}
-            >
-              {l.name}
-            </span>
-          ))}
-          {!labels?.length && (
-            <span className="text-sm text-gray-400 dark:text-gray-500">No labels yet</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={newLabelColor}
-            onChange={(e) => setNewLabelColor(e.target.value)}
-            className="h-8 w-8 cursor-pointer rounded border-0"
-          />
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Label name"
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-          />
-          <button
-            onClick={() => newLabel && createLabel.mutate()}
-            disabled={!newLabel}
-            className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-          >
-            Add
-          </button>
-          <button
-            onClick={() => seedLabels.mutate()}
-            className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900"
-          >
-            Seed Defaults
-          </button>
-        </div>
-      </section>
+      <LabelsSection
+        labels={labels.labels}
+        onCreate={(data) => labels.create.mutate(data)}
+        onSeed={() => labels.seed.mutate()}
+      />
 
-      {/* Components */}
-      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Components</h2>
-        {components && components.length > 0 ? (
-          <div className="mb-3 space-y-2">
-            {components.map((comp) =>
-              editingComponent?.id === comp.id ? (
-                <div key={comp.id} className="space-y-2 rounded-lg border border-primary-200 bg-primary-50/30 p-3">
-                  <input
-                    value={editComponentName}
-                    onChange={(e) => setEditComponentName(e.target.value)}
-                    placeholder="Component name"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-                  />
-                  <input
-                    value={editComponentDesc}
-                    onChange={(e) => setEditComponentDesc(e.target.value)}
-                    placeholder="Description (optional)"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={editComponentLead}
-                      onChange={(e) => setEditComponentLead(e.target.value)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-                    >
-                      <option value="">No lead</option>
-                      {members?.map((m) => (
-                        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={editComponentDefaultAssignee}
-                      onChange={(e) => setEditComponentDefaultAssignee(e.target.value)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-                    >
-                      <option value="">No default assignee</option>
-                      {members?.map((m) => (
-                        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => editComponentName && updateComponent.mutate()}
-                      disabled={!editComponentName}
-                      className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingComponent(null)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div key={comp.id} className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{comp.name}</div>
-                    {comp.description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{comp.description}</div>
-                    )}
-                    <div className="mt-0.5 flex gap-3 text-xs text-gray-400 dark:text-gray-500">
-                      {comp.lead && <span>Lead: {comp.lead.name}</span>}
-                      {comp.defaultAssignee && <span>Default: {comp.defaultAssignee.name}</span>}
-                      <span>{comp._count.issues} issue{comp._count.issues !== 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => startEditComponent(comp)}
-                    className="text-gray-400 dark:text-gray-500 hover:text-primary-500"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Delete component "${comp.name}"?`)) {
-                        deleteComponent.mutate(comp.id)
-                      }
-                    }}
-                    className="text-gray-400 dark:text-gray-500 hover:text-red-500"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ),
-            )}
-          </div>
-        ) : (
-          <p className="mb-3 text-sm text-gray-400 dark:text-gray-500">No components yet</p>
-        )}
-        <div className="space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Add Component</div>
-          <input
-            value={newComponentName}
-            onChange={(e) => setNewComponentName(e.target.value)}
-            placeholder="Component name"
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-          />
-          <input
-            value={newComponentDesc}
-            onChange={(e) => setNewComponentDesc(e.target.value)}
-            placeholder="Description (optional)"
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={newComponentLead}
-              onChange={(e) => setNewComponentLead(e.target.value)}
-              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-            >
-              <option value="">No lead</option>
-              {members?.map((m) => (
-                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-              ))}
-            </select>
-            <select
-              value={newComponentDefaultAssignee}
-              onChange={(e) => setNewComponentDefaultAssignee(e.target.value)}
-              className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-            >
-              <option value="">No default assignee</option>
-              {members?.map((m) => (
-                <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={() => newComponentName && createComponent.mutate()}
-            disabled={!newComponentName}
-            className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-          >
-            Add
-          </button>
-        </div>
-      </section>
+      <ComponentsSection
+        components={components.components}
+        members={members.members}
+        onCreate={(data) => components.create.mutate(data)}
+        onUpdate={(id, data) => components.update.mutate({ id, data })}
+        onDelete={(id) => components.remove.mutate(id)}
+      />
 
-      {/* Integrations */}
       <SlackIntegration />
-      <GitHubIntegration projectId={projectId!} />
+      <GitHubIntegration projectId={projectId} />
 
-      {/* Daily Reports */}
       <DailyReportSettings
-        projectId={projectId!}
+        projectId={projectId}
         integrationId={slackStatus?.integrationId}
         slackConnected={slackStatus?.connected ?? false}
       />
 
-      {/* Danger zone */}
-      <section className="rounded-xl border border-red-200 bg-white dark:bg-gray-800 p-5">
-        <h2 className="mb-2 text-sm font-semibold text-red-600">Danger Zone</h2>
-        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Deleting a project is irreversible.</p>
-        <button
-          onClick={() => {
-            if (confirm('Are you sure you want to delete this project? This cannot be undone.')) {
-              deleteProject.mutate()
-            }
-          }}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        >
-          Delete Project
-        </button>
-      </section>
+      <DangerZoneSection onDelete={() => projectMutations.remove.mutate()} />
     </div>
   )
 }
