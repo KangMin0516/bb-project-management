@@ -1,37 +1,42 @@
-# Stage 6: 검증 (Verification)
+# Stage 6: Verify (`/6-verify`)
 
-배포 후 서비스 상태 및 기능을 최종 검증합니다.
+After deploy, confirm the service is healthy and the change works in the deployed environment. Final stage of the pipeline.
 
-## 실행 모드: Task 에이전트 생성
+## Execution mode: subagent spawn (context isolation)
 
-**컨텍스트 분리를 위해 반드시 Task 에이전트를 생성하세요.**
+> **Always spawn a subagent.** Verification needs a clean context, free of the deployer's chatter.
 
-### 실행 절차
+### Procedure
 
-1. `.claude/config.md`를 읽어서 프로젝트 정보를 파악하세요
-
-2. **검증 에이전트** — Task 에이전트 생성:
+1. Read `.claude/config.md` for service URLs and `critical_paths`.
+2. Read `.claude/outputs/stage-5-deploy.md` to confirm the deploy succeeded and get the merge commit SHA.
+   - Missing → instruct the user to run `/5-deploy` first.
+3. **Spawn the verifier subagent**:
    ```
-   Task(subagent_type=general-purpose)
-   prompt: ".claude/agents/verifier.md 파일을 읽고 그 역할에 따라 배포된 변경사항을 검증하세요."
+   Agent(
+     subagent_type: "general-purpose",
+     description: "Post-deploy verification",
+     prompt: "Read .claude/agents/verifier.md and follow it exactly. Verify the deployed change against the production environment: health checks, change-scoped functional tests, critical-path regression. Return the full Stage 6 report."
+   )
    ```
+4. **Receive** the verifier's report. Save it to `.claude/outputs/stage-6-verify.md`.
+5. **Surface Critical findings at the top** when reporting to the user — they may need to roll back immediately.
 
-3. 검증 결과를 사용자에게 보고하세요
-4. 결과를 `.claude/outputs/stage-6-verify.md`에 저장하세요
+## Recovery matrix
 
-## 에러 복구
+| Situation | Recovery |
+|---|---|
+| Service down                                  | → `/0-run` to restart → re-run `/6-verify`. |
+| Minor regression                              | → `/2-implement` → `/4-test` → `/5-deploy` → `/6-verify`. |
+| Major regression in a critical path           | → `/2-implement` → `/3-review` → `/4-test` → `/5-deploy` → `/6-verify`. |
+| **Critical** issue (data loss, security, broken auth, broken core flow) | **Roll back immediately** (`git revert -m 1 <merge-sha>` → new PR → merge), then restart the pipeline from `/2-implement`. |
+| Chrome extension disconnected                 | Verification cannot complete. Pause and ask the user to enable it. |
 
-| 상황 | 복구 흐름 |
-|------|-----------|
-| 서비스 다운 | → `/0-run`으로 재시작 → `/6-verify` 재시작 |
-| 기능 이상 발견 (경미) | → `/2-implement`로 수정 → `/4-test` → `/5-deploy` → `/6-verify` |
-| 심각한 이상 발견 | → 즉시 롤백 → `/2-implement`부터 전체 파이프라인 재시작 |
-| 회귀 버그 발견 | → `/2-implement`로 수정 → `/3-review` → `/4-test` → `/5-deploy` → `/6-verify` |
+## Next stage
 
-## 다음 단계
-
-- 검증 완료 → 파이프라인 종료
+- Verification passes → **Pipeline complete.** Mark the work as shipped.
+- Verification fails → follow the recovery matrix.
 
 ---
 
-배포된 변경사항에 대한 검증을 시작합니다.
+Starting post-deploy verification. Spawning the verifier subagent.

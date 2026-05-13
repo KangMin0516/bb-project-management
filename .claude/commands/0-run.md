@@ -1,28 +1,40 @@
-# 서비스 관리 유틸리티 (Run & Build)
+# Service Lifecycle Utility (`/0-run`)
 
-Docker Compose 기반 개발 환경을 관리합니다.
-**파이프라인 스테이지가 아닌, 언제든 사용 가능한 상시 유틸리티입니다.**
+Manages the Docker Compose-based dev/prod environment for `bb-pm`.
 
-## 실행 모드: 직접 실행
+> **Not a pipeline stage.** This is an always-available utility — invoke it any time you need to start, stop, rebuild, or inspect a service. It does not produce a stage handoff artifact (other than a brief status report at `.claude/outputs/stage-0-run.md`).
 
-현재 컨텍스트에서 DevOps 엔지니어로 작업합니다.
+## Execution mode: in-context
 
-1. `.claude/agents/devops.md`를 읽고 페르소나를 적용하세요
-2. 에이전트의 수행 절차에 따라 `$ARGUMENTS` 작업을 수행하세요
+You execute the DevOps Engineer role directly in the current Claude session (no subagent spawn).
 
-## 주요 명령어
+### Procedure
 
-| 인자 | 동작 |
-|------|------|
-| (없음) / `start` | 전체 서비스 시작 |
-| `stop` | 전체 서비스 중지 |
-| `status` / `health` | 상태 확인 + 헬스체크 |
-| `backend` / `frontend` / `db` | 개별 서비스 재빌드 |
-| `build` | 전체 이미지 빌드 |
-| `restart [서비스]` | 특정 서비스 재시작 |
-| `logs [서비스]` | 로그 확인 |
-| `prod` | 프로덕션 모드 시작 |
+1. Read `.claude/agents/devops.md` and adopt the persona, principles, and procedures defined there.
+2. Parse `$ARGUMENTS` against the subcommand table below. If empty or unrecognized, default to `start`.
+3. Follow the agent's procedure for that subcommand.
+4. Write the status report to `.claude/outputs/stage-0-run.md` using the format in `devops.md`.
+
+## Subcommand reference
+
+| Argument | What it does |
+|---|---|
+| _(empty)_ / `start` / `all` | Boot the full dev stack (DB in Docker; api + web on host via `pnpm dev`). Run health probes. |
+| `stop`                      | Stop the dev stack. |
+| `status` / `health`         | `docker compose ps` + HTTP probes + login smoke test. |
+| `backend` / `be` / `api`    | Rebuild and start only the api container (or restart `pnpm dev:api` on host). |
+| `frontend` / `fe` / `web`   | Rebuild and start only the web container (or restart `pnpm dev:web` on host). |
+| `db`                        | Start only the db container. |
+| `build`                     | Rebuild all images with `--no-cache`. |
+| `restart <service>`         | Restart one named service. |
+| `logs <service>`            | Tail logs for one service (defaults to all if omitted). |
+| `prod`                      | Boot the production stack (requires `JWT_SECRET`, `ADMIN_PASSWORD`, `POSTGRES_PASSWORD`, `ENCRYPTION_KEY` in `.env`). |
+
+## Safety notes
+
+- Destructive commands (`make clean`, `docker compose down -v`, etc.) require **explicit user confirmation**. The DevOps agent will pause and ask.
+- Production mode validates required env vars before starting. If anything is missing or has a placeholder, the agent stops and asks the user to fix `.env`.
 
 ---
 
-$ARGUMENTS 에 대한 작업을 시작합니다.
+Starting work on `$ARGUMENTS`. Reading `.claude/agents/devops.md` first.

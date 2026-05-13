@@ -1,29 +1,39 @@
-# Stage 1: 기획 (Planning)
+# Stage 1: Plan (`/1-plan`)
 
-요구사항을 분석하고 구현 계획을 수립합니다.
+Analyze a user requirement and produce a concrete implementation plan. No code is written at this stage.
 
-## 실행 모드: 직접 실행
+## Execution mode: in-context
 
-현재 컨텍스트에서 시스템 기획자로 작업합니다.
+The Planner role runs in the current Claude session (no subagent spawn).
 
-0. **워크로그 아카이브**: `.claude/outputs/stage-1-plan.md`가 이미 존재하면, 기존 산출물을 아카이브합니다.
-   - 기존 `stage-1-plan.md`의 첫 줄에서 작업명을 추출 (없으면 `unknown`)
-   - `.claude/outputs/history/{YYYY-MM-DD}_{slug}/` 디렉토리를 생성
-   - `.claude/outputs/stage-*.md` 파일을 모두 해당 디렉토리로 **복사**한 후 원본 삭제
-   - Bash로 실행: `mkdir -p .claude/outputs/history/$(date +%Y-%m-%d)_{slug} && cp .claude/outputs/stage-*.md .claude/outputs/history/$(date +%Y-%m-%d)_{slug}/ && rm .claude/outputs/stage-*.md`
-1. `.claude/agents/planner.md`를 읽고 페르소나를 적용하세요
-2. 에이전트의 수행 절차에 따라 `$ARGUMENTS`에 대한 기획을 수행하세요
-3. 기획서를 `.claude/outputs/stage-1-plan.md`에 저장하세요
-4. **사용자 승인을 받은 후** 다음 단계로 안내하세요
+### Procedure
 
-## 에러 복구
+0. **Archive previous run** if `.claude/outputs/stage-1-plan.md` already exists. Follow `.claude/shared/procedures.md` §7 to move the existing `stage-*.md` files to `.claude/outputs/history/<YYYY-MM-DD>_<slug>/`. The slug is derived from the previous plan's title (falls back to `unknown`).
+   ```bash
+   # Inline summary (full version is in procedures.md §7):
+   SLUG=$(head -1 .claude/outputs/stage-1-plan.md 2>/dev/null | sed -E 's/^# (Plan|기획서): *//' | tr -cd '[:alnum:]-_' | head -c 40)
+   [ -z "$SLUG" ] && SLUG="unknown"
+   DEST=".claude/outputs/history/$(date +%Y-%m-%d)_${SLUG}"
+   mkdir -p "$DEST" && cp .claude/outputs/stage-*.md "$DEST/" 2>/dev/null && rm -f .claude/outputs/stage-*.md
+   ```
 
-- 요구사항이 불명확하면 사용자에게 질문으로 해결합니다.
+1. Read `.claude/agents/planner.md` and adopt the persona, principles, and workflow.
+2. Follow the agent's procedure to analyze `$ARGUMENTS`, explore the codebase, conduct the required Q&A, and write the plan.
+3. Save the plan to `.claude/outputs/stage-1-plan.md`.
+4. **Wait for explicit user approval** before suggesting the next stage. Do not proceed yourself.
 
-## 다음 단계
+## Error recovery
 
-- 계획 승인 → `/2-implement`
+| Situation | Recovery |
+|---|---|
+| Requirement is ambiguous | Use `AskUserQuestion` to clarify before drafting. |
+| Existing code conflicts with the proposed plan | Surface the conflict in the plan's "Risks" section; do not silently override. |
+| The change is too large for a single plan | Propose a phased plan with explicit milestones; ask the user to confirm scope. |
+
+## Next stage
+
+- User approves the plan → `/2-implement`
 
 ---
 
-$ARGUMENTS 에 대한 기획을 시작합니다.
+Starting planning for `$ARGUMENTS`. Reading `.claude/agents/planner.md` first.
