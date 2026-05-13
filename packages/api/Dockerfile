@@ -19,6 +19,10 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/api/package.json packages/api/
+# Prisma schema + config are needed at install time because @bb-pm/api's
+# postinstall runs `prisma generate`, which requires schema.prisma to exist.
+COPY packages/api/prisma packages/api/prisma
+COPY packages/api/prisma.config.ts packages/api/
 
 # Fetch tuning lives in .npmrc (copied above). The BuildKit cache mount keeps
 # the pnpm store across builds so slow-registry pain is paid once, not per push.
