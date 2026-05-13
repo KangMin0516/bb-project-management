@@ -7,7 +7,7 @@ FROM node:22-alpine AS development
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/web/package.json packages/web/
 COPY packages/shared/package.json packages/shared/
 

@@ -12,7 +12,7 @@ WORKDIR /app
 FROM base AS deps
 
 # Install dependencies (including shared workspace package)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/api/package.json packages/api/
 
