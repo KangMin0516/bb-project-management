@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useShortcutsStore, type ShortcutDefinition } from '@/stores/shortcuts'
+import { useShortcutsStore, type ShortcutDefinition } from '@/shared/lib/shortcuts'
 
 export function useRegisterShortcuts(
   scope: string,

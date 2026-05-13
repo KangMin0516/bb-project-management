@@ -1,10 +1,10 @@
 import { memo } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
-import type { Issue } from '@/api/issues'
+import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, STATUS_LABELS } from '@/shared/config/constants'
 
 interface BoardColumnProps {
   status: string

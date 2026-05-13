@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { githubApi, type GitHubPrLink } from '@/api/github'
-import { cn } from '@/lib/utils'
+import { githubApi, type GitHubPrLink } from '@/features/integrations/github/api'
+import { cn } from '@/shared/lib/utils'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
-import { timeAgo } from '@/lib/time'
+import { getErrorMessage } from '@/shared/lib/error'
+import { timeAgo } from '@/shared/lib/time'
 import { GitMerge, GitPullRequest, X, Plus, ExternalLink } from 'lucide-react'
 
 const STATE_STYLES: Record<string, { bg: string; text: string; icon: typeof GitMerge }> = {

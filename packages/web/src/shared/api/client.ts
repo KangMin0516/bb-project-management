@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/features/auth/store'
 
 const api = axios.create({
   baseURL: '/api',

@@ -1,8 +1,8 @@
 import { AlertTriangle } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
-import type { OverdueIssue } from '@/api/dashboard'
-import InfoTooltip from '@/components/ui/InfoTooltip'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, PRIORITY_COLORS } from '@/shared/config/constants'
+import type { OverdueIssue } from '@/features/dashboard/api'
+import InfoTooltip from '@/shared/ui/atoms/InfoTooltip'
 
 interface OverdueAlertProps {
   issues: OverdueIssue[]

@@ -1,4 +1,4 @@
-import { useShortcutsStore } from '@/stores/shortcuts'
+import { useShortcutsStore } from '@/shared/lib/shortcuts'
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
 

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { githubApi, type GitHubStatus } from '@/features/integrations/github/api'
-import { STATUSES, STATUS_LABELS } from '@/lib/constants'
+import { STATUSES, STATUS_LABELS } from '@/shared/config/constants'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 import { GitFork, Unplug, Copy, Eye, EyeOff, Info } from 'lucide-react'
 
 export default function GitHubIntegration({ projectId }: { projectId: string }) {

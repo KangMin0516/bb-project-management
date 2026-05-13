@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils'
-import type { TeamDashboard } from '@/api/dashboard'
+import { cn } from '@/shared/lib/utils'
+import type { TeamDashboard } from '@/features/dashboard/api'
 
 interface WorkloadHeatmapProps {
   heatmap: TeamDashboard['heatmap']

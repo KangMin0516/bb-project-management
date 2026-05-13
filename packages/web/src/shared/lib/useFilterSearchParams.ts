@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   INITIAL_FILTER,
   type FilterState,
-} from '@/components/filter/FilterBar'
+} from '@/shared/ui/FilterBar'
 import { deserializeFilter, serializeFilter } from '@/lib/filter-codec'
 
 const SEARCH_DEBOUNCE_MS = 300

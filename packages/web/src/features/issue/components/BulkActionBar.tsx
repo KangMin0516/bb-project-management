@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi } from '@/api/issues'
-import { STATUSES, STATUS_LABELS, PRIORITIES, PRIORITY_LABELS } from '@/lib/constants'
-import { cn } from '@/lib/utils'
+import { issueApi } from '@/features/issue/api'
+import { STATUSES, STATUS_LABELS, PRIORITIES, PRIORITY_LABELS } from '@/shared/config/constants'
+import { cn } from '@/shared/lib/utils'
 import { X, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 
 interface BulkActionBarProps {
   projectId: string

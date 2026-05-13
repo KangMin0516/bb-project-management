@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { BurndownPoint } from '@/api/dashboard'
+import type { BurndownPoint } from '@/features/dashboard/api'
 
 interface BurndownChartProps {
   data: BurndownPoint[]

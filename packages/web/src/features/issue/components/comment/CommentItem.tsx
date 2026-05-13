@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import type { Comment } from '@/api/issues'
-import MarkdownViewer from '@/components/markdown/MarkdownViewer'
-import MarkdownEditor from '@/components/markdown/MarkdownEditor'
-import { timeAgo } from '@/lib/time'
+import type { Comment } from '@/features/issue/api'
+import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
+import MarkdownEditor from '@/shared/ui/markdown/MarkdownEditor'
+import { timeAgo } from '@/shared/lib/time'
 
 interface CommentItemProps {
   comment: Comment

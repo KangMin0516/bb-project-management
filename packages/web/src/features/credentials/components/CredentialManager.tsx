@@ -24,7 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 
 const SERVICE_TYPES = ['AWS', 'GCP', 'DB', 'SLACK', 'CUSTOM'] as const
 

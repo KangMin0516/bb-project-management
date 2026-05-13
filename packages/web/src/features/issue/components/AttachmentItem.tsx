@@ -1,6 +1,6 @@
-import { type Attachment } from '@/api/issues'
+import { type Attachment } from '@/features/issue/api'
 import { Trash2 } from 'lucide-react'
-import { useImagePreviewStore } from '@/stores/imagePreview'
+import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 export default function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete: (id: string) => void }) {
   const isImage = attachment.mimeType.startsWith('image/')

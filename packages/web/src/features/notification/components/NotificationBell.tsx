@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificationApi, type Notification } from '@/features/notification/api'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import { Bell, Check } from 'lucide-react'
-import { timeAgo } from '@/lib/time'
+import { timeAgo } from '@/shared/lib/time'
 
 const NOTIFICATION_ICONS: Record<string, string> = {
   ASSIGNED: '👤',

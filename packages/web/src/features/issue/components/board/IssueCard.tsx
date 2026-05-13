@@ -1,10 +1,10 @@
 import { memo, useMemo, useRef, useEffect } from 'react'
-import type { Issue } from '@/api/issues'
+import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
-import { cn } from '@/lib/utils'
-import { useImagePreviewStore } from '@/stores/imagePreview'
-import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/lib/constants'
-import { getDueBadge, isIssueOverdue } from '@/lib/time'
+import { cn } from '@/shared/lib/utils'
+import { useImagePreviewStore } from '@/shared/lib/imagePreview'
+import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/shared/config/constants'
+import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
 interface IssueCardProps {

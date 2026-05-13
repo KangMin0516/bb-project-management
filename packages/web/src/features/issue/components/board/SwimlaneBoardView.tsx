@@ -1,9 +1,9 @@
 import { useMemo, useCallback, useState } from 'react'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
-import type { Issue } from '@/api/issues'
+import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import SwimlaneRow from './SwimlaneRow'
-import { calculateDropOrder, EPIC_STATUS_ORDER } from '@/lib/constants'
+import { calculateDropOrder, EPIC_STATUS_ORDER } from '@/shared/config/constants'
 
 interface SwimlaneData {
   epic: Issue | null

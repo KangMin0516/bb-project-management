@@ -1,10 +1,10 @@
 import { memo, useMemo } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
-import type { Issue } from '@/api/issues'
+import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
-import { cn } from '@/lib/utils'
-import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/lib/constants'
+import { cn } from '@/shared/lib/utils'
+import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/shared/config/constants'
 import { ChevronRight, ChevronDown, Plus } from 'lucide-react'
 
 interface SwimlaneRowProps {

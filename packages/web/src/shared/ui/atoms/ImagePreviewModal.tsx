@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
-import { useImagePreviewStore } from '@/stores/imagePreview'
+import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 export default function ImagePreviewModal() {
   const { url, alt, close, open } = useImagePreviewStore()

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { ChevronRight, ChevronDown } from 'lucide-react'
-import type { Issue } from '@/api/issues'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
-import { getDueBadge } from '@/lib/time'
+import type { Issue } from '@/features/issue/api'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/shared/config/constants'
+import { getDueBadge } from '@/shared/lib/time'
 
 interface TreeNode {
   issue: Issue

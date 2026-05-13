@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { searchApi, type SearchResult } from '@/features/search/api'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS, DEBOUNCE_DELAY } from '@/lib/constants'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS, DEBOUNCE_DELAY } from '@/shared/config/constants'
 import {
   Search, X, Plus, LayoutDashboard, List, BarChart3,
   Settings, FileText, Keyboard, FolderKanban,
 } from 'lucide-react'
-import { useShortcutsStore } from '@/stores/shortcuts'
+import { useShortcutsStore } from '@/shared/lib/shortcuts'
 
 interface QuickAction {
   id: string

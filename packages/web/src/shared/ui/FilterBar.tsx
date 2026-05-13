@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { STATUSES, STATUS_COLORS } from '@/lib/constants'
+import { cn } from '@/shared/lib/utils'
+import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 
 // Shared filter state interface
 export interface FilterState {

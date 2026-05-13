@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useShortcutsStore } from '@/stores/shortcuts'
+import { useShortcutsStore } from '@/shared/lib/shortcuts'
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof HTMLElement)) return false

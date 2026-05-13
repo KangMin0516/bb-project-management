@@ -1,11 +1,11 @@
 import { Outlet, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '@/stores/auth'
-import { useThemeStore, type Theme } from '@/stores/theme'
+import { useAuthStore } from '@/features/auth/store'
+import { useThemeStore, type Theme } from '@/shared/lib/theme'
 import { useQuery } from '@tanstack/react-query'
 import { useRef, useCallback, useMemo } from 'react'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
-import { projectApi, type Project } from '@/api/projects'
+import { getErrorMessage } from '@/shared/lib/error'
+import { projectApi, type Project } from '@/features/project/api'
 import {
   Home,
   LayoutDashboard,
@@ -29,14 +29,14 @@ import {
   Moon,
   Monitor,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import { useState, useEffect } from 'react'
 import CommandPalette from '@/components/search/CommandPalette'
 import QuickIssueModal from '@/components/issue/QuickIssueModal'
 import NotificationBell from '@/components/notification/NotificationBell'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
-import { useShortcutsStore } from '@/stores/shortcuts'
+import { useShortcutsStore } from '@/shared/lib/shortcuts'
 import ShortcutsHelpModal from '@/components/shortcuts/ShortcutsHelpModal'
 
 const THEME_OPTIONS: { value: Theme; icon: typeof Sun; title: string }[] = [

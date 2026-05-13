@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reportApi, type UpdateReportConfigPayload } from '@/api/reports'
-import { slackApi, type SlackChannel } from '@/api/slack'
+import { reportApi, type UpdateReportConfigPayload } from '@/features/report/api'
+import { slackApi, type SlackChannel } from '@/features/integrations/slack/api'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 import { Clock, Send, Calendar } from 'lucide-react'
 
 const TIMEZONES = [

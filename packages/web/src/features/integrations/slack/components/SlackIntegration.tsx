@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { slackApi } from '@/features/integrations/slack/api'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 import { MessageSquare, ExternalLink, Unplug } from 'lucide-react'
 
 export default function SlackIntegration() {

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { specApi, type SpecComment } from '@/api/specifications'
-import { useAuthStore } from '@/stores/auth'
+import { specApi, type SpecComment } from '@/features/specification/api'
+import { useAuthStore } from '@/features/auth/store'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 import { MessageSquare, Check, Reply, Trash2, X } from 'lucide-react'
-import MarkdownViewer from '@/components/markdown/MarkdownViewer'
+import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
 
 interface SpecCommentPanelProps {
   projectId: string

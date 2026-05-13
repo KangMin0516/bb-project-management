@@ -1,5 +1,5 @@
-import type { WorkloadAssignee } from '@/api/dashboard'
-import { STATUSES, STATUS_LABELS, STATUS_BAR_COLORS } from '@/lib/constants'
+import type { WorkloadAssignee } from '@/features/dashboard/api'
+import { STATUSES, STATUS_LABELS, STATUS_BAR_COLORS } from '@/shared/config/constants'
 
 interface WorkloadChartProps {
   data: WorkloadAssignee[]

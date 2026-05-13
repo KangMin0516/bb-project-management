@@ -1,4 +1,4 @@
-import { useImagePreviewStore } from '@/stores/imagePreview'
+import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 interface ClickableImageProps {
   src: string

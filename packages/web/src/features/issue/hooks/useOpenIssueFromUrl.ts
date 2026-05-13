@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { Issue } from '@/api/issues'
+import type { Issue } from '@/features/issue/api'
 import { useToastStore } from '@/stores/toast'
 
 export function useOpenIssueFromUrl(

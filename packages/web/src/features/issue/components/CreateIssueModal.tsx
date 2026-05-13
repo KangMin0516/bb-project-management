@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { issueApi, type CreateIssuePayload } from '@/api/issues'
-import { templateApi } from '@/api/templates'
-import { projectApi } from '@/api/projects'
-import { componentApi } from '@/api/components'
+import { issueApi, type CreateIssuePayload } from '@/features/issue/api'
+import { templateApi } from '@/features/template/api'
+import { projectApi } from '@/features/project/api'
+import { componentApi } from '@/features/project/component-api'
 import { X } from 'lucide-react'
-import TipTapEditor from '@/components/editor/TipTapEditor'
+import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 
 interface CreateIssueModalProps {
   projectId: string

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
-import type { ProjectMember } from '@/api/projects'
-import TipTapEditor from '@/components/editor/TipTapEditor'
+import type { ProjectMember } from '@/features/project/api'
+import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 
 interface CommentInputProps {
   members: ProjectMember[]

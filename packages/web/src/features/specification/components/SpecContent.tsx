@@ -3,10 +3,10 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
-import type { SpecSection, SpecComment, SpecIssueLink } from '@/api/specifications'
+import type { SpecSection, SpecComment, SpecIssueLink } from '@/features/specification/api'
 import { MessageSquare, Plus, ExternalLink, X } from 'lucide-react'
-import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS } from '@/lib/constants'
-import { cn } from '@/lib/utils'
+import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS } from '@/shared/config/constants'
+import { cn } from '@/shared/lib/utils'
 import '@/components/markdown/markdown.css'
 
 export interface SpecContentHandle {

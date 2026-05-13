@@ -11,15 +11,15 @@ import {
   Plus,
   ArrowRight,
 } from 'lucide-react'
-import type { Activity } from '@/api/issues'
-import type { ProjectMember } from '@/api/projects'
-import { timeAgo } from '@/lib/time'
+import type { Activity } from '@/features/issue/api'
+import type { ProjectMember } from '@/features/project/api'
+import { timeAgo } from '@/shared/lib/time'
 import {
   STATUS_LABELS,
   STATUS_COLORS,
   PRIORITY_LABELS,
   PRIORITY_COLORS,
-} from '@/lib/constants'
+} from '@/shared/config/constants'
 
 const TYPE_LABELS: Record<string, string> = {
   EPIC: 'Epic',

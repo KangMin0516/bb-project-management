@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { issueApi, type IssueLink, type IssueLinkType, type IssueSpecLink, type Issue } from '@/api/issues'
-import { specApi, type SpecListItem } from '@/api/specifications'
-import { STATUS_COLORS, PRIORITY_COLORS, SPEC_STATUS_COLORS } from '@/lib/constants'
-import { cn } from '@/lib/utils'
+import { issueApi, type IssueLink, type IssueLinkType, type IssueSpecLink, type Issue } from '@/features/issue/api'
+import { specApi, type SpecListItem } from '@/features/specification/api'
+import { STATUS_COLORS, PRIORITY_COLORS, SPEC_STATUS_COLORS } from '@/shared/config/constants'
+import { cn } from '@/shared/lib/utils'
 import { X, Link2, Plus, Search, FileText, ChevronLeft } from 'lucide-react'
 import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { getErrorMessage } from '@/shared/lib/error'
 
 const LINK_TYPE_LABELS: Record<IssueLinkType, string> = {
   BLOCKS: 'blocks',
