@@ -7,6 +7,9 @@ FROM node:22-alpine AS base
 
 WORKDIR /app
 
+# Let corepack download the pinned pnpm version without prompting in CI.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
 # =============================================================================
 # Dependencies stage
 # =============================================================================

@@ -8,6 +8,9 @@ FROM node:22-alpine AS development
 
 WORKDIR /app
 
+# Let corepack download the pinned pnpm version without prompting in CI.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/web/package.json packages/web/
 COPY packages/shared/package.json packages/shared/
