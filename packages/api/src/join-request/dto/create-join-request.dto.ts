@@ -2,7 +2,7 @@ import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateJoinRequestDto {
-  @ApiPropertyOptional({ example: '이 프로젝트에 참여하고 싶습니다' })
+  @ApiPropertyOptional({ example: 'I would like to join this project' })
   @IsOptional()
   @IsString()
   @MaxLength(500)

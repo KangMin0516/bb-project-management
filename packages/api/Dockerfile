@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # =============================================================================
 # BB Project Management - Backend Dockerfile (NestJS)
 # =============================================================================
@@ -12,11 +13,15 @@ WORKDIR /app
 FROM base AS deps
 
 # Install dependencies (including shared workspace package)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/api/package.json packages/api/
 
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+# Fetch tuning lives in .npmrc (copied above). The BuildKit cache mount keeps
+# the pnpm store across builds so slow-registry pain is paid once, not per push.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
+    corepack enable pnpm && \
+    pnpm install --frozen-lockfile
 
 # =============================================================================
 # Builder stage

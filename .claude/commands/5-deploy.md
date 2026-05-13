@@ -1,37 +1,54 @@
-# Stage 5: 배포 (CI/CD Deployment)
+# Stage 5: Deploy (`/5-deploy`)
 
-CI/CD 파이프라인을 통해 배포합니다. **수동 배포는 허용되지 않습니다.**
+Ship the change through the CI/CD pipeline. **Manual deploys are not permitted in this repo.**
 
-## 실행 모드: 직접 실행
+## Execution mode: in-context (user-gated)
 
-사용자 확인이 필요하므로 현재 컨텍스트에서 배포 엔지니어로 작업합니다.
+The Deployer role runs in the current Claude session because user confirmations are required at multiple points (push, PR creation, merge).
 
-1. `.claude/agents/deployer.md`를 읽고 페르소나를 적용하세요
-2. **반드시 CI/CD 설정 확인(절차 0)을 먼저 수행하세요**
-3. 에이전트의 수행 절차에 따라 브랜치 → 커밋 → PR → CI 모니터링 → 머지를 수행하세요
-4. **사용자 확인 후에만** push, merge를 실행하세요
-5. 배포 보고서를 `.claude/outputs/stage-5-deploy.md`에 저장하세요
+### Procedure
 
-## 배포 흐름
+1. Read `.claude/agents/deployer.md` and adopt the persona, principles, and workflow.
+2. **Run Step 0 of the agent procedure first** — verify `config.md` `CI/CD → enabled: true`. If not, abort with the agent's standard CI/CD-not-configured warning.
+3. Verify `stage-3-review.md` shows 0 open Critical findings; verify `stage-4-test.md` shows all suites PASS. If either is missing or failing, abort and route the user back.
+4. Follow the agent's procedure: branch → stage → commit → push → PR → CI watch → merge.
+5. **Each user-visible action (push, PR, merge) requires explicit confirmation.** Do not proceed silently.
+6. Save the deploy report to `.claude/outputs/stage-5-deploy.md`.
+
+### Pipeline flow (visual)
 
 ```
-브랜치 생성 → 커밋 → push → PR 생성 → CI 체크 대기 → 머지 (사용자 확인) → 배포 자동 트리거
+Branch  →  Stage files (named)  →  Commit  →  [confirm]  →  push
+       →   Open PR  →  [confirm]  →  CI checks  →  [all green]
+       →   Merge (after [confirm])  →  Deploy pipeline triggers automatically
 ```
 
-## 에러 복구
+## Recovery matrix
 
-| 상황 | 복구 흐름 |
-|------|-----------|
-| CI/CD 미설정 | → 사용자에게 CI/CD 구성 안내 후 중단 |
-| CI 체크 실패 | → 실패 원인 분석 → `/2-implement`로 수정 → `/4-test` → `/5-deploy` 재시작 |
-| PR 충돌 | → rebase 또는 merge conflict 해결 후 재시도 |
-| 배포 파이프라인 실패 | → 파이프라인 로그 확인 → 원인 수정 → 새 커밋 push |
-| 배포 후 이상 | → `git revert` → 새 PR → 머지로 롤백 |
+| Situation | Recovery |
+|---|---|
+| CI/CD `enabled: false` in `config.md`        | Abort with the standard warning. Direct the user to configure CI/CD. |
+| `gh` CLI missing                              | Tell the user to install (`brew install gh` / https://cli.github.com). Stop. |
+| `stage-3-review.md` has open Critical         | Abort → `/2-implement` to address. |
+| `stage-4-test.md` shows any FAIL             | Abort → `/2-implement` → `/4-test`. |
+| Pre-commit hook fails                         | Fix the underlying issue, **create a new commit** (never `--amend` a committed change). Re-run. |
+| CI check fails                                | Analyze the failure; route to `/2-implement` if it's a code defect, ask the user if it's a flake. |
+| PR has merge conflict with `main`             | Rebase locally with user confirmation; or ask the user to resolve interactively. |
+| Deploy pipeline fails after merge             | Read pipeline logs; if forward-fixable, new commit. Otherwise route to rollback. |
+| Post-deploy production anomaly                | `git revert -m 1 <merge-sha>` → new PR → merge to roll back. |
 
-## 다음 단계
+## Safety reminders
 
-- 배포 완료 → `/6-verify`
+- **Never** push with `--no-verify`.
+- **Never** force-push to `main`.
+- **Never** stage with blanket `git add .` — name files explicitly to avoid leaking `.env` / credentials.
+- **Never** commit OS-generated files (`.DS_Store`, etc.) without intent.
+- Always include the standard `Co-Authored-By` trailer in commit messages.
+
+## Next stage
+
+- Merge complete + deploy pipeline succeeded → `/6-verify`
 
 ---
 
-배포 준비를 시작합니다. 먼저 CI/CD 설정을 확인합니다.
+Starting deploy preparation. Reading `.claude/agents/deployer.md` and verifying CI/CD configuration first.

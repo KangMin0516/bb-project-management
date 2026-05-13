@@ -78,7 +78,7 @@ export default memo(function IssueCard({
             </span>
           )}
         </div>
-        <p className={cn('font-medium leading-snug text-gray-900 dark:text-gray-100', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
+        <p className={cn('font-medium leading-snug break-words text-gray-900 dark:text-gray-100', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
 
         {/* Progress bar for parent issues */}
         {hasChildren && (
@@ -110,11 +110,11 @@ export default memo(function IssueCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1">
+        <div className="flex items-end justify-between gap-2 min-w-0">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-1">
             <span
               className={cn(
-                'rounded px-1.5 py-0.5 text-[10px] font-medium',
+                'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
                 PRIORITY_COLORS[issue.priority] || 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400',
               )}
             >
@@ -123,12 +123,25 @@ export default memo(function IssueCard({
             {issue.labels.slice(0, 2).map((l) => (
               <span
                 key={l.label.id}
-                className="rounded px-1.5 py-0.5 text-[10px] font-medium"
-                style={{ backgroundColor: l.label.color + '20', color: l.label.color }}
+                className="max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-medium"
+                style={{
+                  backgroundColor: l.label.color + '33',
+                  color: l.label.color,
+                  borderColor: l.label.color + '66',
+                }}
+                title={l.label.name}
               >
                 {l.label.name}
               </span>
             ))}
+            {issue.labels.length > 2 && (
+              <span
+                className="shrink-0 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400"
+                title={issue.labels.slice(2).map((l) => l.label.name).join(', ')}
+              >
+                +{issue.labels.length - 2}
+              </span>
+            )}
           </div>
           {(issue.assignee || childList.length > 0) && (() => {
             // Collect unique sub-task assignees that differ from the task assignee
@@ -140,7 +153,7 @@ export default memo(function IssueCard({
             }
             const extras = [...subAssignees.values()]
             return (
-              <div className="flex items-center -space-x-1.5">
+              <div className="flex shrink-0 items-center -space-x-1.5">
                 {extras.map((a) => (
                   <div
                     key={a.name}

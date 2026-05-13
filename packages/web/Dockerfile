@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # =============================================================================
 # BB Project Management - Frontend Dockerfile (React + Vite)
 # =============================================================================
@@ -7,11 +8,15 @@ FROM node:22-alpine AS development
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/web/package.json packages/web/
 COPY packages/shared/package.json packages/shared/
 
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+# Fetch tuning lives in .npmrc (copied above). The BuildKit cache mount keeps
+# the pnpm store across builds so slow-registry pain is paid once, not per push.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
+    corepack enable pnpm && \
+    pnpm install --frozen-lockfile
 
 COPY packages/shared packages/shared
 COPY packages/web packages/web

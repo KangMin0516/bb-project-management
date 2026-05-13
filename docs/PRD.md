@@ -1,48 +1,52 @@
-# Burningbros 내부 프로젝트 관리 시스템 - PRD
+# Burningbros Internal Project Management System — PRD
 
-## 1. 개요
+> **Historical planning document.** This PRD captures the **original product requirements** at project kickoff. Implementation has diverged in several places (e.g., `RECHECK` was refactored from a status into an `isRecheck` boolean; the WebSocket real-time layer is not yet built; integrations like Slack standup, GitHub PR sync, and the AI quick-issue capture were added after this PRD). For the **current state**, read [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) and the per-domain [`docs/changelogs/`](./changelogs/).
+>
+> This file is preserved as the originating "what we set out to build" artifact.
 
-### 목적
-Jira를 대체하는 내부 프로젝트 관리 시스템 구축
+## 1. Overview
 
-### 핵심 목표
-- **비용 절감**: Jira 라이선스 비용 제거
-- **업무 명확성**: 20명 규모, 4개 프로젝트(프로젝트당 4~5명)에서 업무 할당/진행 추적이 명확하게 되는 시스템
-- **AI 시스템 연동**: 기존 AI 기반 업무 생성/기획 시스템과 REST API 연동
+### Purpose
+Build an in-house project management system to replace Jira.
 
-### 대상 사용자
-- Burningbros 내부 PM / 개발자 (약 20명)
+### Core goals
+- **Cost reduction**: remove Jira license cost.
+- **Operational clarity**: for a 20-person team across 4 projects (4–5 people per project), make task assignment and progress tracking unambiguous.
+- **AI-system integration**: REST API that lets our existing AI-based task-generation/planning systems read and write issues.
 
-### 목표 일정
-- 3개월 내 구축
+### Target users
+- Burningbros internal PMs and engineers (~20 people).
 
----
-
-## 2. 기술 스택
-
-| 영역 | 기술 | 비고 |
-|------|------|------|
-| **Backend** | NestJS + TypeScript | 프로덕션 레벨: DI, Module, Guard, Interceptor |
-| **ORM** | Prisma 7 | Type-safe, 마이그레이션 내장 |
-| **Database** | PostgreSQL 16 | 자체 운영 |
-| **인증** | JWT (Passport) + bcrypt | NestJS Guard 기반 역할 관리 |
-| **Frontend** | React 19 + Vite + TypeScript | 기존 프로젝트 패턴 준용 |
-| **UI** | Tailwind CSS + Radix UI + Lucide Icons | 커스텀 컴포넌트 |
-| **상태관리** | Zustand + TanStack React Query | 클라이언트/서버 상태 분리 |
-| **라우팅** | React Router DOM | SPA |
-| **폼/검증** | React Hook Form + Zod | 프론트 검증 |
-| **실시간** | WebSocket (Socket.io) | 칸반 보드 실시간 동기화 |
-| **모노레포** | pnpm workspaces | BB_YT_AUTOMATION 패턴 준용 |
-| **배포** | Docker Compose + 기존 인프라 | 프론트: nginx, 백: Node |
+### Target timeline
+- Production launch within 3 months.
 
 ---
 
-## 3. 프로젝트 구조 (pnpm 모노레포)
+## 2. Tech Stack
+
+| Area | Technology | Notes |
+|------|------------|-------|
+| **Backend** | NestJS + TypeScript | Production-grade: DI, modules, guards, interceptors |
+| **ORM** | Prisma 7 | Type-safe, built-in migrations |
+| **Database** | PostgreSQL 16 | Self-hosted |
+| **Auth** | JWT (Passport) + bcrypt | NestJS Guard-based role management |
+| **Frontend** | React 19 + Vite + TypeScript | Aligned with existing project patterns |
+| **UI** | Tailwind CSS + Radix UI + Lucide Icons | Custom components |
+| **State management** | Zustand + TanStack React Query | Separate client / server state |
+| **Routing** | React Router DOM | SPA |
+| **Forms / validation** | React Hook Form + Zod | Client-side validation |
+| **Real-time** | WebSocket (Socket.io) | Live kanban board sync |
+| **Monorepo** | pnpm workspaces | Following the BB_YT_AUTOMATION pattern |
+| **Deployment** | Docker Compose on existing infra | Frontend: nginx, backend: Node |
+
+---
+
+## 3. Project Structure (pnpm monorepo)
 
 ```
 project-management/
 ├── packages/
-│   ├── api/                          # NestJS 백엔드
+│   ├── api/                          # NestJS backend
 │   │   ├── src/
 │   │   │   ├── auth/                 # AuthModule
 │   │   │   │   ├── auth.module.ts
@@ -59,11 +63,11 @@ project-management/
 │   │   │   │   ├── issues.module.ts
 │   │   │   │   ├── issues.controller.ts
 │   │   │   │   ├── issues.service.ts
-│   │   │   │   └── issues.gateway.ts  # WebSocket (실시간 보드)
+│   │   │   │   └── issues.gateway.ts  # WebSocket (live board)
 │   │   │   ├── labels/               # LabelModule
 │   │   │   ├── members/              # MemberModule
 │   │   │   ├── activities/           # ActivityModule
-│   │   │   ├── common/               # 공통 (decorators, pipes, filters, dto)
+│   │   │   ├── common/               # Shared (decorators, pipes, filters, dto)
 │   │   │   │   ├── decorators/
 │   │   │   │   │   ├── roles.decorator.ts
 │   │   │   │   │   └── current-user.decorator.ts
@@ -82,29 +86,29 @@ project-management/
 │   │   ├── test/
 │   │   └── package.json
 │   │
-│   ├── web/                          # React + Vite 프론트엔드
+│   ├── web/                          # React + Vite frontend
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── ui/               # 공통 UI (Button, Input, Card, Badge, Table 등)
-│   │   │   │   ├── board/            # 칸반 보드 컴포넌트
-│   │   │   │   ├── issue/            # 이슈 카드, 상세, 생성 모달
-│   │   │   │   ├── project/          # 프로젝트 카드, 설정
+│   │   │   │   ├── ui/               # Shared UI (Button, Input, Card, Badge, Table, …)
+│   │   │   │   ├── board/            # Kanban board components
+│   │   │   │   ├── issue/            # Issue card, detail, create modal
+│   │   │   │   ├── project/          # Project card, settings
 │   │   │   │   └── layout/           # Sidebar, Header, Layout
-│   │   │   ├── pages/                # 페이지 컴포넌트
-│   │   │   ├── services/             # API 클라이언트 (Axios)
-│   │   │   ├── stores/               # Zustand 스토어
+│   │   │   ├── pages/                # Page components
+│   │   │   ├── services/             # API client (Axios)
+│   │   │   ├── stores/               # Zustand stores
 │   │   │   ├── contexts/             # AuthContext
-│   │   │   ├── hooks/                # useIssues, useProjects 등
-│   │   │   ├── types/                # TypeScript 타입
-│   │   │   ├── lib/                  # 유틸리티
+│   │   │   ├── hooks/                # useIssues, useProjects, …
+│   │   │   ├── types/                # TypeScript types
+│   │   │   ├── lib/                  # Utilities
 │   │   │   ├── App.tsx
 │   │   │   └── main.tsx
 │   │   └── package.json
 │   │
-│   └── shared/                       # 공유 타입/상수
+│   └── shared/                       # Shared types / constants
 │       ├── src/
-│       │   ├── types/                # Issue, Project 등 공통 타입
-│       │   └── constants/            # 상태값, 우선순위 등 enum/상수
+│       │   ├── types/                # Issue, Project, etc. shared types
+│       │   └── constants/            # Status, priority, etc. enums / constants
 │       └── package.json
 │
 ├── docker-compose.yml
@@ -119,43 +123,43 @@ project-management/
 
 ---
 
-## 4. 핵심 기능
+## 4. Core Features
 
-### 4.1 프로젝트 관리
-- 프로젝트 CRUD (생성/조회/수정/삭제)
-- 프로젝트별 멤버 관리 (초대/역할변경/제거)
-- 프로젝트 목록 및 요약 대시보드
+### 4.1 Project Management
+- Project CRUD (create / read / update / delete).
+- Per-project member management (invite, change role, remove).
+- Project list and summary dashboard.
 
-### 4.2 이슈 관리
+### 4.2 Issue Management
 
-#### 이슈 타입
-| 타입 | 설명 |
-|------|------|
-| Epic | 큰 단위의 기능/목표 그룹핑 |
-| Task | 주요 작업 단위 (주력 이슈 타입) |
-| Bug | 버그 리포트 |
-| Sub-task | Task 하위 세부 작업 |
+#### Issue types
+| Type | Description |
+|------|-------------|
+| Epic | Large-scale feature / goal grouping |
+| Task | Primary unit of work (the most common issue type) |
+| Bug | Bug report |
+| Sub-task | Sub-unit under a Task |
 
-#### 이슈 필드
-| 필드 | 타입 | 필수 |
-|------|------|------|
-| 제목 (Title) | text | O |
-| 설명 (Description) | rich text | X |
-| 상태 (Status) | enum | O |
-| 우선순위 (Priority) | enum | O |
-| 담당자 (Assignee) | user | X |
-| 라벨 (Labels) | tag[] | X |
-| 이슈 타입 (Type) | enum | O |
-| 부모 이슈 (Parent) | relation | X |
+#### Issue fields
+| Field | Type | Required |
+|-------|------|----------|
+| Title | text | Yes |
+| Description | rich text | No |
+| Status | enum | Yes |
+| Priority | enum | Yes |
+| Assignee | user | No |
+| Labels | tag[] | No |
+| Type | enum | Yes |
+| Parent issue | relation | No |
 
-#### 이슈 계층
+#### Issue hierarchy
 ```
 Epic
  └── Task
       └── Sub-task
 ```
 
-### 4.3 워크플로우 (통일)
+### 4.3 Workflow (unified)
 
 ```
 Backlog → To Do → In Progress → Review/QA → Done
@@ -165,115 +169,115 @@ Backlog → To Do → In Progress → Review/QA → Done
                   └──── RECHECK ─────────────┘
 ```
 
-| 상태 | 카테고리 | 설명 |
-|------|---------|------|
-| Backlog | To Do | 아직 계획되지 않은 이슈 |
-| To Do | To Do | 할 일로 확정됨 |
-| In Progress | In Progress | 작업 진행 중 |
-| Review/QA | In Progress | 리뷰 또는 QA 진행 중 |
-| Done | Done | 완료 |
-| Canceled | Done | 취소됨 |
-| Recheck | In Progress | 재확인 필요 (QA → 다시 작업) |
+| Status | Category | Description |
+|--------|----------|-------------|
+| Backlog | To Do | Unscheduled |
+| To Do | To Do | Scheduled to do |
+| In Progress | In Progress | Work underway |
+| Review/QA | In Progress | Under review or QA |
+| Done | Done | Completed |
+| Canceled | Done | Canceled |
+| Recheck | In Progress | Needs recheck (QA → back to in-progress) |
 
-- 모든 상태 간 자유 전환 가능 (Jira 현재 방식 유지)
+- All status transitions are unrestricted (preserves Jira's current behavior).
 
-### 4.4 뷰
+### 4.4 Views
 
-#### 칸반 보드
-- 상태별 칼럼으로 이슈 표시
-- 드래그 & 드롭으로 상태 변경
-- **실시간 동기화** (WebSocket: 다른 사용자의 변경이 즉시 반영)
-- 필터: 담당자, 라벨, 우선순위, 이슈 타입
-- WIP(Work In Progress) 개수 표시
+#### Kanban board
+- Columns per status with issues as cards.
+- Drag-and-drop to change status.
+- **Live sync** (WebSocket: another user's changes appear immediately).
+- Filters: assignee, label, priority, issue type.
+- WIP (Work In Progress) count per column.
 
-#### 리스트 뷰
-- 테이블 형태로 이슈 목록 표시
-- 정렬: 상태, 우선순위, 생성일, 수정일
-- 필터: 칸반과 동일
-- 벌크 액션 (상태 변경, 담당자 할당 등)
+#### List view
+- Tabular view of issues.
+- Sort by: status, priority, created date, updated date.
+- Filters: same as kanban.
+- Bulk actions (status change, assignee assignment, etc.).
 
-### 4.5 권한/역할 (3단계)
+### 4.5 Roles & Permissions (3 tiers)
 
-| 역할 | 권한 |
-|------|------|
-| Admin | 시스템 전체 설정, 프로젝트 생성/삭제, 멤버 초대 |
-| PM | 프로젝트 설정, 이슈 생성/수정/삭제, 멤버 관리 |
-| Developer | 이슈 생성/수정, 자기 이슈 상태 변경 |
+| Role | Permissions |
+|------|-------------|
+| Admin | System-wide settings, create/delete projects, invite members |
+| PM | Project settings, create/update/delete issues, manage members |
+| Developer | Create/update issues, change status on own issues |
 
-NestJS 구현: `@Roles('ADMIN')` 데코레이터 + `RolesGuard`로 엔드포인트별 제어
+NestJS implementation: `@Roles('ADMIN')` decorator + `RolesGuard` for per-endpoint access control.
 
-### 4.6 AI 시스템 연동 (REST API)
-- REST API 제공으로 외부 AI 시스템에서 이슈 CRUD 가능
-- API Key 기반 인증 (Bearer JWT와 별도 `X-API-Key` 헤더)
+### 4.6 AI-system Integration (REST API)
+- External AI systems can perform issue CRUD through the REST API.
+- API-key authentication (separate from Bearer JWT — uses an `X-API-Key` header).
 
 ---
 
-## 5. API 설계 (v1)
+## 5. API Design (v1)
 
 Base URL: `/api/v1`
 
-### 인증
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| POST | `/auth/login` | 로그인 (JWT 발급) | Public |
-| POST | `/auth/register` | 회원가입 | Public |
-| GET | `/auth/me` | 현재 사용자 정보 | JWT |
+### Auth
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| POST | `/auth/login` | Login (JWT issuance) | Public |
+| POST | `/auth/register` | Register | Public |
+| GET | `/auth/me` | Current user info | JWT |
 
-### 프로젝트
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| GET | `/projects` | 내 프로젝트 목록 | JWT |
-| POST | `/projects` | 프로젝트 생성 | JWT |
-| GET | `/projects/:key` | 프로젝트 상세 | JWT + Member |
-| PATCH | `/projects/:key` | 프로젝트 수정 | JWT + PM↑ |
-| DELETE | `/projects/:key` | 프로젝트 삭제 | JWT + Admin |
+### Projects
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| GET | `/projects` | List my projects | JWT |
+| POST | `/projects` | Create project | JWT |
+| GET | `/projects/:key` | Project detail | JWT + Member |
+| PATCH | `/projects/:key` | Update project | JWT + PM↑ |
+| DELETE | `/projects/:key` | Delete project | JWT + Admin |
 
-### 프로젝트 멤버
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| GET | `/projects/:key/members` | 멤버 목록 | JWT + Member |
-| POST | `/projects/:key/members` | 멤버 추가 | JWT + PM↑ |
-| PATCH | `/projects/:key/members/:userId` | 역할 변경 | JWT + Admin |
-| DELETE | `/projects/:key/members/:userId` | 멤버 제거 | JWT + PM↑ |
+### Project Members
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| GET | `/projects/:key/members` | List members | JWT + Member |
+| POST | `/projects/:key/members` | Add member | JWT + PM↑ |
+| PATCH | `/projects/:key/members/:userId` | Change role | JWT + Admin |
+| DELETE | `/projects/:key/members/:userId` | Remove member | JWT + PM↑ |
 
-### 이슈
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| GET | `/projects/:key/issues` | 이슈 목록 (필터/페이지네이션) | JWT + Member |
-| POST | `/projects/:key/issues` | 이슈 생성 | JWT + Member |
-| GET | `/issues/:id` | 이슈 상세 | JWT |
-| PATCH | `/issues/:id` | 이슈 수정 | JWT |
-| DELETE | `/issues/:id` | 이슈 삭제 | JWT + PM↑ |
-| PATCH | `/issues/:id/status` | 상태 변경 (D&D용, WebSocket broadcast) | JWT |
-| PATCH | `/issues/bulk` | 벌크 수정 | JWT + PM↑ |
+### Issues
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| GET | `/projects/:key/issues` | List issues (filter / paginate) | JWT + Member |
+| POST | `/projects/:key/issues` | Create issue | JWT + Member |
+| GET | `/issues/:id` | Issue detail | JWT |
+| PATCH | `/issues/:id` | Update issue | JWT |
+| DELETE | `/issues/:id` | Delete issue | JWT + PM↑ |
+| PATCH | `/issues/:id/status` | Change status (for D&D; WebSocket broadcast) | JWT |
+| PATCH | `/issues/bulk` | Bulk update | JWT + PM↑ |
 
-### 라벨
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| GET | `/projects/:key/labels` | 라벨 목록 | JWT + Member |
-| POST | `/projects/:key/labels` | 라벨 생성 | JWT + PM↑ |
-| PATCH | `/labels/:id` | 라벨 수정 | JWT + PM↑ |
-| DELETE | `/labels/:id` | 라벨 삭제 | JWT + PM↑ |
+### Labels
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| GET | `/projects/:key/labels` | List labels | JWT + Member |
+| POST | `/projects/:key/labels` | Create label | JWT + PM↑ |
+| PATCH | `/labels/:id` | Update label | JWT + PM↑ |
+| DELETE | `/labels/:id` | Delete label | JWT + PM↑ |
 
-### 활동 이력
-| Method | Endpoint | 설명 | Guard |
-|--------|----------|------|-------|
-| GET | `/issues/:id/activities` | 이슈 변경 이력 | JWT |
+### Activity Log
+| Method | Endpoint | Description | Guard |
+|--------|----------|-------------|-------|
+| GET | `/issues/:id/activities` | Issue change history | JWT |
 
 ### WebSocket Events (Socket.io)
-| Event | Direction | 설명 |
-|-------|-----------|------|
-| `join-project` | Client → Server | 프로젝트 룸 참여 |
-| `leave-project` | Client → Server | 프로젝트 룸 퇴장 |
-| `issue-updated` | Server → Client | 이슈 변경 브로드캐스트 |
-| `issue-created` | Server → Client | 이슈 생성 브로드캐스트 |
-| `issue-deleted` | Server → Client | 이슈 삭제 브로드캐스트 |
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `join-project` | Client → Server | Join the project room |
+| `leave-project` | Client → Server | Leave the project room |
+| `issue-updated` | Server → Client | Issue change broadcast |
+| `issue-created` | Server → Client | Issue creation broadcast |
+| `issue-deleted` | Server → Client | Issue deletion broadcast |
 
 ---
 
-## 6. 데이터 모델 (Prisma Schema)
+## 6. Data Model (Prisma Schema)
 
-### ER 다이어그램
+### ER diagram
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
 │    users     │────▶│ project_members  │◀────│  projects   │
@@ -296,11 +300,11 @@ Base URL: `/api/v1`
 └─────────────┘
 ```
 
-### 테이블 상세
+### Tables
 
 #### users
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK, @default(uuid()) |
 | email | String | @unique |
 | name | String | |
@@ -311,18 +315,18 @@ Base URL: `/api/v1`
 | updated_at | DateTime | @updatedAt |
 
 #### projects
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
 | name | String | |
-| key | String | @unique, 영문 대문자 2~10자 |
+| key | String | @unique, uppercase 2–10 chars |
 | description | String? | nullable |
 | created_at | DateTime | |
 | updated_at | DateTime | |
 
 #### project_members
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
 | user_id | UUID | FK → users |
 | project_id | UUID | FK → projects |
@@ -331,16 +335,16 @@ Base URL: `/api/v1`
 | | | @@unique([user_id, project_id]) |
 
 #### issues
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
-| number | Int | 프로젝트 내 자동 증가 |
-| title | String | max 500자 |
+| number | Int | auto-increment within project |
+| title | String | max 500 chars |
 | description | String? | nullable |
 | status | Enum | BACKLOG / TODO / IN_PROGRESS / REVIEW_QA / DONE / CANCELED / RECHECK |
 | priority | Enum | HIGH / MEDIUM / LOW |
 | type | Enum | EPIC / TASK / BUG / SUB_TASK |
-| order | Int | 칸반 칼럼 내 정렬 순서 |
+| order | Int | sort order within a kanban column |
 | project_id | UUID | FK → projects |
 | assignee_id | UUID? | FK → users, nullable |
 | creator_id | UUID | FK → users |
@@ -351,152 +355,152 @@ Base URL: `/api/v1`
 | | | @@index([project_id, status]) |
 
 #### labels
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
-| name | String | max 50자 |
+| name | String | max 50 chars |
 | color | String | hex (#RRGGBB) |
 | project_id | UUID | FK → projects |
 | | | @@unique([project_id, name]) |
 
 #### issue_labels
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | issue_id | UUID | FK → issues |
 | label_id | UUID | FK → labels |
 | | | @@id([issue_id, label_id]) |
 
 #### activities
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
 | issue_id | UUID | FK → issues |
 | user_id | UUID | FK → users |
-| field | String | 변경된 필드명 |
+| field | String | changed field name |
 | old_value | String? | |
 | new_value | String? | |
 | created_at | DateTime | |
 | | | @@index([issue_id]) |
 
-#### api_keys (AI 시스템 연동용)
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+#### api_keys (for AI-system integration)
+| Column | Type | Notes |
+|--------|------|-------|
 | id | UUID | PK |
-| key | String | @unique, 64자 해시 |
-| name | String | 키 설명 |
+| key | String | @unique, 64-char hash |
+| name | String | key description |
 | user_id | UUID | FK → users |
 | last_used | DateTime? | |
 | created_at | DateTime | |
 
 ---
 
-## 7. 페이지 구조 (프론트엔드 라우팅)
+## 7. Page Structure (Frontend Routing)
 
 ```
-/login                     → 로그인 페이지
-/                          → 홈 → /projects 리다이렉트
-/projects                  → 프로젝트 목록
-/projects/:key/board       → 칸반 보드 (메인 뷰)
-/projects/:key/list        → 리스트 뷰
-/projects/:key/settings    → 프로젝트 설정 (멤버/라벨 관리)
-/settings                  → 시스템 설정 (Admin)
-/settings/members          → 전체 멤버 관리
+/login                     → Login page
+/                          → Home → redirects to /projects
+/projects                  → Project list
+/projects/:key/board       → Kanban board (main view)
+/projects/:key/list        → List view
+/projects/:key/settings    → Project settings (members / labels)
+/settings                  → System settings (Admin)
+/settings/members          → Global member management
 ```
 
-### 주요 화면 설명
+### Key screens
 
-#### 로그인
-- 이메일/비밀번호 → JWT 발급 → AuthContext 저장
+#### Login
+- Email + password → JWT issued → stored in AuthContext.
 
-#### 프로젝트 목록
-- 카드 형태 (이름, 키, 이슈 수, 멤버 아바타)
-- 프로젝트 생성 모달
+#### Project list
+- Card layout (name, key, issue count, member avatars).
+- Project-creation modal.
 
-#### 칸반 보드 (핵심 화면)
-- 7개 상태 칼럼 (접기/펼치기 가능)
-- 이슈 카드: 타입 뱃지, 우선순위 아이콘, 제목, 담당자, 라벨
-- 드래그 & 드롭 → 상태 변경 + WebSocket 브로드캐스트
-- 상단 필터바 (담당자, 이슈 타입, 우선순위, 검색)
-- 카드 클릭 → 이슈 상세 사이드패널/모달
+#### Kanban board (core screen)
+- 7 status columns (collapsible).
+- Issue card: type badge, priority icon, title, assignee, labels.
+- Drag-and-drop → status change + WebSocket broadcast.
+- Top filter bar (assignee, issue type, priority, search).
+- Click a card → opens the issue detail side panel / modal.
 
-#### 리스트 뷰
-- 테이블: #, 타입, 제목, 상태, 우선순위, 담당자
-- 정렬/필터
-- 체크박스 + 벌크 액션 (상태 변경, 담당자 할당)
+#### List view
+- Table columns: #, type, title, status, priority, assignee.
+- Sort / filter.
+- Checkbox + bulk actions (change status, assign).
 
-#### 이슈 상세 (모달/사이드패널)
-- 제목 인라인 편집
-- 상태/우선순위/담당자 드롭다운
-- 설명 마크다운 편집
-- 부모 이슈 링크
-- 하위 이슈 목록
-- 라벨 태그
-- Activity 로그 (변경 이력 타임라인)
-
----
-
-## 8. 개발 로드맵
-
-### Phase 1 - MVP (1개월차)
-- [ ] 모노레포 세팅 (pnpm workspaces)
-- [ ] NestJS 프로젝트 초기화 + Prisma 스키마 + 마이그레이션
-- [ ] AuthModule (로그인/회원가입/JWT Guard/Role Guard)
-- [ ] ProjectModule (CRUD + 멤버 관리)
-- [ ] IssueModule (CRUD + 상태 변경)
-- [ ] React 프론트 초기화 + 라우팅 + AuthContext
-- [ ] 칸반 보드 (드래그 & 드롭)
-- [ ] Docker Compose 개발 환경
-
-### Phase 2 - 완성도 (2개월차)
-- [ ] 리스트 뷰
-- [ ] 이슈 필터링 & 검색 (쿼리 파라미터)
-- [ ] LabelModule + UI
-- [ ] ActivityModule (변경 이력 자동 기록)
-- [ ] WebSocket 실시간 보드 동기화
-- [ ] API Key 인증 (AI 시스템 연동)
-- [ ] 벌크 액션
-- [ ] 이슈 상세 사이드패널
-
-### Phase 3 - 안정화 & 확장 (3개월차)
-- [ ] 프로젝트 대시보드 (진행률, 상태별 통계)
-- [ ] 프로덕션 Docker 빌드 최적화
-- [ ] E2E 테스트 (Playwright)
-- [ ] Jira 데이터 마이그레이션 스크립트
-- [ ] 스프린트 기능 (옵션)
-- [ ] 실사용 피드백 반영
+#### Issue detail (modal / side panel)
+- Inline title edit.
+- Status / priority / assignee dropdowns.
+- Description with markdown editing.
+- Parent issue link.
+- Children list.
+- Label tags.
+- Activity log (change-history timeline).
 
 ---
 
-## 9. Jira 현재 사용 대비 변경점
+## 8. Development Roadmap
 
-| 항목 | Jira (현재) | 새 시스템 |
-|------|------------|----------|
-| 워크플로우 | 프로젝트마다 다름 (4~9단계) | 통일 7단계 |
-| 이슈 타입 | Story 포함 5종 | 4종 (Story 제거) |
-| 방법론 | 스크럼/칸반 혼용 | 칸반 우선 → 스프린트 확장 |
-| 라벨 | 자유 입력 | 프로젝트별 라벨 관리 |
-| 우선순위 | 5단계 (사실상 3단계만 사용) | 3단계 (High, Medium, Low) |
-| 알림 | 이메일 | 1차 없음 (추후 검토) |
-| 뷰 | 보드/백로그/타임라인 등 | 칸반 + 리스트 |
-| 실시간 | 없음 | WebSocket 보드 동기화 |
+### Phase 1 — MVP (Month 1)
+- [ ] Monorepo setup (pnpm workspaces).
+- [ ] NestJS project init + Prisma schema + migration.
+- [ ] AuthModule (login / register / JWT guard / role guard).
+- [ ] ProjectModule (CRUD + member management).
+- [ ] IssueModule (CRUD + status change).
+- [ ] React frontend init + routing + AuthContext.
+- [ ] Kanban board (drag-and-drop).
+- [ ] Docker Compose dev environment.
+
+### Phase 2 — Polish (Month 2)
+- [ ] List view.
+- [ ] Issue filtering & search (query params).
+- [ ] LabelModule + UI.
+- [ ] ActivityModule (auto-record change history).
+- [ ] WebSocket live board sync.
+- [ ] API-key auth (AI-system integration).
+- [ ] Bulk actions.
+- [ ] Issue detail side panel.
+
+### Phase 3 — Stabilization & Expansion (Month 3)
+- [ ] Project dashboard (progress, per-status stats).
+- [ ] Production Docker build optimization.
+- [ ] E2E tests (Playwright).
+- [ ] Jira data migration script.
+- [ ] Sprint feature (optional).
+- [ ] Iterate on real-user feedback.
 
 ---
 
-## 10. 기존 프로젝트 재활용 목록
+## 9. Changes vs. Current Jira Usage
 
-### BB_YT_AUTOMATION에서 (Node.js/TS 패턴)
-| 모듈 | 재활용 내용 |
-|------|-----------|
-| pnpm-workspace.yaml | 모노레포 설정 |
-| Prisma 설정 | schema.prisma 구조, 마이그레이션 패턴 |
-| Docker 구성 | multi-stage build, docker-compose |
-| JWT 미들웨어 | 인증 패턴 참고 (→ NestJS Guard로 전환) |
+| Item | Jira (current) | New system |
+|------|----------------|------------|
+| Workflow | Varies per project (4–9 steps) | Unified 7 steps |
+| Issue types | 5 incl. Story | 4 (Story removed) |
+| Methodology | Mixed Scrum / Kanban | Kanban first → sprints later |
+| Labels | Free-form input | Per-project label management |
+| Priority | 5 levels (only 3 actually used) | 3 levels (High, Medium, Low) |
+| Notifications | Email | None initially (revisit later) |
+| Views | Board / backlog / timeline / etc. | Kanban + List |
+| Real-time | None | WebSocket board sync |
 
-### BB_DEVTEAM / CP에서 (프론트엔드)
-| 모듈 | 재활용 내용 |
-|------|-----------|
-| components/ui/ | Button, Input, Card, Badge, Table 등 공통 컴포넌트 |
-| AuthContext | 인증 컨텍스트 패턴 |
-| services/ | Axios 인스턴스 + 인터셉터 패턴 |
-| Tailwind 설정 | CSS 변수, 테마 구성 |
-| Zustand 스토어 | 상태관리 패턴 |
+---
+
+## 10. Reuse from Existing Projects
+
+### From BB_YT_AUTOMATION (Node.js / TS patterns)
+| Module | Reused content |
+|--------|----------------|
+| pnpm-workspace.yaml | Monorepo configuration |
+| Prisma setup | schema.prisma structure, migration pattern |
+| Docker setup | multi-stage build, docker-compose |
+| JWT middleware | Auth pattern reference (→ converted to NestJS Guard) |
+
+### From BB_DEVTEAM / CP (frontend)
+| Module | Reused content |
+|--------|----------------|
+| components/ui/ | Button, Input, Card, Badge, Table, … shared components |
+| AuthContext | Auth context pattern |
+| services/ | Axios instance + interceptor pattern |
+| Tailwind setup | CSS variables, theme configuration |
+| Zustand stores | State-management pattern |

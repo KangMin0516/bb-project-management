@@ -244,6 +244,80 @@ export class SlackService {
     return users;
   }
 
+  // ─── Send DM ─────────────────────────────────────────────
+
+  /**
+   * Send a direct message to a Slack user (by Slack user ID).
+   * Uses the most-recently-installed SlackIntegration. Skips silently when
+   * no integration exists or when the user's DM channel cannot be opened —
+   * callers should treat DMs as best-effort enrichment on top of the
+   * authoritative in-app notification.
+   */
+  async sendDirectMessage(
+    slackUserId: string,
+    text: string,
+    blocks?: unknown[],
+  ): Promise<void> {
+    const integration = await this.prisma.slackIntegration.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!integration) {
+      this.logger.debug(
+        `No Slack integration installed; skipping DM to ${slackUserId}`,
+      );
+      return;
+    }
+
+    const token = this.decrypt(integration.botToken);
+    const client = new WebClient(token);
+
+    let dmChannelId: string | undefined;
+    try {
+      const dm = await client.conversations.open({ users: slackUserId });
+      dmChannelId = dm.channel?.id;
+    } catch (err) {
+      this.logger.warn(
+        `Failed to open DM with ${slackUserId}`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return;
+    }
+
+    if (!dmChannelId) {
+      this.logger.warn(`No DM channel id for Slack user ${slackUserId}`);
+      return;
+    }
+
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries <= maxRetries) {
+      try {
+        await client.chat.postMessage({
+          channel: dmChannelId,
+          text,
+          blocks: blocks as never[] | undefined,
+        });
+        return;
+      } catch (err: unknown) {
+        const error = err as { data?: { error?: string }; retryAfter?: number };
+        if (error.data?.error === 'ratelimited' && retries < maxRetries) {
+          const delay = (error.retryAfter ?? Math.pow(2, retries)) * 1000;
+          this.logger.warn(
+            `Slack DM rate limited, retrying in ${delay}ms (attempt ${retries + 1})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          retries++;
+        } else {
+          this.logger.warn(
+            `Failed to DM ${slackUserId}`,
+            err instanceof Error ? err.message : String(err),
+          );
+          return;
+        }
+      }
+    }
+  }
+
   // ─── Send Message ────────────────────────────────────────
 
   async sendMessage(
