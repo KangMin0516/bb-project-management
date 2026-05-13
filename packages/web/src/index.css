@@ -57,3 +57,17 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+/* Native <button> defaults to cursor:default per the UA stylesheet, which
+   makes interactive icon-only toolbars feel "dead". Force pointer for any
+   non-disabled button; disabled buttons keep the not-allowed cursor so
+   users still get the affordance that the action is blocked. */
+button:not(:disabled):not([aria-disabled="true"]),
+[role="button"]:not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:disabled,
+button[aria-disabled="true"],
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
