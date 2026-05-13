@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, PanelLeftOpen } from 'lucide-react'
-import { specApi } from '@/features/specification/api'
-import { projectApi } from '@/features/project/api'
-import { issueApi } from '@/features/issue/api'
+import { specRepository } from '@/features/specification/repository'
+import { projectRepository } from '@/features/project/repository'
+import { issueRepository } from '@/features/issue/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { useSpecifications } from '@/features/specification/hooks/useSpecifications'
@@ -41,7 +41,7 @@ export default function SpecificationsPage() {
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectApi.get(projectId!),
+    queryFn: () => projectRepository.findOne(projectId!),
     enabled: !!projectId,
   })
 
@@ -71,7 +71,7 @@ export default function SpecificationsPage() {
 
   const handleIssueCreated = useCallback((issueId: string) => {
     if (!selectedId || !projectId) return
-    issueApi.createSpecLink(projectId, issueId, {
+    issueRepository.createSpecLink(projectId, issueId, {
       specId: selectedId,
       sectionSlug: createIssueForSection || undefined,
     })
@@ -84,7 +84,7 @@ export default function SpecificationsPage() {
 
   const handleDownloadAll = useCallback(() => {
     if (!projectId) return
-    specApi.downloadAll(projectId).then((items) => {
+    specRepository.downloadAll(projectId).then((items) => {
       for (const spec of items) {
         const blob = new Blob([spec.content], { type: 'text/markdown' })
         const url = URL.createObjectURL(blob)
@@ -99,7 +99,7 @@ export default function SpecificationsPage() {
 
   const handleDownloadOne = useCallback(() => {
     if (!projectId || !specs.detail) return
-    specApi.downloadOne(projectId, specs.detail.id).then((blob) => {
+    specRepository.downloadOne(projectId, specs.detail.id).then((blob) => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

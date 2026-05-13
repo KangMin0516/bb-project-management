@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { FolderKanban } from 'lucide-react'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { useCreateJoinRequest } from '@/features/project/hooks/useCreateJoinRequest'
 import ProjectCard from '@/features/project/components/ProjectCard'
 import TemplateManager from '@/features/template/components/TemplateManager'
@@ -25,7 +25,7 @@ export default function ProjectsPage() {
 
   const { data: projects, isLoading, isError } = useQuery({
     queryKey: ['projects-all'],
-    queryFn: projectApi.listAll,
+    queryFn: projectRepository.findAllWithMembership,
   })
 
   const join = useCreateJoinRequest(() => setActiveRequestId(null))

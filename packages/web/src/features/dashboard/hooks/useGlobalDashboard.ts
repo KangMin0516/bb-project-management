@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { dashboardApi } from '@/features/dashboard/api'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 
 export function useGlobalDashboard() {
   const queryClient = useQueryClient()
@@ -12,7 +12,7 @@ export function useGlobalDashboard() {
 
   const toggleFocus = useMutation({
     mutationFn: ({ projectId, issueId, focusDate }: { projectId: string; issueId: string; focusDate: string | null }) =>
-      issueApi.update(projectId, issueId, { focusDate }),
+      issueRepository.update(projectId, issueId, { focusDate }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['global-dashboard'] }),
   })
 

@@ -213,7 +213,7 @@ export default function TipTapEditor({
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return
     try {
-      const result = await uploadApi.upload(file)
+      const result = await issueRepository.uploadFile(file)
       if (result.url) {
         editor.chain().focus().setImage({ src: result.url }).run()
       }

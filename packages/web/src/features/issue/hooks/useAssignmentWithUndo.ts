@@ -41,7 +41,7 @@ export function useAssignmentWithUndo({ projectId, issueId, members, onSuccess }
       if (nextId === prevId) return
 
       const payload = { [opts.field]: nextId } as UpdateIssuePayload
-      issueApi.update(projectId, issueId, payload).then(onSuccess).catch((err: unknown) => {
+      issueRepository.update(projectId, issueId, payload).then(onSuccess).catch((err: unknown) => {
         useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
       })
 

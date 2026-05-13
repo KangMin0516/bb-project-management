@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { notificationApi, type Notification } from '@/features/notification/api'
+import { notificationRepository, type Notification } from '@/features/notification/repository'
 import { cn } from '@/shared/lib/utils'
 import { Bell, Check } from 'lucide-react'
 import { timeAgo } from '@/shared/lib/time'
@@ -20,18 +20,18 @@ export default function NotificationBell() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
-    queryFn: notificationApi.unreadCount,
+    queryFn: notificationRepository.getUnreadCount,
     refetchInterval: 30000,
   })
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
-    queryFn: notificationApi.list,
+    queryFn: notificationRepository.findMine,
     enabled: open,
   })
 
   const markReadMutation = useMutation({
-    mutationFn: notificationApi.markAsRead,
+    mutationFn: notificationRepository.markAsRead,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })
@@ -39,7 +39,7 @@ export default function NotificationBell() {
   })
 
   const markAllReadMutation = useMutation({
-    mutationFn: notificationApi.markAllAsRead,
+    mutationFn: notificationRepository.markAllAsRead,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })

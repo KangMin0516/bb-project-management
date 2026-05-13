@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trash2, Link2, ChevronsLeft, ChevronsRight, GitBranch } from 'lucide-react'
 import type { IssueDetail, Issue } from '@/features/issue/api'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { TYPE_ICONS } from '@/shared/config/constants'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
@@ -158,7 +158,7 @@ function Breadcrumb({
   const ancestors = [parent.parent, parent].filter(Boolean) as Array<{ id: string; number: number; title: string; type: string }>
 
   const navigate = (id: string) => {
-    issueApi.get(projectId, id).then(
+    issueRepository.findOne(projectId, id).then(
       (fullIssue) => onNavigate(fullIssue),
       (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
     )

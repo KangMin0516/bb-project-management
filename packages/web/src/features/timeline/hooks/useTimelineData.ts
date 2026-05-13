@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
-import { projectApi } from '@/features/project/api'
+import { issueRepository } from '@/features/issue/repository'
+import { projectRepository } from '@/features/project/repository'
 
 /**
  * The two queries every timeline screen needs: the project (for header) and
@@ -11,13 +11,13 @@ import { projectApi } from '@/features/project/api'
 export function useTimelineData(projectId: string) {
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectApi.get(projectId),
+    queryFn: () => projectRepository.findOne(projectId),
     enabled: !!projectId,
   })
 
   const issuesQuery = useQuery({
     queryKey: ['issues', projectId, 'timeline'],
-    queryFn: () => issueApi.list(projectId, { limit: '200' }),
+    queryFn: () => issueRepository.findInProjectRaw(projectId, { limit: '200' }),
     enabled: !!projectId,
   })
 

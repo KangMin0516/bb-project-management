@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
-import { projectApi } from '@/features/project/api'
+import { issueRepository } from '@/features/issue/repository'
+import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
@@ -21,14 +21,14 @@ export function useIssueListData({ projectId, listParams }: UseIssueListDataOpti
   const queryClient = useQueryClient()
   const enabled = !!projectId
 
-  const project = useQuery({ queryKey: ['project', projectId], queryFn: () => projectApi.get(projectId), enabled })
-  const members = useQuery({ queryKey: ['members', projectId], queryFn: () => projectApi.listMembers(projectId), enabled })
-  const labels = useQuery({ queryKey: ['labels', projectId], queryFn: () => projectApi.listLabels(projectId), enabled })
+  const project = useQuery({ queryKey: ['project', projectId], queryFn: () => projectRepository.findOne(projectId), enabled })
+  const members = useQuery({ queryKey: ['members', projectId], queryFn: () => projectRepository.listMembers(projectId), enabled })
+  const labels = useQuery({ queryKey: ['labels', projectId], queryFn: () => projectRepository.listLabels(projectId), enabled })
   const components = useQuery({ queryKey: ['components', projectId], queryFn: () => componentApi.list(projectId), enabled })
 
   const list = useQuery({
     queryKey: ['issues', projectId, listParams],
-    queryFn: () => issueApi.list(projectId, listParams),
+    queryFn: () => issueRepository.findInProjectRaw(projectId, listParams),
     enabled,
   })
 
@@ -36,13 +36,13 @@ export function useIssueListData({ projectId, listParams }: UseIssueListDataOpti
 
   const epicChange = useMutation({
     mutationFn: ({ issueId, parentId }: { issueId: string; parentId: string | null }) =>
-      issueApi.update(projectId, issueId, { parentId }),
+      issueRepository.update(projectId, issueId, { parentId }),
     onSuccess: invalidateList,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change epic')),
   })
 
   const remove = useMutation({
-    mutationFn: (issueId: string) => issueApi.delete(projectId, issueId),
+    mutationFn: (issueId: string) => issueRepository.remove(projectId, issueId),
     onSuccess: invalidateList,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue')),
   })

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type CreateIssuePayload } from '@/features/issue/api'
 import { templateApi } from '@/features/template/api'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
 import { X } from 'lucide-react'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
@@ -37,12 +37,12 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
 
   const { data: members } = useQuery({
     queryKey: ['members', projectId],
-    queryFn: () => projectApi.listMembers(projectId),
+    queryFn: () => projectRepository.listMembers(projectId),
   })
 
   const { data: labels } = useQuery({
     queryKey: ['labels', projectId],
-    queryFn: () => projectApi.listLabels(projectId),
+    queryFn: () => projectRepository.listLabels(projectId),
   })
 
   const { data: components } = useQuery({
@@ -52,7 +52,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
 
   const { data: issuesData } = useQuery({
     queryKey: ['issues', projectId, 'parent-options'],
-    queryFn: () => issueApi.list(projectId, { limit: '200' }),
+    queryFn: () => issueRepository.findInProjectRaw(projectId, { limit: '200' }),
   })
 
   const { data: templates } = useQuery({
@@ -83,7 +83,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
   }, [issuesData, type])
 
   const mutation = useMutation({
-    mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
+    mutationFn: (data: CreateIssuePayload) => issueRepository.create(projectId, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })

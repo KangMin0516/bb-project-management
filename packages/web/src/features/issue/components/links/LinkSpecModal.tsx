@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search, FileText } from 'lucide-react'
-import { specApi, type SpecListItem } from '@/features/specification/api'
+import { specRepository } from '@/features/specification/repository'
+import type { SpecListItem } from '@/features/specification/api'
 import { SPEC_STATUS_COLORS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import { useSpecLinkMutations } from '@/features/issue/hooks/useSpecLinkMutations'
@@ -24,12 +25,12 @@ export default function LinkSpecModal({ projectId, issueId, onClose }: LinkSpecM
 
   const { data: specs } = useQuery({
     queryKey: ['specifications', projectId],
-    queryFn: () => specApi.list(projectId),
+    queryFn: () => specRepository.findInProject(projectId),
   })
 
   const { data: specDetail } = useQuery({
     queryKey: ['specification', projectId, selectedSpec?.id],
-    queryFn: () => specApi.get(projectId, selectedSpec!.id),
+    queryFn: () => specRepository.findOne(projectId, selectedSpec!.id),
     enabled: !!selectedSpec,
   })
 

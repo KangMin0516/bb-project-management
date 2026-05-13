@@ -33,20 +33,20 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
 
   const createMutation = useMutation({
     mutationFn: (data: { content: string; sectionId?: string; parentId?: string }) =>
-      specApi.createComment(projectId, specId, data),
+      specRepository.createComment(projectId, specId, data),
     onSuccess: () => { invalidate(); setNewContent(''); setReplyContent(''); setReplyTo(null) },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment')),
   })
 
   const toggleResolveMutation = useMutation({
     mutationFn: ({ commentId, resolved }: { commentId: string; resolved: boolean }) =>
-      specApi.updateComment(projectId, specId, commentId, { resolved }),
+      specRepository.updateComment(projectId, specId, commentId, { resolved }),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment')),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (commentId: string) => specApi.deleteComment(projectId, specId, commentId),
+    mutationFn: (commentId: string) => specRepository.deleteComment(projectId, specId, commentId),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment')),
   })

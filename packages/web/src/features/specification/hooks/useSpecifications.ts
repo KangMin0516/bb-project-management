@@ -16,30 +16,30 @@ export function useSpecifications(projectId: string, selectedId: string | null) 
 
   const list = useQuery({
     queryKey: ['specifications', projectId],
-    queryFn: () => specApi.list(projectId),
+    queryFn: () => specRepository.findInProject(projectId),
     enabled,
   })
 
   const detail = useQuery({
     queryKey: ['specification', projectId, selectedId],
-    queryFn: () => specApi.get(projectId, selectedId!),
+    queryFn: () => specRepository.findOne(projectId, selectedId!),
     enabled: enabled && !!selectedId,
   })
 
   const create = useMutation({
-    mutationFn: (data: { title: string; content: string; category?: string }) => specApi.create(projectId, data),
+    mutationFn: (data: { title: string; content: string; category?: string }) => specRepository.create(projectId, data),
     onSuccess: invalidateList,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create specification')),
   })
 
   const update = useMutation({
-    mutationFn: (data: { content?: string; status?: SpecStatus }) => specApi.update(projectId, selectedId!, data),
+    mutationFn: (data: { content?: string; status?: SpecStatus }) => specRepository.update(projectId, selectedId!, data),
     onSuccess: () => { invalidateList(); invalidateDetail() },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update specification')),
   })
 
   const remove = useMutation({
-    mutationFn: () => specApi.delete(projectId, selectedId!),
+    mutationFn: () => specRepository.remove(projectId, selectedId!),
     onSuccess: invalidateList,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete specification')),
   })

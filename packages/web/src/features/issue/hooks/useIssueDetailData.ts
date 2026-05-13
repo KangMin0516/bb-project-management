@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
 
 /**
@@ -19,12 +19,12 @@ export function useIssueDetailData(projectId: string, issueId: string, skipEpics
 
   const membersQuery = useQuery({
     queryKey: ['members', projectId],
-    queryFn: () => projectApi.listMembers(projectId),
+    queryFn: () => projectRepository.listMembers(projectId),
   })
 
   const labelsQuery = useQuery({
     queryKey: ['labels', projectId],
-    queryFn: () => projectApi.listLabels(projectId),
+    queryFn: () => projectRepository.listLabels(projectId),
   })
 
   const componentsQuery = useQuery({

@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DropResult } from '@hello-pangea/dnd'
-import { specApi, type SpecListItem } from '@/features/specification/api'
+import { specRepository } from '@/features/specification/repository'
+import type { SpecListItem } from '@/features/specification/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -50,7 +51,7 @@ export function useSpecReorder(projectId: string, specs: SpecListItem[] | undefi
     })
 
     Promise.all(
-      reordered.map((spec, idx) => (spec.order === idx ? null : specApi.update(projectId, spec.id, { order: idx }))),
+      reordered.map((spec, idx) => (spec.order === idx ? null : specRepository.update(projectId, spec.id, { order: idx }))),
     )
       .catch((err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder')))
       .finally(() => queryClient.invalidateQueries({ queryKey: ['specifications', projectId] }))

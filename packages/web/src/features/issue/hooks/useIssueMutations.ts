@@ -20,7 +20,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   }
 
   const update = useMutation({
-    mutationFn: (data: UpdateIssuePayload) => issueApi.update(projectId, issueId, data),
+    mutationFn: (data: UpdateIssuePayload) => issueRepository.update(projectId, issueId, data),
     onSuccess: invalidateAll,
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
@@ -28,7 +28,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   })
 
   const deleteIssue = useMutation({
-    mutationFn: () => issueApi.delete(projectId, issueId),
+    mutationFn: () => issueRepository.remove(projectId, issueId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
@@ -40,7 +40,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   })
 
   const uploadAttachment = useMutation({
-    mutationFn: (file: File) => uploadApi.upload(file, { issueId }),
+    mutationFn: (file: File) => issueRepository.uploadFile(file, { issueId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'))
@@ -48,7 +48,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   })
 
   const deleteAttachment = useMutation({
-    mutationFn: (id: string) => uploadApi.delete(id),
+    mutationFn: (id: string) => issueRepository.removeFile(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete file'))
@@ -56,7 +56,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   })
 
   const createSubtask = useMutation({
-    mutationFn: (data: CreateIssuePayload) => issueApi.create(projectId, data),
+    mutationFn: (data: CreateIssuePayload) => issueRepository.create(projectId, data),
     onSuccess: invalidateAll,
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create sub-task'))

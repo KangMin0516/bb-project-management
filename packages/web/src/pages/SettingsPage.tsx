@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { projectApi } from '@/features/project/api'
-import { userApi } from '@/entities/user/api'
+import { projectRepository } from '@/features/project/repository'
+import { userRepository } from '@/entities/user/repository'
 import { slackApi } from '@/features/integrations/slack/api'
 import { useAuthStore } from '@/features/auth/store'
 import { useProjectMembers } from '@/features/project/hooks/useProjectMembers'
@@ -34,7 +34,7 @@ export default function SettingsPage() {
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectApi.get(projectId!),
+    queryFn: () => projectRepository.findOne(projectId!),
     enabled: !!projectId,
   })
 
@@ -43,7 +43,7 @@ export default function SettingsPage() {
     queryFn: slackApi.getStatus,
   })
 
-  const { data: allUsers } = useQuery({ queryKey: ['users'], queryFn: () => userApi.list() })
+  const { data: allUsers } = useQuery({ queryKey: ['users'], queryFn: () => userRepository.search() })
 
   const members = useProjectMembers(projectId ?? '')
   const labels = useProjectLabels(projectId ?? '')

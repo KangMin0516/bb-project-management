@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 
 export function useBoardData(projectId: string, showArchived: boolean) {
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectApi.get(projectId),
+    queryFn: () => projectRepository.findOne(projectId),
     enabled: !!projectId,
   })
 

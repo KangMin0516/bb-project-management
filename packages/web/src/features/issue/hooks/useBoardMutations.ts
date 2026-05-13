@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -10,14 +10,14 @@ export function useBoardMutations(projectId: string) {
 
   const reorder = useMutation({
     mutationFn: (args: { issueId: string; status: string; order: number }) =>
-      issueApi.reorder(projectId, args.issueId, { status: args.status, order: args.order }),
+      issueRepository.reorder(projectId, args.issueId, { status: args.status, order: args.order }),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder issue')),
   })
 
   const updateIssue = useMutation({
     mutationFn: (args: { issueId: string; data: { status?: string; parentId?: string | null } }) =>
-      issueApi.update(projectId, args.issueId, args.data),
+      issueRepository.update(projectId, args.issueId, args.data),
     onSuccess: invalidate,
   })
 

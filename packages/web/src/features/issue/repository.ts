@@ -1,4 +1,4 @@
-import { issueApi, type Issue, type PaginatedIssues } from '@/features/issue/api'
+import { issueApi, uploadApi, type Issue, type PaginatedIssues } from '@/features/issue/api'
 
 /**
  * Repository layer for Issue. Wraps the raw HTTP client with typed,
@@ -51,6 +51,12 @@ export const issueRepository = {
     return issueApi.list(projectId, toQueryParams(filters))
   },
 
+  /**
+   * Low-level list with raw server params. Used by IssuesPage where the
+   * URL → params transform already produces the server-shaped dict.
+   */
+  findInProjectRaw: issueApi.list,
+
   /** EPIC-type issues only — used by the parent picker in IssueDetailPanel. */
   findEpicsInProject(projectId: string): Promise<Issue[]> {
     return issueApi.list(projectId, { type: 'EPIC', limit: String(EPIC_PAGE_SIZE) }).then((r) => r.items)
@@ -82,6 +88,29 @@ export const issueRepository = {
   /** Bulk operations from the issues list page. */
   bulkUpdate: issueApi.bulkUpdate,
   bulkDelete: issueApi.bulkDelete,
+
+  /** Activity feed. */
+  findActivities: issueApi.activities,
+  findProjectActivities: issueApi.projectActivities,
+
+  /** Comments. */
+  findComments: issueApi.comments,
+  createComment: issueApi.createComment,
+  updateComment: issueApi.updateComment,
+  deleteComment: issueApi.deleteComment,
+
+  /** Issue-to-issue links (BLOCKS, RELATES_TO, DUPLICATES, ...). */
+  findLinks: issueApi.getLinks,
+  createLink: issueApi.createLink,
+  deleteLink: issueApi.deleteLink,
+
+  /** Issue-to-spec section links. */
+  createSpecLink: issueApi.createSpecLink,
+  deleteSpecLink: issueApi.deleteSpecLink,
+
+  /** File attachments (uploaded against an issueId or commentId). */
+  uploadFile: uploadApi.upload,
+  removeFile: uploadApi.delete,
 }
 
 export type IssueRepository = typeof issueRepository

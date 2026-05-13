@@ -29,11 +29,11 @@ export default function ActivityTab({
 
   const { data: commentsData } = useQuery({
     queryKey: ['comments', projectId, issueId],
-    queryFn: () => issueApi.comments(projectId, issueId),
+    queryFn: () => issueRepository.findComments(projectId, issueId),
   })
 
   const createCommentMutation = useMutation({
-    mutationFn: (content: string) => issueApi.createComment(projectId, issueId, { content }),
+    mutationFn: (content: string) => issueRepository.createComment(projectId, issueId, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
@@ -44,7 +44,7 @@ export default function ActivityTab({
 
   const updateCommentMutation = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string; content: string }) =>
-      issueApi.updateComment(projectId, issueId, commentId, { content }),
+      issueRepository.updateComment(projectId, issueId, commentId, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
@@ -54,7 +54,7 @@ export default function ActivityTab({
   })
 
   const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) => issueApi.deleteComment(projectId, issueId, commentId),
+    mutationFn: (commentId: string) => issueRepository.deleteComment(projectId, issueId, commentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },

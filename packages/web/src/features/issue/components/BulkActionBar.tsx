@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { STATUSES, STATUS_LABELS, PRIORITIES, PRIORITY_LABELS } from '@/shared/config/constants'
 import { X, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/shared/lib/toast'
@@ -25,7 +25,7 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
 
   const bulkUpdateMutation = useMutation({
     mutationFn: (data: { status?: string; priority?: string; assigneeId?: string | null }) =>
-      issueApi.bulkUpdate(projectId, { issueIds: [...selectedIds], ...data }),
+      issueRepository.bulkUpdate(projectId, { issueIds: [...selectedIds], ...data }),
     onSuccess: () => invalidate(),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Bulk update failed'))
@@ -33,7 +33,7 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
   })
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: () => issueApi.bulkDelete(projectId, [...selectedIds]),
+    mutationFn: () => issueRepository.bulkDelete(projectId, [...selectedIds]),
     onSuccess: () => invalidate(),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Bulk delete failed'))

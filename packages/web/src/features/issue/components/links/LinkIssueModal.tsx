@@ -22,7 +22,7 @@ export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssu
 
   const { data: issuesData } = useQuery({
     queryKey: ['issues', projectId, { limit: '200' }],
-    queryFn: () => issueApi.list(projectId, { limit: '200' }),
+    queryFn: () => issueRepository.findInProjectRaw(projectId, { limit: '200' }),
   })
 
   const { create } = useIssueLinkMutations(projectId, issueId, onClose)

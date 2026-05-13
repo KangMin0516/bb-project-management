@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/features/auth/store'
 import QuickIssueModal from '@/features/issue/components/QuickIssueModal'
 import NotificationBell from '@/features/notification/components/NotificationBell'
-import { projectApi } from '@/features/project/api'
+import { projectRepository } from '@/features/project/repository'
 import CommandPalette from '@/features/search/components/CommandPalette'
 import { getErrorMessage } from '@/shared/lib/error'
 import { useShortcutsStore } from '@/shared/lib/shortcuts'
@@ -152,7 +152,7 @@ export default function AppLayout() {
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],
-    queryFn: projectApi.list,
+    queryFn: projectRepository.findMine,
   })
 
   const currentProject = projects?.find((p) => p.id === projectId || p.key === projectId)

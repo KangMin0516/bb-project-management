@@ -226,7 +226,7 @@ export default function DependencyGraph() {
 
   const { data: links, isLoading } = useQuery({
     queryKey: ['dependencies', projectId],
-    queryFn: () => issueApi.dependencies(projectId!),
+    queryFn: () => issueRepository.findDependencyGraph(projectId!),
     enabled: !!projectId,
   })
 

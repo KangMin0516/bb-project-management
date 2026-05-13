@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, type IssueLinkType } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
+import type { IssueLinkType } from '@/features/issue/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
@@ -14,13 +15,13 @@ export function useIssueLinkMutations(projectId: string, issueId: string, onCrea
 
   const create = useMutation({
     mutationFn: (data: { targetIssueId: string; type: IssueLinkType }) =>
-      issueApi.createLink(projectId, issueId, data),
+      issueRepository.createLink(projectId, issueId, data),
     onSuccess: () => { invalidate(); onCreated?.() },
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create link')),
   })
 
   const remove = useMutation({
-    mutationFn: (linkId: string) => issueApi.deleteLink(projectId, issueId, linkId),
+    mutationFn: (linkId: string) => issueRepository.deleteLink(projectId, issueId, linkId),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete link')),
   })
