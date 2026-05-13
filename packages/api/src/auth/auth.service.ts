@@ -41,7 +41,7 @@ export class AuthService {
 
     return {
       message:
-        '가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.',
+        'Your registration request has been submitted. You can sign in after an administrator approves it.',
     };
   }
 
@@ -60,15 +60,19 @@ export class AuthService {
     }
 
     if (user.status === 'PENDING') {
-      throw new ForbiddenException('관리자 승인 대기 중입니다.');
+      throw new ForbiddenException(
+        'Your account is awaiting administrator approval.',
+      );
     }
 
     if (user.status === 'REJECTED') {
-      throw new ForbiddenException('가입이 거절되었습니다.');
+      throw new ForbiddenException(
+        'Your registration request was rejected.',
+      );
     }
 
     if (user.status === 'DELETED') {
-      throw new ForbiddenException('삭제된 계정입니다.');
+      throw new ForbiddenException('This account has been deleted.');
     }
 
     return this.buildTokenResponse(user.id, user.email);

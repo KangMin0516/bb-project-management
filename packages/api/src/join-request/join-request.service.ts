@@ -37,7 +37,7 @@ export class JoinRequestService {
         select: { id: true },
       });
       if (!project) {
-        throw new NotFoundException('프로젝트를 찾을 수 없습니다');
+        throw new NotFoundException('Project not found');
       }
       projectId = project.id;
     }
@@ -47,7 +47,7 @@ export class JoinRequestService {
       where: { userId_projectId: { userId: requesterId, projectId } },
     });
     if (existingMember) {
-      throw new BadRequestException('이미 프로젝트 멤버입니다');
+      throw new BadRequestException('You are already a member of this project');
     }
 
     // Check for existing PENDING request
@@ -57,7 +57,7 @@ export class JoinRequestService {
 
     if (existingRequest) {
       if (existingRequest.status === 'PENDING') {
-        throw new BadRequestException('이미 요청이 진행 중입니다');
+        throw new BadRequestException('A join request is already pending');
       }
       // If REJECTED or APPROVED, delete old record and allow re-request
       await this.prisma.projectJoinRequest.delete({
@@ -112,11 +112,11 @@ export class JoinRequestService {
         project: { select: { id: true, name: true, key: true } },
       },
     });
-    if (!request) throw new NotFoundException('요청을 찾을 수 없습니다');
+    if (!request) throw new NotFoundException('Join request not found');
     if (request.projectId !== projectId)
-      throw new BadRequestException('프로젝트가 일치하지 않습니다');
+      throw new BadRequestException('Join request does not belong to this project');
     if (request.status !== 'PENDING')
-      throw new BadRequestException('이미 처리된 요청입니다');
+      throw new BadRequestException('This join request has already been resolved');
     return request;
   }
 
@@ -156,7 +156,7 @@ export class JoinRequestService {
     // In-app notification to requester
     await this.notificationService.create({
       type: 'JOIN_APPROVED',
-      message: `${request.project.name} 프로젝트 참여 요청이 승인되었습니다`,
+      message: `Your request to join "${request.project.name}" has been approved`,
       userId: request.requesterId,
       projectId: request.projectId,
       actorId: resolvedById,
@@ -190,7 +190,7 @@ export class JoinRequestService {
     // In-app notification to requester
     await this.notificationService.create({
       type: 'JOIN_REJECTED',
-      message: `${request.project.name} 프로젝트 참여 요청이 거절되었습니다`,
+      message: `Your request to join "${request.project.name}" was rejected`,
       userId: request.requesterId,
       projectId: request.projectId,
       actorId: resolvedById,
@@ -205,10 +205,10 @@ export class JoinRequestService {
     });
 
     if (!request || request.requesterId !== userId) {
-      throw new NotFoundException('요청을 찾을 수 없습니다');
+      throw new NotFoundException('Join request not found');
     }
     if (request.status !== 'PENDING') {
-      throw new BadRequestException('대기 중인 요청만 취소할 수 있습니다');
+      throw new BadRequestException('Only pending requests can be canceled');
     }
 
     await this.prisma.projectJoinRequest.delete({ where: { id: requestId } });
@@ -243,13 +243,13 @@ export class JoinRequestService {
     const blocks = [
       {
         type: 'header',
-        text: { type: 'plain_text', text: '📋 프로젝트 참여 요청' },
+        text: { type: 'plain_text', text: '📋 Project join request' },
       },
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${joinRequest.requester.name}*님이 *${joinRequest.project.name}* 프로젝트 참여를 요청했습니다.`,
+          text: `*${joinRequest.requester.name}* has requested to join *${joinRequest.project.name}*.`,
         },
       },
       ...(joinRequest.message
@@ -268,7 +268,7 @@ export class JoinRequestService {
         elements: [
           {
             type: 'button',
-            text: { type: 'plain_text', text: '승인/거절하기' },
+            text: { type: 'plain_text', text: 'Approve / Reject' },
             url: settingsUrl,
             style: 'primary',
           },
@@ -276,7 +276,7 @@ export class JoinRequestService {
       },
     ];
 
-    const text = `${joinRequest.requester.name}님이 ${joinRequest.project.name} 프로젝트 참여를 요청했습니다.`;
+    const text = `${joinRequest.requester.name} has requested to join ${joinRequest.project.name}.`;
 
     for (const member of adminsAndPms) {
       if (member.user.slackUserId) {
