@@ -36,17 +36,17 @@ export default defineConfig([
       'boundaries/ignore': ['**/*.test.*', '**/*.spec.*'],
     },
     rules: {
-      'boundaries/element-types': [
+      'boundaries/dependencies': [
         'error',
         {
           default: 'disallow',
           rules: [
-            { from: 'shared',   allow: ['shared'] },
-            { from: 'entities', allow: ['shared', 'entities'] },
-            { from: 'features', allow: ['shared', 'entities', 'features'] },
-            { from: 'widgets',  allow: ['shared', 'entities', 'features', 'widgets'] },
-            { from: 'pages',    allow: ['shared', 'entities', 'features', 'widgets', 'pages'] },
-            { from: 'app',      allow: ['shared', 'entities', 'features', 'widgets', 'pages', 'app'] },
+            { from: { type: 'shared' },   allow: { to: { type: 'shared' } } },
+            { from: { type: 'entities' }, allow: { to: { type: ['shared', 'entities'] } } },
+            { from: { type: 'features' }, allow: { to: { type: ['shared', 'entities', 'features'] } } },
+            { from: { type: 'widgets' },  allow: { to: { type: ['shared', 'entities', 'features', 'widgets'] } } },
+            { from: { type: 'pages' },    allow: { to: { type: ['shared', 'entities', 'features', 'widgets', 'pages'] } } },
+            { from: { type: 'app' },      allow: { to: { type: ['shared', 'entities', 'features', 'widgets', 'pages', 'app'] } } },
           ],
         },
       ],
