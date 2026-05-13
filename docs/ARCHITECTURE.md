@@ -475,6 +475,62 @@ sequenceDiagram
 
 The API-key prefix optimisation: only the first 8 chars (`bbpm_xxx`) are indexed and used to narrow the bcrypt-compare set. With ~28 hex chars of entropy left, collisions on the prefix are vanishingly rare but bounded — the guard tolerates more than one row by iterating compare.
 
+### 7.6. Issue assignment → Slack DM (fire-and-forget)
+
+When an issue's `assigneeId` changes, the system writes the in-app `notifications` row (authoritative) and *then* triggers a best-effort Slack DM to the new assignee. The DM is opt-in by *user mapping*: it only fires when the recipient's `users.slack_user_id` is non-null (populated lazily by the standup flow, see §7.2).
+
+```mermaid
+sequenceDiagram
+  actor Actor as Actor (PM)
+  participant Issue as IssueService
+  participant DB as Postgres
+  participant Notif as NotificationService
+  participant Slack as SlackService
+  participant SlackAPI as Slack Web API
+  actor Assignee as Assignee
+
+  Actor->>Issue: PATCH /api/projects/.../issues/:id<br/>{ assigneeId: U2 }
+  Issue->>DB: UPDATE issues, write Activity
+  Issue->>DB: SELECT users.name WHERE id = actor.id
+  Issue->>Notif: create({ type:'ASSIGNED', userId:U2, actorId, meta:{projectKey,issueNumber,issueTitle,actorName} })
+  Notif->>DB: INSERT notifications (meta NOT persisted)
+  Notif-->>Issue: notification row
+  Note over Notif,Slack: Fire-and-forget — never blocks the PATCH response.
+  Notif->>DB: SELECT users.slackUserId WHERE id = U2
+  alt slackUserId is null
+    Notif->>Notif: skip DM (in-app notification is enough)
+  else slackUserId present
+    Notif->>Slack: sendDirectMessage(slackUserId, text, blocks)
+    Slack->>DB: SELECT first SlackIntegration (most recent)
+    alt no SlackIntegration installed
+      Slack-->>Notif: skip silently (debug log)
+    else
+      Slack->>SlackAPI: conversations.open({ users: slackUserId })
+      Slack->>SlackAPI: chat.postMessage(channel: DM, blocks)
+      Note over Slack,SlackAPI: Same retry loop as sendMessage:<br/>up to 3 retries on `ratelimited`<br/>with exponential backoff.
+      SlackAPI-->>Assignee: 💬 "You've been assigned BBPM-123<br/>'Fix login redirect bug' by Alice"<br/>[View in BB-PM]
+    end
+  end
+```
+
+**Block payload**:
+
+- Section: `:clipboard: *You've been assigned a new issue*`.
+- Section with two `*Field*: value` fields — `*BBPM-123*\n<title>` and `*Assigned by*\n<actorName>`.
+- Action button: `View in BB-PM` linking to `${FRONTEND_URL}/projects/<projectKey>/board?open=<issueId>`. `FRONTEND_URL` is the same env var used by `MgmtDigestService` (§7.4); defaults to `http://localhost:5173` in dev.
+
+**Fire-and-forget guarantees**:
+
+- The DM is dispatched from `NotificationService.create` via an explicit `.catch(log)` so any Slack error (no integration, DM channel cannot be opened, rate-limit exhausted) only produces a `warn` log — the issue PATCH succeeds.
+- `meta` is **not persisted** — it's destructured off the create input and consumed only by the delivery side-effect. The `notifications` row stores the same fields it always did.
+
+**Coverage**:
+
+- Fires from every site that calls `IssueService.notifyAssignment`: PATCH `update` (`issue.service.ts:547`), `autoAssignUnassignedChildren` (`:124`), `bulkUpdate` (`:750`).
+- Does **not** fire on drag-reorder — `reorder()` only mutates `status` + `order`, not `assigneeId`.
+
+See [`docs/changelogs/slack-changelog.md`](./changelogs/slack-changelog.md), [`docs/changelogs/notification-changelog.md`](./changelogs/notification-changelog.md), [`docs/plans/slack-assignment-notification.md`](./plans/slack-assignment-notification.md).
+
 ---
 
 ## 8. State Machines
@@ -585,10 +641,12 @@ There is no broker. Everything async runs in-process via `@nestjs/schedule` cron
 
 **Fire-and-forget patterns in-request:**
 
-- `IssueService.notifyAssignment` — calls `NotificationService.create(...).catch(() => {})` after a status/assignee change. The promise is intentionally not awaited; failures vanish silently.
+- `IssueService.notifyAssignment` — fetches `users.name` for the actor, then calls `NotificationService.create(..., meta:{...}).catch(() => {})`. The notification row is awaited; the downstream Slack DM dispatched by `NotificationService` is not (see §7.6).
+- `NotificationService.create` (for `type === 'ASSIGNED'`) — dispatches `SlackService.sendDirectMessage` via `.catch(warn)`. The DM never blocks the issue PATCH, never throws upward, and silently skips when the recipient has no `slack_user_id` or no `SlackIntegration` is installed.
 - `IssueService.autoAssignUnassignedChildren` — re-runs the same notify pattern in a loop.
 - `IssueService.bulkUpdate` — notifies inside a `$transaction` callback. If the transaction rolls back, notifications were already sent (in this code, they're inside the tx, but a `$transaction(async tx => …)` boundary creates a subtle race).
 - `GitHubSyncService.transitionLinkedIssues` — wraps each `update` in try/catch but does not retry.
+- `JoinRequestService.sendSlackNotification` — Slack DM to ADMIN/PM on a new request, fire-and-forget with `warn` on failure.
 
 This is P2/P3 in the pain-point register. None of these write to an outbox; they are direct calls.
 

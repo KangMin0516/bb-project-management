@@ -17,6 +17,16 @@
 
 ## Timeline
 
+### 2026-05-13 — Slack DM on `ASSIGNED` notifications
+**Changed.** `NotificationService.create()` now triggers a fire-and-forget Slack DM via `SlackService.sendDirectMessage` whenever `type === 'ASSIGNED'` and the recipient has `users.slack_user_id` populated. The in-app `notifications` row remains the authoritative record — Slack is enrichment, not a replacement. Users without a linked Slack identity continue to see only the in-app notification.
+
+- `CreateNotificationInput` gains an optional `meta: { projectKey?, issueNumber?, issueTitle?, actorName? }` field used to build the Slack block payload. `meta` is **not** persisted to the DB.
+- `IssueService.notifyAssignment` now fetches the actor's name (single `SELECT users.name`) and forwards it via `meta` so the DM reads "Assigned by <name>" instead of an opaque id.
+- `NotificationModule` imports `SlackModule`.
+- The DM contains a "View in BB-PM" button linking to `${FRONTEND_URL}/projects/<key>/board?open=<issueId>` (`FRONTEND_URL` env, same one used by `MgmtDigestService`).
+- Failures are logged at `warn` level and never bubble up; this preserves the pre-existing fire-and-forget property of `notifyAssignment`.
+- Plan: [`docs/plans/slack-assignment-notification.md`](../plans/slack-assignment-notification.md).
+
 ### 2026-04-21 — Join-request resolution notifications (a967958)
 **Added.** When a project admin approves or rejects a join request, the requester gets a notification (`JOIN_APPROVED` / `JOIN_REJECTED`) with the project name and (on rejection) the `rejection_reason` excerpt.
 - Source: `packages/api/src/join-request/join-request.service.ts` (calls `NotificationService.create`).

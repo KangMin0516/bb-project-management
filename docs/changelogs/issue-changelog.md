@@ -22,6 +22,11 @@
 
 ## Timeline
 
+### 2026-05-13 — `notifyAssignment` resolves actor name for Slack DM
+**Changed.** `IssueService.notifyAssignment` is now `async` and fetches the actor's display name (single `users.findUnique` on `actorId`) before calling `NotificationService.create`. The name is forwarded via `meta.actorName` so the new Slack DM (see [`notification-changelog.md`](./notification-changelog.md)) reads "Assigned by Alice" instead of a UUID. Failures fall through silently — the in-app notification path is unaffected.
+
+- Source: `packages/api/src/issue/issue.service.ts` `notifyAssignment` (now `private async`).
+
 ### 2026-05-12 — Hide CANCELED issues by default across views (d2f3ed0)
 **Changed.** Timeline, Board, and Lists pages now filter out `CANCELED` issues unless the user explicitly toggles "Include canceled". Reduces noise on projects with high cancellation rates.
 - Source: `packages/web/src/pages/TimelinePage.tsx`, `BoardPage.tsx`, `IssuesPage.tsx`.

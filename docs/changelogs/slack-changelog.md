@@ -29,6 +29,12 @@
 
 ## Timeline
 
+### 2026-05-13 — `SlackService.sendDirectMessage` helper
+**Added.** New best-effort `sendDirectMessage(slackUserId, text, blocks?)` method. Picks the most-recent `SlackIntegration`, decrypts its bot token, calls `conversations.open` then `chat.postMessage` to the DM channel. Reuses the existing `ratelimited` retry loop pattern (exponential backoff, up to 3 retries). Skips silently — never throws — when no integration is installed or DM cannot be opened. First consumer: assignment notifications (see [`notification-changelog.md`](./notification-changelog.md)).
+
+- Source: `packages/api/src/slack/slack.service.ts` (above `sendMessage`).
+- Plan: [`docs/plans/slack-assignment-notification.md`](../plans/slack-assignment-notification.md).
+
 ### 2026-04-18 — Slack-user ID stored on `users` (Schema: `20260418010000_add_slack_user_id`)
 **Schema.** Added `users.slack_user_id` (unique, nullable). Standup bot maps Slack DM authors to system users on first contact using email match, then caches the Slack user ID for future calls. See [`user-changelog.md`](./user-changelog.md#2026-04-18--slack-user-mapping-by-email-schema-20260418010000_add_slack_user_id).
 - Migration: `20260418010000_add_slack_user_id`.

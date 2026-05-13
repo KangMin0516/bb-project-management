@@ -18,6 +18,14 @@
 
 ## Timeline
 
+### 2026-05-13 — Filter persistence via URL searchParams
+**Added.** Board / Issues / Timeline pages now sync their filter state (`assignees`, `labels`, `components`, `epicId`, `status`, `priority`, `type`, `search`, plus page-specific toggles like `showArchived`, `groupByEpic`, `viewMode`, `sortBy`/`sortOrder`, `groupBy`) with `useSearchParams`. Reload, browser back/forward, and "Copy URL" share now preserve the view. Search input writes are debounced 300ms with `replace: true` to avoid history spam. `localStorage["issues-view-mode"]` is removed — URL is now the source of truth.
+
+- New: `packages/web/src/lib/filter-codec.ts` — pure `serializeFilter`/`deserializeFilter` plus `setBool`/`getBool`/`setEnum`/`getEnum` helpers.
+- New: `packages/web/src/hooks/useFilterSearchParams.ts` — wraps `useSearchParams` with debounced search write and external-URL-change sync.
+- Migrated: `packages/web/src/pages/BoardPage.tsx`, `IssuesPage.tsx`, `TimelinePage.tsx`. Each page lost 5–9 ad-hoc `useState` hooks in exchange for one `useFilterSearchParams()` call.
+- Plan: [`docs/plans/filter-persistence.md`](../plans/filter-persistence.md).
+
 ### 2026-04-23 — `useMemo` ordering fix (060de02)
 **Fixed.** A React hooks-order error fired when a page early-returned (`if (loading) return …`) before a `useMemo`. Moved the memo above the early return on every affected page.
 - Source: cross-cutting; commit diff lists the pages.
