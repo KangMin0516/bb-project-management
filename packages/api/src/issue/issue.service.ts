@@ -17,6 +17,16 @@ import { NotificationService } from '../notification/notification.service.js';
 
 const ORDER_GAP = 1000;
 
+/**
+ * If the same user changes an issue's `assigneeId` multiple times within this
+ * window, the rapid-fire activity rows are collapsed into a single row that
+ * goes straight from the original value to the final one. Matches
+ * notification.service's ASSIGNMENT_DELIVERY_DELAY_MS so the activity log and
+ * the Slack DM stay coherent — when the toast countdown runs out, both the
+ * DB activity row and the DM reflect the same final state.
+ */
+const ASSIGNEE_ACTIVITY_COALESCE_MS = 10_000;
+
 const issueInclude = {
   assignee: { select: USER_SELECT },
   reviewerAssignee: { select: USER_SELECT },
@@ -69,6 +79,54 @@ export class IssueService {
     return activities;
   }
 
+  /**
+   * Collapses a rapid sequence of changes on `field` by the same user into a
+   * single activity row, in place. If the user has clicked back to the value
+   * they started from, the new row is dropped entirely.
+   *
+   * @returns true when the field-level change is a net no-op (caller should
+   *          also cancel any pending side-effect like a Slack DM).
+   */
+  private async coalesceActivityField(
+    activities: {
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }[],
+    field: 'assigneeId' | 'reviewerAssigneeId',
+    ctx: { issueId: string; userId: string },
+  ): Promise<boolean> {
+    const idx = activities.findIndex((a) => a.field === field);
+    if (idx === -1) return false;
+
+    const current = activities[idx];
+    const recent = await this.prisma.activity.findFirst({
+      where: {
+        issueId: ctx.issueId,
+        userId: ctx.userId,
+        field,
+        createdAt: { gt: new Date(Date.now() - ASSIGNEE_ACTIVITY_COALESCE_MS) },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, oldValue: true },
+    });
+    if (!recent) return false;
+
+    // The recent row represents the start of this rapid-click session. Always
+    // remove it; we'll either replace with a coalesced row or drop entirely
+    // if the user is back where they started.
+    await this.prisma.activity.delete({ where: { id: recent.id } });
+
+    if (recent.oldValue === current.newValue) {
+      // Net no-op: user clicked their way back to the original value.
+      activities.splice(idx, 1);
+      return true;
+    }
+    // A→B→C in the window collapses to A→C — preserve the true origin.
+    activities[idx] = { ...current, oldValue: recent.oldValue };
+    return false;
+  }
+
   private async notifyAssignment(params: {
     projectKey: string;
     issueNumber: number;
@@ -77,7 +135,24 @@ export class IssueService {
     projectId: string;
     newAssigneeId: string;
     actorId: string;
+    /**
+     * 'ASSIGNED' for the primary assignee, 'REVIEWER_ASSIGNED' for the
+     * reviewer slot. Determines both the in-app notification type and the
+     * Slack DM copy.
+     */
+    kind?: 'ASSIGNED' | 'REVIEWER_ASSIGNED';
+    /**
+     * When true, this assignment is the result of an Undo from the UI. Don't
+     * schedule a new notification; cancel any in-flight one for this issue.
+     */
+    silent?: boolean;
   }) {
+    const kind = params.kind ?? 'ASSIGNED';
+    if (params.silent) {
+      this.notificationService.cancelPendingAssignment(params.issueId, kind);
+      return;
+    }
+
     // Fetch actor name once so downstream channels (Slack DM blocks) can
     // render "Assigned by <name>" instead of an opaque user id. Single
     // SELECT — fine on the hot path; skipped silently if the actor row
@@ -93,22 +168,21 @@ export class IssueService {
       // best-effort
     }
 
-    this.notificationService
-      .create({
-        type: 'ASSIGNED',
-        message: `${params.projectKey}-${params.issueNumber} "${params.issueTitle}" has been assigned to you`,
-        userId: params.newAssigneeId,
-        issueId: params.issueId,
-        projectId: params.projectId,
-        actorId: params.actorId,
-        meta: {
-          projectKey: params.projectKey,
-          issueNumber: params.issueNumber,
-          issueTitle: params.issueTitle,
-          actorName,
-        },
-      })
-      .catch(() => {});
+    const verb = kind === 'REVIEWER_ASSIGNED' ? 'reviewer of' : 'assigned to';
+    this.notificationService.scheduleAssignmentNotification({
+      type: kind,
+      message: `${params.projectKey}-${params.issueNumber} "${params.issueTitle}" has been ${verb} you`,
+      userId: params.newAssigneeId,
+      issueId: params.issueId,
+      projectId: params.projectId,
+      actorId: params.actorId,
+      meta: {
+        projectKey: params.projectKey,
+        issueNumber: params.issueNumber,
+        issueTitle: params.issueTitle,
+        actorName,
+      },
+    });
   }
 
   /** Auto-assign unassigned children when parent assignee changes (1-level only) */
@@ -479,7 +553,9 @@ export class IssueService {
       throw new NotFoundException('Issue not found');
     }
 
-    const { labelIds, componentIds, ...data } = dto;
+    // `silent` is a notification-side flag (used by the Undo flow) and is not
+    // part of the Issue row, so peel it off before forwarding `data` to Prisma.
+    const { labelIds, componentIds, silent, ...data } = dto;
 
     // Convert date strings to Date objects for Prisma
     if (data.startDate !== undefined) {
@@ -510,6 +586,22 @@ export class IssueService {
     const activities = this.buildActivities(
       existing as unknown as Record<string, unknown>,
       data as unknown as Record<string, unknown>,
+    );
+
+    // Coalesce rapid-fire assignee / reviewer changes by the same user.
+    // Mutates `activities` in place: collapses an A→B then B→C in the window
+    // into a single A→C row, and drops the row entirely if the net change is
+    // a no-op (back to the original). Returns true if a particular field
+    // ended up a net no-op so we can also short-circuit its DM.
+    const assigneeChangeIsNetNoop = await this.coalesceActivityField(
+      activities,
+      'assigneeId',
+      { issueId, userId },
+    );
+    const reviewerChangeIsNetNoop = await this.coalesceActivityField(
+      activities,
+      'reviewerAssigneeId',
+      { issueId, userId },
     );
 
     // Reset archivedAt when status changes away from DONE/CANCELED
@@ -577,6 +669,11 @@ export class IssueService {
       });
       const projectKey = project?.key ?? '';
 
+      // Treat a coalesce-detected no-op the same as an explicit Undo — cancel
+      // any pending DM and don't schedule a new one. Otherwise the user ends
+      // up DM'd back to the same assignee just because they fumbled the click.
+      const effectiveSilent = silent || assigneeChangeIsNetNoop;
+
       this.notifyAssignment({
         projectKey,
         issueNumber: existing.number,
@@ -585,7 +682,14 @@ export class IssueService {
         projectId,
         newAssigneeId,
         actorId: userId,
+        silent: effectiveSilent,
       });
+
+      // Skip cascading auto-assignment when reverting — the user is undoing,
+      // not deliberately re-assigning, so we shouldn't fan it out to children.
+      if (effectiveSilent) {
+        return issue;
+      }
 
       await this.autoAssignUnassignedChildren(
         issueId,
@@ -594,6 +698,35 @@ export class IssueService {
         projectId,
         userId,
       );
+    }
+
+    // Notify new reviewer — same deferred / coalesce semantics as assignee,
+    // just a different field. No cascade to children for reviewer changes.
+    if (
+      data.reviewerAssigneeId !== undefined &&
+      data.reviewerAssigneeId !== existing.reviewerAssigneeId &&
+      data.reviewerAssigneeId
+    ) {
+      const newReviewerId = data.reviewerAssigneeId;
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { key: true },
+      });
+      const projectKey = project?.key ?? '';
+
+      // Fire-and-forget: the in-app notification is delivered async on a
+      // timer (see scheduleAssignmentNotification); we don't need to await.
+      void this.notifyAssignment({
+        projectKey,
+        issueNumber: existing.number,
+        issueTitle: existing.title,
+        issueId,
+        projectId,
+        newAssigneeId: newReviewerId,
+        actorId: userId,
+        kind: 'REVIEWER_ASSIGNED',
+        silent: silent || reviewerChangeIsNetNoop,
+      });
     }
 
     return issue;

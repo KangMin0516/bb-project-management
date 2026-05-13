@@ -65,6 +65,14 @@ export const ORDER_GAP = 1000
 
 export const TOAST_DURATION = 4000
 
+/**
+ * Grace window for assignment Undo. Must match the backend's
+ * ASSIGNMENT_DELIVERY_DELAY_MS — if they drift, the toast can dismiss before
+ * the backend would have fired the DM (user thinks they got out, but Slack
+ * pings anyway).
+ */
+export const ASSIGNMENT_UNDO_DURATION = 10000
+
 export const DEBOUNCE_DELAY = 300
 
 export const STATUS_BADGE_COLORS: Record<string, string> = {

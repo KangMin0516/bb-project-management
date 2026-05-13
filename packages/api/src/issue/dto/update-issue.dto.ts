@@ -103,4 +103,13 @@ export class UpdateIssueDto {
   @IsOptional()
   @IsUUID('4', { each: true })
   componentIds?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'When true, skip assignee notification side effects. Used by the ' +
+      'frontend Undo action so reverting a mis-click does not DM anyone.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  silent?: boolean;
 }

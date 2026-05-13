@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, uploadApi, type Issue, type UpdateIssuePayload, type CreateIssuePayload } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import { componentApi } from '@/api/components'
-import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS, TYPE_ICONS } from '@/lib/constants'
+import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, PRIORITY_COLORS, TYPE_ICONS, ASSIGNMENT_UNDO_DURATION } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
@@ -30,7 +30,21 @@ interface IssueDetailPanelProps {
 }
 
 /** Click-to-edit inline field */
-function InlineField({ label, display, children, fieldId }: { label: string; display: React.ReactNode; children: React.ReactNode; fieldId?: string }) {
+function InlineField({
+  label,
+  display,
+  children,
+  fieldId,
+}: {
+  label: string
+  display: React.ReactNode
+  /**
+   * Either static JSX, or a render function that gets a `close` callback so
+   * the field can dismiss itself after the inner control commits a value.
+   */
+  children: React.ReactNode | ((close: () => void) => React.ReactNode)
+  fieldId?: string
+}) {
   const [editing, setEditing] = useState(false)
   const fieldRef = useRef<HTMLDivElement>(null)
 
@@ -50,7 +64,7 @@ function InlineField({ label, display, children, fieldId }: { label: string; dis
       <span className="w-20 shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
       {editing ? (
         <div className="flex-1">
-          {children}
+          {typeof children === 'function' ? children(() => setEditing(false)) : children}
         </div>
       ) : (
         <button
@@ -270,6 +284,73 @@ export default function IssueDetailPanel({
   const labels = d.labels ?? []
   const components = d.components ?? []
   const linkCount = (detail?.sourceLinks?.length ?? 0) + (detail?.specLinks?.length ?? 0)
+
+  /**
+   * Generic Undo-with-toast flow for assignment-style fields. Both Assignee
+   * and Reviewer share identical semantics: optimistic commit, deferred
+   * notification on the backend, 10s Undo window via toast.
+   *
+   * Skip the toast entirely when clearing the field — there's no one to DM,
+   * so nothing to undo from a notification perspective.
+   */
+  const handleAssignmentChange = useCallback(
+    (opts: {
+      field: 'assigneeId' | 'reviewerAssigneeId'
+      label: 'Assignee' | 'Reviewer'
+      newId: string
+      currentId: string | null | undefined
+    }) => {
+      const prevId = opts.currentId ?? null
+      const nextId = opts.newId || null
+      if (nextId === prevId) return
+
+      updateMutation.mutate({ [opts.field]: nextId })
+
+      if (!nextId) return // no DM to undo when clearing the field
+
+      const member = (members ?? []).find((m) => m.user.id === nextId)
+      const name = member?.user.name ?? 'this user'
+      const role = opts.label === 'Reviewer' ? 'reviewer' : 'assignee'
+
+      useToastStore.getState().showActionToast({
+        key: `${opts.field}:${issue.id}`, // distinct keys → Assignee + Reviewer toasts can coexist
+        type: 'info',
+        message: `Set ${name} as ${role}. Notifying Slack soon.`,
+        durationMs: ASSIGNMENT_UNDO_DURATION,
+        action: {
+          label: 'Undo',
+          onAction: () => {
+            issueApi
+              .update(projectId, issue.id, { [opts.field]: prevId, silent: true })
+              .then(invalidateAll)
+              .catch((err) =>
+                useToastStore.getState().addToast(getErrorMessage(err, `Failed to undo ${role} change`)),
+              )
+          },
+        },
+      })
+    },
+    // updateMutation / invalidateAll are stable refs from react-query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [members, issue.id, projectId],
+  )
+
+  const handleAssigneeChange = useCallback(
+    (id: string) =>
+      handleAssignmentChange({ field: 'assigneeId', label: 'Assignee', newId: id, currentId: d.assigneeId }),
+    [handleAssignmentChange, d.assigneeId],
+  )
+
+  const handleReviewerChange = useCallback(
+    (id: string) =>
+      handleAssignmentChange({
+        field: 'reviewerAssigneeId',
+        label: 'Reviewer',
+        newId: id,
+        currentId: d.reviewerAssigneeId,
+      }),
+    [handleAssignmentChange, d.reviewerAssigneeId],
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
@@ -508,11 +589,16 @@ export default function IssueDetailPanel({
                 </span>
               }
             >
-              <AssigneeDropdown
-                members={members || []}
-                value={d.assigneeId || ''}
-                onChange={(id) => updateMutation.mutate({ assigneeId: id || null })}
-              />
+              {(close) => (
+                <AssigneeDropdown
+                  members={members || []}
+                  value={d.assigneeId || ''}
+                  onChange={(id) => {
+                    handleAssigneeChange(id)
+                    close()
+                  }}
+                />
+              )}
             </InlineField>
 
             <InlineField
@@ -535,11 +621,16 @@ export default function IssueDetailPanel({
                 </span>
               }
             >
-              <AssigneeDropdown
-                members={members || []}
-                value={d.reviewerAssigneeId || ''}
-                onChange={(id) => updateMutation.mutate({ reviewerAssigneeId: id || null })}
-              />
+              {(close) => (
+                <AssigneeDropdown
+                  members={members || []}
+                  value={d.reviewerAssigneeId || ''}
+                  onChange={(id) => {
+                    handleReviewerChange(id)
+                    close()
+                  }}
+                />
+              )}
             </InlineField>
 
             <InlineField
