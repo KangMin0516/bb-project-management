@@ -1,43 +1,42 @@
-import { Outlet, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store'
-import { useThemeStore, type Theme } from '@/shared/lib/theme'
-import { useQuery } from '@tanstack/react-query'
-import { useRef, useCallback, useMemo } from 'react'
-import { useToastStore } from '@/shared/lib/toast'
+import QuickIssueModal from '@/features/issue/components/QuickIssueModal'
+import NotificationBell from '@/features/notification/components/NotificationBell'
+import { projectApi } from '@/features/project/api'
+import CommandPalette from '@/features/search/components/CommandPalette'
 import { getErrorMessage } from '@/shared/lib/error'
-import { projectApi, type Project } from '@/features/project/api'
+import { useShortcutsStore } from '@/shared/lib/shortcuts'
+import { useThemeStore, type Theme } from '@/shared/lib/theme'
+import { useToastStore } from '@/shared/lib/toast'
+import { useKeyboardShortcuts } from '@/shared/lib/useKeyboardShortcuts'
+import { useRegisterShortcuts } from '@/shared/lib/useRegisterShortcuts'
+import { cn } from '@/shared/lib/utils'
+import ShortcutsHelpModal from '@/shared/ui/ShortcutsHelpModal'
+import { useQuery } from '@tanstack/react-query'
 import {
-  Home,
-  LayoutDashboard,
-  FolderKanban,
-  List,
-  FileText,
-  Shield,
-  Settings,
-  LogOut,
-  ChevronDown,
-  Search,
-  PanelLeftClose,
-  PanelLeftOpen,
-  MessageCircle,
-  Users,
-  User,
   BarChart3,
   BookOpen,
   ChartGantt,
-  Sun,
-  Moon,
+  ChevronDown,
+  FileText,
+  FolderKanban,
+  Home,
+  LayoutDashboard,
+  List,
+  LogOut,
+  MessageCircle,
   Monitor,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  Settings,
+  Shield,
+  Sun,
+  User,
+  Users,
 } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
-import { useState, useEffect } from 'react'
-import CommandPalette from '@/features/search/components/CommandPalette'
-import QuickIssueModal from '@/features/issue/components/QuickIssueModal'
-import NotificationBell from '@/features/notification/components/NotificationBell'
-import { useKeyboardShortcuts } from '@/shared/lib/useKeyboardShortcuts'
-import { useRegisterShortcuts } from '@/shared/lib/useRegisterShortcuts'
-import { useShortcutsStore } from '@/shared/lib/shortcuts'
-import ShortcutsHelpModal from '@/shared/ui/ShortcutsHelpModal'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 const THEME_OPTIONS: { value: Theme; icon: typeof Sun; title: string }[] = [
   { value: 'light', icon: Sun, title: 'Light' },

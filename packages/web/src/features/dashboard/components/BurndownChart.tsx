@@ -54,7 +54,7 @@ export default function BurndownChart({ data }: BurndownChartProps) {
     const step = Math.max(1, Math.floor(data.length / 6))
     const xLabels = data
       .filter((_, i) => i % step === 0 || i === data.length - 1)
-      .map((d, _, arr) => {
+      .map((d) => {
         const idx = data.indexOf(d)
         const x = padLeft + (idx / Math.max(data.length - 1, 1)) * chartW
         const label = d.date.slice(5) // MM-DD
