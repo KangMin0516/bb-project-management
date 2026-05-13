@@ -6,6 +6,7 @@ import { NOTIFICATION_LIMIT } from '../common/constants.js';
 
 type NotificationType =
   | 'ASSIGNED'
+  | 'REVIEWER_ASSIGNED'
   | 'COMMENTED'
   | 'MENTIONED'
   | 'JOIN_APPROVED'
@@ -31,9 +32,32 @@ export interface CreateNotificationInput {
   };
 }
 
+/**
+ * 10 second grace window after an assignee change before we actually deliver
+ * the in-app + Slack notification. Lets the user cancel ("undo") a mis-click
+ * without spamming the picked-by-mistake user. In-memory only — on restart
+ * any pending deliveries are dropped, which is acceptable for a 10s window.
+ */
+const ASSIGNMENT_DELIVERY_DELAY_MS = 10_000;
+
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
+
+  /**
+   * Keyed by `${type}:${issueId}` so an assignee change and a reviewer change
+   * on the same issue can be pending simultaneously without overwriting each
+   * other. Within a single (type, issue) slot, a fresh change overwrites the
+   * previous one — that's the desired coalesce behaviour for rapid clicks.
+   */
+  private readonly pendingAssignmentTimers = new Map<string, NodeJS.Timeout>();
+
+  private pendingKey(
+    type: 'ASSIGNED' | 'REVIEWER_ASSIGNED',
+    issueId: string,
+  ): string {
+    return `${type}:${issueId}`;
+  }
 
   constructor(
     private prisma: PrismaService,
@@ -85,16 +109,74 @@ export class NotificationService {
 
     // Fire-and-forget Slack DM for assignment events. Failures are logged
     // but never bubble up — the in-app notification is authoritative.
-    if (data.type === 'ASSIGNED') {
+    if (data.type === 'ASSIGNED' || data.type === 'REVIEWER_ASSIGNED') {
       this.deliverSlackAssignedDm(data).catch((err) =>
         this.logger.warn(
-          'Slack assignment DM failed',
+          `Slack ${data.type === 'ASSIGNED' ? 'assignment' : 'reviewer'} DM failed`,
           err instanceof Error ? err.message : String(err),
         ),
       );
     }
 
     return notification;
+  }
+
+  // ─── Deferred delivery for assignment changes ──────────────
+
+  /**
+   * Schedule an assignment / reviewer-assignment notification to fire after a
+   * grace window so the user can undo a mis-click. If another change of the
+   * same type for the same issue is scheduled within the window, the previous
+   * one is cancelled and replaced.
+   *
+   * The in-app notification row is NOT created until the timer fires, so an
+   * undone assignment leaves no trace in the bell dropdown.
+   */
+  scheduleAssignmentNotification(data: CreateNotificationInput) {
+    if (data.type !== 'ASSIGNED' && data.type !== 'REVIEWER_ASSIGNED') {
+      throw new Error(
+        'scheduleAssignmentNotification only supports ASSIGNED / REVIEWER_ASSIGNED',
+      );
+    }
+    if (!data.issueId) return;
+    // Don't schedule a DM the actor would send to themselves; matches create().
+    if (data.actorId === data.userId) return;
+
+    const key = this.pendingKey(data.type, data.issueId);
+    this.cancelPendingAssignmentByKey(key);
+
+    const timer = setTimeout(() => {
+      this.pendingAssignmentTimers.delete(key);
+      this.create(data).catch((err) =>
+        this.logger.warn(
+          'Deferred assignment notification failed',
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
+    }, ASSIGNMENT_DELIVERY_DELAY_MS);
+    // Don't keep the Node process alive just for a pending toast countdown.
+    timer.unref?.();
+
+    this.pendingAssignmentTimers.set(key, timer);
+  }
+
+  /**
+   * Cancel a pending assignment notification for an issue. `type` defaults to
+   * `'ASSIGNED'` for backward-compatibility with the original undo flow.
+   */
+  cancelPendingAssignment(
+    issueId: string,
+    type: 'ASSIGNED' | 'REVIEWER_ASSIGNED' = 'ASSIGNED',
+  ): boolean {
+    return this.cancelPendingAssignmentByKey(this.pendingKey(type, issueId));
+  }
+
+  private cancelPendingAssignmentByKey(key: string): boolean {
+    const timer = this.pendingAssignmentTimers.get(key);
+    if (!timer) return false;
+    clearTimeout(timer);
+    this.pendingAssignmentTimers.delete(key);
+    return true;
   }
 
   // ─── Slack delivery (best-effort) ──────────────────────────
@@ -113,9 +195,17 @@ export class NotificationService {
     const actorName = meta.actorName ?? 'Someone';
     const issueKey = issueNumber != null ? `${projectKey}-${issueNumber}` : '';
 
+    const isReviewer = data.type === 'REVIEWER_ASSIGNED';
+    const verbPast = isReviewer ? 'set as the reviewer of' : 'been assigned';
+    const headerEmoji = isReviewer ? ':mag:' : ':clipboard:';
+    const headerLabel = isReviewer
+      ? "*You're the reviewer of a new issue*"
+      : "*You've been assigned a new issue*";
+    const byFieldLabel = isReviewer ? '*Set by*' : '*Assigned by*';
+
     const fallbackText =
       issueKey && issueTitle
-        ? `You've been assigned ${issueKey} "${issueTitle}" by ${actorName}`
+        ? `You've ${verbPast} ${issueKey} "${issueTitle}" by ${actorName}`
         : data.message;
 
     const blocks: unknown[] = [
@@ -123,7 +213,7 @@ export class NotificationService {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `:clipboard: *You've been assigned a new issue*`,
+          text: `${headerEmoji} ${headerLabel}`,
         },
       },
       {
@@ -135,7 +225,10 @@ export class NotificationService {
               ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
               : `*${escapeSlack(issueTitle || data.message)}*`,
           },
-          { type: 'mrkdwn', text: `*Assigned by*\n${escapeSlack(actorName)}` },
+          {
+            type: 'mrkdwn',
+            text: `${byFieldLabel}\n${escapeSlack(actorName)}`,
+          },
         ],
       },
     ];
