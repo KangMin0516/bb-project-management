@@ -5,7 +5,7 @@ import { searchApi, type SearchResult } from '@/features/search/api'
 import { cn } from '@/shared/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS, DEBOUNCE_DELAY } from '@/shared/config/constants'
 import {
-  Search, X, Plus, LayoutDashboard, List, BarChart3,
+  Search, X, Plus, List, BarChart3,
   Settings, FileText, Keyboard, FolderKanban,
 } from 'lucide-react'
 import { useShortcutsStore } from '@/shared/lib/shortcuts'

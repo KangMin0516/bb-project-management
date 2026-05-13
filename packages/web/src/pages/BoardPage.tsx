@@ -114,7 +114,7 @@ export default function BoardPage() {
   const toggleExpand = useCallback((issueId: string) => {
     setExpandedIssues((prev) => {
       const next = new Set(prev)
-      next.has(issueId) ? next.delete(issueId) : next.add(issueId)
+      if (next.has(issueId)) next.delete(issueId); else next.add(issueId)
       return next
     })
   }, [])

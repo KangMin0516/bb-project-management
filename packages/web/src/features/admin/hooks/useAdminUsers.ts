@@ -24,13 +24,6 @@ export function useAdminUsers({ status, search, enabled }: UseAdminUsersOptions)
     enabled,
   })
 
-  const wrap = <T,>(fn: () => Promise<T>, success: string, fail: string) =>
-    useMutation({
-      mutationFn: fn,
-      onSuccess: () => { invalidate(); useToastStore.getState().addToast(success, 'success') },
-      onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, fail), 'error'),
-    })
-
   const approve = useMutation({
     mutationFn: (id: string) => userApi.approve(id),
     onSuccess: () => { invalidate(); useToastStore.getState().addToast('User approved', 'success') },
@@ -73,9 +66,6 @@ export function useAdminUsers({ status, search, enabled }: UseAdminUsersOptions)
     onSuccess: () => useToastStore.getState().addToast('Password reset successfully', 'success'),
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reset password'), 'error'),
   })
-
-  // Silence unused warning - `wrap` documents the intent but we expanded inline for clarity.
-  void wrap
 
   return {
     users: list.data,

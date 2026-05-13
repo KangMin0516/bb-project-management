@@ -22,7 +22,7 @@ interface ShortcutsState {
   setSequenceBuffer: (buffer: string) => void
 }
 
-export const useShortcutsStore = create<ShortcutsState>((set, get) => ({
+export const useShortcutsStore = create<ShortcutsState>((set) => ({
   shortcuts: new Map(),
   activeScopes: ['global'],
   sequenceBuffer: '',

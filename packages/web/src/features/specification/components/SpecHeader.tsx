@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Download, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { SPEC_STATUS_COLORS } from '@/shared/config/constants'

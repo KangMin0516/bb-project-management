@@ -27,7 +27,7 @@ export default function ApiDocsPage() {
   const toggleTag = (tag: string) => {
     setExpandedTags((prev) => {
       const next = new Set(prev)
-      next.has(tag) ? next.delete(tag) : next.add(tag)
+      if (next.has(tag)) next.delete(tag); else next.add(tag)
       return next
     })
     setActiveTag(tag)
