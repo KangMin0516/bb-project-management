@@ -51,11 +51,11 @@ export async function enrichWithLlm(
   const memberList = members.map((m) => `- ${m.name} (ID: ${m.id})`).join('\n');
 
   const hintsDesc: string[] = [];
-  if (parsed.hints.type) hintsDesc.push(`type 추론: ${parsed.hints.type}`);
+  if (parsed.hints.type) hintsDesc.push(`type hint: ${parsed.hints.type}`);
   if (parsed.hints.priority)
-    hintsDesc.push(`priority 추론: ${parsed.hints.priority}`);
+    hintsDesc.push(`priority hint: ${parsed.hints.priority}`);
   if (parsed.hints.assigneeHint)
-    hintsDesc.push(`assignee 힌트: @${parsed.hints.assigneeHint}`);
+    hintsDesc.push(`assignee hint: @${parsed.hints.assigneeHint}`);
 
   const systemPrompt = `You are a project management assistant that extracts structured issue fields from natural language text.
 

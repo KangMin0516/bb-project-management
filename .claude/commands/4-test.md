@@ -1,72 +1,78 @@
-# Stage 4: 테스트 (Testing + QA)
+# Stage 4: Test + QA (`/4-test`)
 
-정적 분석, 빌드, 단위 테스트, API 테스트, E2E 테스트를 **병렬로** 수행합니다.
+Run static analysis, builds, unit tests, API tests, and E2E browser tests **in parallel** via two specialist subagents.
 
-## 실행 모드: Task 에이전트 **2개 병렬** 생성
+## Execution mode: 2 subagents in parallel
 
-**컨텍스트 분리를 위해 반드시 Task 에이전트를 생성하세요.**
-두 에이전트를 **동시에** 실행하여 테스트 시간을 단축합니다.
+> **Always spawn subagents.** Both run simultaneously in one message to halve wall-clock time.
 
-### 실행 절차
+### Procedure
 
-1. `.claude/config.md`를 읽어서 프로젝트 정보를 파악하세요
+1. Read `.claude/config.md` for project context and the `E2E / Browser Automation` section.
+2. Read `.claude/outputs/stage-2-implement.md` for the change scope.
+3. **Spawn both agents in parallel** (single message, two `Agent` tool calls):
 
-2. **두 에이전트를 병렬로 동시 생성**:
-
-   **에이전트 A: 정적 분석 / 빌드 / 단위 테스트**
+   **Agent A — static / build / unit tests:**
    ```
-   Task(subagent_type=general-purpose)
-   prompt: ".claude/agents/tester.md 파일을 읽고 그 역할에 따라 변경된 코드에 대한 정적 분석, 빌드 검증, 단위 테스트를 수행하세요."
-   ```
-
-   **에이전트 B: API / E2E 테스트**
-   ```
-   Task(subagent_type=general-purpose)
-   prompt: ".claude/agents/qa-engineer.md 파일을 읽고 그 역할에 따라 변경된 코드에 대한 테스트 케이스 설계, API 테스트, E2E 브라우저 테스트를 수행하세요."
+   Agent(
+     subagent_type: "general-purpose",
+     description: "Static + build + unit tests",
+     prompt: "Read .claude/agents/tester.md and follow it exactly. Run lint, typecheck, build, and unit tests against the change described in .claude/outputs/stage-2-implement.md. Return Part A of the Stage 4 report."
+   )
    ```
 
-3. **두 에이전트의 결과를 취합**하여 사용자에게 보고하세요
-4. 통합 결과를 `.claude/outputs/stage-4-test.md`에 저장하세요
+   **Agent B — API + E2E tests:**
+   ```
+   Agent(
+     subagent_type: "general-purpose",
+     description: "API + E2E tests",
+     prompt: "Read .claude/agents/qa-engineer.md and follow it exactly. Design test cases, run API tests via curl, run E2E tests via the Claude in Chrome MCP, and return Part B of the Stage 4 report."
+   )
+   ```
 
-### 산출물 통합 형식
+4. **Wait** for both reports.
+5. **Merge** into a single Stage 4 report and save to `.claude/outputs/stage-4-test.md`.
+6. Surface the overall verdict to the user.
 
+### Merged report shape
+
+```markdown
+## Stage 4: Test Pipeline — Consolidated Report
+
+### Summary
+- **Overall**: PASS / FAIL
+- **Static / Build / Unit (Part A)**: PASS / FAIL
+- **API / E2E (Part B)**: PASS / FAIL
+
+---
+
+### Part A — Static / Build / Unit
+<verbatim output from tester agent>
+
+---
+
+### Part B — API / E2E
+<verbatim output from qa-engineer agent>
 ```
-## Stage 4: 테스트 통합 결과
 
-### 전체 요약
-- **전체 결과**: 통과 / 실패
-- **정적 분석/빌드/단위 테스트**: 통과 / 실패
-- **API/E2E 테스트**: 통과 / 실패
+## Recovery matrix
 
----
+| Situation | Recovery |
+|---|---|
+| Lint / typecheck error                   | → `/2-implement` → re-run `/4-test` (review may be skipped if Stage 3 already passed). |
+| Build failure                            | → `/2-implement` → re-run `/4-test`. |
+| Unit test fails — new regression         | → `/2-implement` → `/3-review` → `/4-test`. |
+| Unit test fails — pre-existing           | Mark as known failure, continue. |
+| API test fails                           | → `/2-implement` → re-run `/4-test`. |
+| E2E test fails                           | → `/2-implement` → re-run `/4-test`. |
+| Chrome extension not connected           | Ask the user to activate it. **Do not** mark E2E PASS in its absence; re-run `/4-test`. |
+| Environment problem (service down)       | → `/0-run start` to restart, then re-run `/4-test`. |
 
-### Part A: 정적 분석 / 빌드 / 단위 테스트
-[에이전트 A 결과]
+## Next stage
 
----
-
-### Part B: API / E2E 테스트
-[에이전트 B 결과]
-```
-
-## 에러 복구
-
-| 상황 | 복구 흐름 |
-|------|-----------|
-| 린트/타입 에러 | → `/2-implement`로 수정 → `/4-test` 재시작 (리뷰 스킵 가능) |
-| 빌드 실패 | → `/2-implement`로 수정 → `/4-test` 재시작 (리뷰 스킵 가능) |
-| 단위 테스트 실패 (새 버그) | → `/2-implement`로 수정 → `/3-review` → `/4-test` 재시작 |
-| 단위 테스트 실패 (기존 버그) | → 기존 실패로 표기하고 진행 가능 |
-| API 테스트 실패 | → `/2-implement`로 수정 → `/4-test` 재시작 |
-| E2E 테스트 실패 | → `/2-implement`로 수정 → `/4-test` 재시작 |
-| Chrome Extension 미연결 | → 사용자에게 extension 활성화 요청 → 연결 후 `/4-test` 재시작 |
-| 환경 문제 (서버 다운) | → `/0-run`으로 서비스 재시작 후 `/4-test` 재시작 |
-
-## 다음 단계
-
-- 전체 통과 → `/5-deploy`
-- 실패 → 에러 복구 흐름 참조
+- All PASS → `/5-deploy`
+- Any FAIL → follow the recovery matrix above
 
 ---
 
-$ARGUMENTS에 대한 테스트를 시작합니다.
+Starting Stage 4 for `$ARGUMENTS`. Spawning Tester and QA Engineer in parallel.

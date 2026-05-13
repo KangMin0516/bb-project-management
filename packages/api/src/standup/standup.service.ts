@@ -717,13 +717,13 @@ export class StandupService {
 
         await client.chat.postMessage({
           channel,
-          text: '📋 프로젝트를 선택해주세요:',
+          text: '📋 Please select a project:',
           blocks: [
             {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: '📋 *프로젝트를 선택해주세요:*',
+                text: '📋 *Please select a project:*',
               },
             },
             {
@@ -755,7 +755,7 @@ export class StandupService {
       );
       await client.chat.postMessage({
         channel,
-        text: '❌ 이슈 생성 중 오류가 발생했습니다.',
+        text: '❌ An error occurred while creating the issue.',
       });
     }
   }
@@ -810,7 +810,7 @@ export class StandupService {
         const { issueKey } = await this.quickIssueService.create(data, userId);
         await client.chat.postMessage({
           channel,
-          text: `✅ 이슈가 생성되었습니다: *${issueKey}* — ${data.title}`,
+          text: `✅ Issue created: *${issueKey}* — ${data.title}`,
         });
       } catch (err) {
         this.logger.error(
@@ -819,13 +819,13 @@ export class StandupService {
         );
         await client.chat.postMessage({
           channel,
-          text: '❌ 이슈 생성에 실패했습니다.',
+          text: '❌ Failed to create the issue.',
         });
       }
     } else if (action.action_id === 'qi_cancel') {
       await client.chat.postMessage({
         channel,
-        text: '🚫 이슈 생성이 취소되었습니다.',
+        text: '🚫 Issue creation canceled.',
       });
     }
   }
@@ -848,26 +848,26 @@ export class StandupService {
     });
 
     const fields = [
-      `*프로젝트:* ${parsed.projectName} (${parsed.projectKey})`,
-      `*제목:* ${parsed.title}`,
-      `*타입:* ${parsed.type} | *우선순위:* ${parsed.priority} | *상태:* ${parsed.status}`,
+      `*Project:* ${parsed.projectName} (${parsed.projectKey})`,
+      `*Title:* ${parsed.title}`,
+      `*Type:* ${parsed.type} | *Priority:* ${parsed.priority} | *Status:* ${parsed.status}`,
     ];
     if (parsed.description) {
-      fields.push(`*설명:* ${parsed.description}`);
+      fields.push(`*Description:* ${parsed.description}`);
     }
     if (parsed.assigneeName) {
-      fields.push(`*담당자:* ${parsed.assigneeName}`);
+      fields.push(`*Assignee:* ${parsed.assigneeName}`);
     }
 
     await client.chat.postMessage({
       channel,
-      text: `📝 이슈 프리뷰`,
+      text: `📝 Issue preview`,
       blocks: [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `📝 *이슈 프리뷰*\n\n${fields.join('\n')}`,
+            text: `📝 *Issue preview*\n\n${fields.join('\n')}`,
           },
         },
         {
@@ -876,14 +876,14 @@ export class StandupService {
             {
               type: 'button',
               action_id: 'qi_confirm',
-              text: { type: 'plain_text', text: '✅ 생성' },
+              text: { type: 'plain_text', text: '✅ Create' },
               style: 'primary',
               value: confirmValue,
             },
             {
               type: 'button',
               action_id: 'qi_cancel',
-              text: { type: 'plain_text', text: '❌ 취소' },
+              text: { type: 'plain_text', text: '❌ Cancel' },
               style: 'danger',
               value: 'cancel',
             },

@@ -57,3 +57,38 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+/* Thinner, less obtrusive scrollbars for board / swimlane / list overflow.
+   Defaults to "Always" on macOS Chrome are visually heavy; this gives a
+   subtle 8px track with hover affordance. WebKit handles ::-webkit-scrollbar;
+   Firefox uses scrollbar-width / scrollbar-color. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(156 163 175 / 0.4) transparent;
+}
+.dark * {
+  scrollbar-color: rgb(75 85 99 / 0.6) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(156 163 175 / 0.4);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(107 114 128 / 0.7);
+}
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgb(75 85 99 / 0.6);
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(107 114 128 / 0.8);
+}

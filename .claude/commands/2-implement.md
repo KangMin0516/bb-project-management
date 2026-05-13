@@ -1,28 +1,34 @@
-# Stage 2: 구현 (Implementation)
+# Stage 2: Implement (`/2-implement`)
 
-승인된 기획서를 기반으로 코드를 작성합니다.
+Translate the approved plan from Stage 1 into code. **Implements only what the plan says.**
 
-## 실행 모드: 직접 실행
+## Execution mode: in-context
 
-현재 컨텍스트에서 시니어 개발자로 작업합니다.
+The Implementer role runs in the current Claude session (no subagent spawn).
 
-1. `.claude/agents/implementer.md`를 읽고 페르소나를 적용하세요
-2. 에이전트의 수행 절차에 따라 구현을 수행하세요
-3. 에이전트의 **자체 점검 체크리스트**를 반드시 수행하세요
-4. 구현 보고서를 `.claude/outputs/stage-2-implement.md`에 저장하세요
+### Procedure
 
-## 에러 복구
+1. Read `.claude/agents/implementer.md` and adopt the persona, principles, and workflow.
+2. Read `.claude/outputs/stage-1-plan.md` to anchor on the approved plan.
+   - Missing → check the conversation context for an inline plan. If neither exists, **stop** and instruct the user to run `/1-plan`.
+3. Follow the agent's workflow: re-read every target file before editing it, implement plan-step by plan-step, then run the self-check checklist.
+4. Save the implementation report to `.claude/outputs/stage-2-implement.md`.
+5. **Wait for the user** before suggesting the next stage.
 
-| 상황 | 복구 흐름 |
-|------|-----------|
-| 기획서 없음 | → `/1-plan`부터 시작 |
-| 구현 중 기획서 모호 | → 사용자에게 질문 후 계속 |
-| 기존 코드 충돌 | → 사용자에게 보고 후 기획서 수정 여부 결정 |
+## Error recovery
 
-## 다음 단계
+| Situation | Recovery |
+|---|---|
+| Plan file missing                       | → `/1-plan` first.                                                              |
+| Plan is ambiguous mid-implementation    | Ask the user; do not invent the missing detail.                                  |
+| Existing code conflicts with the plan   | Report the conflict; ask the user whether to amend the plan or pivot the change. |
+| New dependency required, not in plan    | Stop and ask before installing.                                                  |
+| Discovered the change is bigger than planned | Report it, propose a phased approach, ask the user.                          |
 
-- 구현 완료 → `/3-review`
+## Next stage
+
+- Implementation complete → `/3-review`
 
 ---
 
-$ARGUMENTS 에 대한 구현을 시작합니다. 먼저 기획서를 확인합니다.
+Starting implementation of `$ARGUMENTS`. Reading the plan and `.claude/agents/implementer.md` first.

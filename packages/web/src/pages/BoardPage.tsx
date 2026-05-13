@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { Rows3, Archive } from 'lucide-react'
@@ -10,7 +10,9 @@ import BoardColumn from '@/components/board/BoardColumn'
 import SwimlaneBoardView from '@/components/board/SwimlaneBoardView'
 import CreateIssueModal from '@/components/issue/CreateIssueModal'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
-import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters, toggleSet } from '@/components/filter/FilterBar'
+import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters, toggleSet, hasActiveFilters } from '@/components/filter/FilterBar'
+import { useFilterSearchParams } from '@/hooks/useFilterSearchParams'
+import { getBool, setBool, PARAM } from '@/lib/filter-codec'
 import { useOpenIssueFromUrl } from '@/hooks/useOpenIssueFromUrl'
 import { STATUSES, calculateDropOrder } from '@/lib/constants'
 import { useToastStore } from '@/stores/toast'
@@ -70,21 +72,89 @@ function filterBoard(
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { filters, setFilters, setFiltersFull, resetFilters } = useFilterSearchParams()
   const [createModal, setCreateModal] = useState<string | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-  const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set())
-  const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
-  const [selectedComponents, setSelectedComponents] = useState<Set<string>>(new Set())
-  const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<Set<string>>(new Set())
-  const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
-  const [filterType, setFilterType] = useState<Set<string>>(new Set())
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
-  const [groupByEpic, setGroupByEpic] = useState(true)
-  const [showArchived, setShowArchived] = useState(false)
   const [focusedIssueId, setFocusedIssueId] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  // groupByEpic defaults to true (swimlane view per docs/changelogs/issue-changelog.md@ac9db46)
+  const groupByEpic = !searchParams.has(PARAM.swimlane)
+    ? true
+    : getBool(searchParams, PARAM.swimlane, true)
+  const showArchived = getBool(searchParams, PARAM.archived, false)
+
+  const mutateParams = useCallback(
+    (mutator: (p: URLSearchParams) => void) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          mutator(next)
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  const setShowArchived = useCallback(
+    (value: boolean) => mutateParams((p) => setBool(p, PARAM.archived, value, false)),
+    [mutateParams],
+  )
+  const setGroupByEpic = useCallback(
+    // default is true → write '0' when toggled off, clear when back to default
+    (value: boolean) => mutateParams((p) => setBool(p, PARAM.swimlane, value, true)),
+    [mutateParams],
+  )
+
+  // Aliases for the old per-field setters: forward to setFilters{,Full}.
+  const setSelectedAssignees = useCallback(
+    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+      setFiltersFull((prev) => ({
+        ...prev,
+        assignees: typeof updater === 'function' ? (updater as (p: Set<string>) => Set<string>)(prev.assignees) : updater,
+      }))
+    },
+    [setFiltersFull],
+  )
+  const setSelectedLabels = useCallback(
+    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+      setFiltersFull((prev) => ({
+        ...prev,
+        labels: typeof updater === 'function' ? (updater as (p: Set<string>) => Set<string>)(prev.labels) : updater,
+      }))
+    },
+    [setFiltersFull],
+  )
+  const setSelectedComponents = useCallback(
+    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+      setFiltersFull((prev) => ({
+        ...prev,
+        components: typeof updater === 'function' ? (updater as (p: Set<string>) => Set<string>)(prev.components) : updater,
+      }))
+    },
+    [setFiltersFull],
+  )
+  const setSelectedEpicId = useCallback((id: string | null) => setFilters({ epicId: id }), [setFilters])
+  const setSearch = useCallback((v: string) => setFilters({ search: v }), [setFilters])
+  const setFilterStatus = useCallback((v: Set<string>) => setFilters({ status: v }), [setFilters])
+  const setFilterPriority = useCallback((v: Set<string>) => setFilters({ priority: v }), [setFilters])
+  const setFilterType = useCallback((v: Set<string>) => setFilters({ type: v }), [setFilters])
+
+  // Keep the old destructured names so the rest of the file reads naturally.
+  const {
+    assignees: selectedAssignees,
+    labels: selectedLabels,
+    components: selectedComponents,
+    epicId: selectedEpicId,
+    search,
+    status: filterStatus,
+    priority: filterPriority,
+    type: filterType,
+  } = filters
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -168,13 +238,7 @@ export default function BoardPage() {
     setCreateModal(status)
   }, [])
 
-  // Shared filter config
-  const filters = useMemo(() => ({
-    assignees: selectedAssignees, labels: selectedLabels, components: selectedComponents,
-    epicId: selectedEpicId, search, status: filterStatus, priority: filterPriority, type: filterType,
-  }), [selectedAssignees, selectedLabels, selectedComponents, selectedEpicId, search, filterStatus, filterPriority, filterType])
-
-  const hasFilters = selectedAssignees.size > 0 || selectedLabels.size > 0 || selectedComponents.size > 0 || !!selectedEpicId || !!search || filterStatus.size > 0 || filterPriority.size > 0 || filterType.size > 0
+  const hasFilters = hasActiveFilters(filters)
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -319,15 +383,15 @@ export default function BoardPage() {
 
   const toggleAssignee = useCallback((id: string) => {
     setSelectedAssignees((prev) => toggleSet(prev, id))
-  }, [])
+  }, [setSelectedAssignees])
 
   const toggleLabel = useCallback((id: string) => {
     setSelectedLabels((prev) => toggleSet(prev, id))
-  }, [])
+  }, [setSelectedLabels])
 
   const toggleComponent = useCallback((id: string) => {
     setSelectedComponents((prev) => toggleSet(prev, id))
-  }, [])
+  }, [setSelectedComponents])
 
   if (!projectId) return null
 
@@ -351,9 +415,7 @@ export default function BoardPage() {
           <LabelChips labels={boardLabels} selected={selectedLabels} onToggle={toggleLabel} />
           <ComponentChips components={boardComponents} selected={selectedComponents} onToggle={toggleComponent} />
           <EpicChips epics={boardEpics} selectedId={selectedEpicId} onSelect={setSelectedEpicId} />
-          {hasFilters && (
-            <ClearFiltersButton onClick={() => { setSelectedAssignees(new Set()); setSelectedLabels(new Set()); setSelectedComponents(new Set()); setSelectedEpicId(null); setSearch(''); setFilterStatus(new Set()); setFilterPriority(new Set()); setFilterType(new Set()) }} />
-          )}
+          {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
           <FilterDivider />
           <button
             type="button"

@@ -207,7 +207,7 @@ function ActivityItem({
 
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex flex-wrap items-center gap-1 text-xs">
-          <span className="font-medium text-gray-800">{user?.name || 'Unknown'}</span>
+          <span className="font-medium text-gray-800 dark:text-gray-200">{user?.name || 'Unknown'}</span>
 
           {isCreation ? (
             <>

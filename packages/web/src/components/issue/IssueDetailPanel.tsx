@@ -9,9 +9,10 @@ import type { ShareContext } from '@/lib/types'
 import { useToastStore } from '@/stores/toast'
 import { useImagePreviewStore } from '@/stores/imagePreview'
 import { getErrorMessage } from '@/lib/error'
-import { Trash2, Link2, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Trash2, Link2, ChevronsLeft, ChevronsRight, GitBranch } from 'lucide-react'
 import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
 import { copyIssueLink } from '@/components/issue/IssueActionMenu'
+import { deriveBranchName } from '@/lib/branch-name'
 import MarkdownViewer from '@/components/markdown/MarkdownViewer'
 import TipTapEditor from '@/components/editor/TipTapEditor'
 import ActivityTab from '@/components/issue/ActivityTab'
@@ -113,6 +114,8 @@ export default function IssueDetailPanel({
   const [draftTitle, setDraftTitle] = useState('')
   const [showSubtaskInput, setShowSubtaskInput] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
+  const [labelPickerOpen, setLabelPickerOpen] = useState(false)
+  const labelPickerRef = useRef<HTMLDivElement>(null)
 
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -132,6 +135,18 @@ export default function IssueDetailPanel({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [editingTitle, editingDescription])
+
+  // Close the label picker on outside click.
+  useEffect(() => {
+    if (!labelPickerOpen) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (labelPickerRef.current && !labelPickerRef.current.contains(e.target as Node)) {
+        setLabelPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [labelPickerOpen])
 
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -267,6 +282,55 @@ export default function IssueDetailPanel({
         <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-end">
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const branch = deriveBranchName({
+                    projectKey,
+                    issueNumber: d.number,
+                    title: d.title,
+                    labels: labels.map((l) => l.label),
+                    issueType: d.type as 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK',
+                  })
+                  const copyToClipboard = (text: string) => {
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(text).then(
+                        () =>
+                          useToastStore
+                            .getState()
+                            .addToast(`Copied: ${text}`, 'success'),
+                        () => fallback(),
+                      )
+                    } else {
+                      fallback()
+                    }
+                    function fallback() {
+                      const ta = document.createElement('textarea')
+                      ta.value = text
+                      ta.style.position = 'fixed'
+                      ta.style.opacity = '0'
+                      document.body.appendChild(ta)
+                      ta.select()
+                      try {
+                        document.execCommand('copy')
+                        useToastStore
+                          .getState()
+                          .addToast(`Copied: ${text}`, 'success')
+                      } catch {
+                        useToastStore
+                          .getState()
+                          .addToast('Failed to copy branch name', 'error')
+                      }
+                      document.body.removeChild(ta)
+                    }
+                  }
+                  copyToClipboard(branch)
+                }}
+                aria-label="Copy branch name"
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
+                title="Copy branch name (derived from labels)"
+              >
+                <GitBranch className="h-4 w-4" />
+              </button>
               <button
                 onClick={() => copyIssueLink(projectKey, d.number, context)}
                 aria-label="Copy link"
@@ -557,34 +621,80 @@ export default function IssueDetailPanel({
 
             <div className="flex items-start gap-2 py-1.5">
               <span className="w-20 shrink-0 pt-0.5 text-xs font-medium text-gray-400">Labels</span>
-              <div className="flex flex-1 flex-wrap gap-1">
-                {(projectLabels || []).map((label) => {
-                  const isSelected = labels.some((l) => l.label.id === label.id)
-                  return (
+              <div className="flex flex-1 flex-wrap items-center gap-1.5" ref={labelPickerRef}>
+                {labels.map(({ label }) => (
+                  <span
+                    key={label.id}
+                    className="group inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      backgroundColor: label.color + '22',
+                      color: label.color,
+                      borderColor: label.color + '55',
+                    }}
+                  >
+                    {label.name}
                     <button
-                      key={label.id}
+                      type="button"
                       onClick={() => {
-                        const currentIds = labels.map((l) => l.label.id)
-                        const nextIds = isSelected
-                          ? currentIds.filter((id) => id !== label.id)
-                          : [...currentIds, label.id]
+                        const nextIds = labels
+                          .map((l) => l.label.id)
+                          .filter((id) => id !== label.id)
                         updateMutation.mutate({ labelIds: nextIds })
                       }}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium border transition-colors ${
-                        isSelected ? 'ring-1 ring-offset-1' : 'opacity-30 hover:opacity-70'
-                      }`}
-                      style={{
-                        backgroundColor: label.color + (isSelected ? '20' : '10'),
-                        color: label.color,
-                        borderColor: label.color + '40',
-                      }}
+                      aria-label={`Remove ${label.name}`}
+                      className="opacity-60 hover:opacity-100"
                     >
-                      {label.name}
+                      ×
                     </button>
-                  )
-                })}
-                {(!projectLabels || projectLabels.length === 0) && (
-                  <span className="text-xs text-gray-400 italic">No labels</span>
+                  </span>
+                ))}
+                {(!projectLabels || projectLabels.length === 0) ? (
+                  <span className="text-xs text-gray-400 italic">No labels in project yet</span>
+                ) : (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setLabelPickerOpen((v) => !v)}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      + {labels.length === 0 ? 'Add label' : 'Add'}
+                    </button>
+                    {labelPickerOpen && (
+                      <div className="absolute left-0 top-full z-40 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
+                        {projectLabels.map((label) => {
+                          const isSelected = labels.some(
+                            (l) => l.label.id === label.id,
+                          )
+                          return (
+                            <label
+                              key={label.id}
+                              className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  const currentIds = labels.map((l) => l.label.id)
+                                  const nextIds = isSelected
+                                    ? currentIds.filter((id) => id !== label.id)
+                                    : [...currentIds, label.id]
+                                  updateMutation.mutate({ labelIds: nextIds })
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                              />
+                              <span
+                                className="h-3 w-3 rounded-full"
+                                style={{ backgroundColor: label.color }}
+                              />
+                              <span className="truncate text-xs text-gray-700 dark:text-gray-200">
+                                {label.name}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

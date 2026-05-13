@@ -69,7 +69,7 @@ export class IssueService {
     return activities;
   }
 
-  private notifyAssignment(params: {
+  private async notifyAssignment(params: {
     projectKey: string;
     issueNumber: number;
     issueTitle: string;
@@ -78,6 +78,21 @@ export class IssueService {
     newAssigneeId: string;
     actorId: string;
   }) {
+    // Fetch actor name once so downstream channels (Slack DM blocks) can
+    // render "Assigned by <name>" instead of an opaque user id. Single
+    // SELECT — fine on the hot path; skipped silently if the actor row
+    // was deleted between the action and this side effect.
+    let actorName: string | undefined;
+    try {
+      const actor = await this.prisma.user.findUnique({
+        where: { id: params.actorId },
+        select: { name: true },
+      });
+      actorName = actor?.name;
+    } catch {
+      // best-effort
+    }
+
     this.notificationService
       .create({
         type: 'ASSIGNED',
@@ -86,6 +101,12 @@ export class IssueService {
         issueId: params.issueId,
         projectId: params.projectId,
         actorId: params.actorId,
+        meta: {
+          projectKey: params.projectKey,
+          issueNumber: params.issueNumber,
+          issueTitle: params.issueTitle,
+          actorName,
+        },
       })
       .catch(() => {});
   }
