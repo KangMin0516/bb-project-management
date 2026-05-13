@@ -1,16 +1,7 @@
 import { Archive } from 'lucide-react'
-import type { FilterState } from '@/shared/ui/FilterBar'
-import {
-  AssigneeAvatars,
-  LabelChips,
-  ComponentChips,
-  FilterDivider,
-  ClearFiltersButton,
-  DropdownFilters,
-  SearchInput,
-  hasActiveFilters,
-  toggleSet,
-} from '@/shared/ui/FilterBar'
+import type { FilterState } from '@/shared/ui/filterState'
+import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
+import { AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFiltersButton, DropdownFilters, SearchInput } from '@/shared/ui/FilterBar'
 import ViewToggle, { type ViewOption } from '@/shared/ui/ViewToggle'
 import { cn } from '@/shared/lib/utils'
 import type { Label } from '@/features/project/api'

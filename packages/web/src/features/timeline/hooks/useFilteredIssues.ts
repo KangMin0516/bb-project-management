@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import type { Issue } from '@/features/issue/api'
-import type { FilterState } from '@/shared/ui/FilterBar'
-
+import type { FilterState } from '@/shared/ui/filterState'
 /**
  * Applies the shared FilterBar state to a list of issues. `CANCELED` is
  * hidden by default — that matches the convention in the board / list

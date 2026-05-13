@@ -1,18 +1,8 @@
 import { Archive, Rows3 } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
-import {
-  AssigneeAvatars,
-  LabelChips,
-  ComponentChips,
-  EpicChips,
-  FilterDivider,
-  ClearFiltersButton,
-  SearchInput,
-  DropdownFilters,
-} from '@/shared/ui/FilterBar'
+import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters } from '@/shared/ui/FilterBar'
 import { cn } from '@/shared/lib/utils'
-import type { FilterState } from '@/shared/ui/FilterBar'
-
+import type { FilterState } from '@/shared/ui/filterState'
 interface BoardToolbarProps {
   filters: FilterState
   setFilters: (next: Partial<FilterState>) => void

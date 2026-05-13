@@ -25,8 +25,10 @@ export default function GlobalDashboardPage() {
 
   const { data, isLoading, toggleFocus } = useGlobalDashboard()
 
-  const focusIssues = data?.focusIssues ?? []
-  const myIssues = data?.myIssues ?? []
+  // Memoise the array fallbacks so dependent useMemos don't re-run every render
+  // (a fresh `[]` would mismatch reference equality each time `data` is undefined).
+  const focusIssues = useMemo(() => data?.focusIssues ?? [], [data?.focusIssues])
+  const myIssues = useMemo(() => data?.myIssues ?? [], [data?.myIssues])
   const overdueIssues = data?.overdueIssues ?? []
   const projects = data?.projects ?? []
 

@@ -8,7 +8,7 @@ import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import TipTapToolbar from './TipTapToolbar'
-import { uploadApi } from '@/features/issue/api'
+
 import { useToastStore } from '@/shared/lib/toast'
 import './editor.css'
 

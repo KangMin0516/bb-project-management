@@ -5,10 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  INITIAL_FILTER,
-  type FilterState,
-} from '@/shared/ui/FilterBar'
+import { INITIAL_FILTER, type FilterState } from '@/shared/ui/filterState'
 import { deserializeFilter, serializeFilter } from '@/shared/lib/filter-codec'
 
 const SEARCH_DEBOUNCE_MS = 300

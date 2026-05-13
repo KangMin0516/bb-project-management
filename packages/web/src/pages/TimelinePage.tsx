@@ -12,7 +12,7 @@ import TimelineTooltip from '@/features/timeline/components/TimelineTooltip'
 import { startOfDay, type GroupBy, GROUP_BY_OPTIONS } from '@/features/timeline/lib'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { getEnum, setEnum, PARAM } from '@/shared/lib/filter-codec'
-import { toggleSet } from '@/shared/ui/FilterBar'
+import { toggleSet } from '@/shared/ui/filterState'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import type { Issue } from '@/features/issue/api'
 

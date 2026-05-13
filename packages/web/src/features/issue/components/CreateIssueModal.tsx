@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { issueApi, type CreateIssuePayload } from '@/features/issue/api'
+import { type CreateIssuePayload } from '@/features/issue/api'
 import { templateApi } from '@/features/template/api'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'

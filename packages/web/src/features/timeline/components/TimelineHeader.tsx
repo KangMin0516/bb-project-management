@@ -1,5 +1,5 @@
 import { SearchInput, DropdownFilters, AssigneeAvatars, FilterDivider, ClearFiltersButton } from '@/shared/ui/FilterBar'
-import type { FilterState } from '@/shared/ui/FilterBar'
+import type { FilterState } from '@/shared/ui/filterState'
 import type { ProjectDetail } from '@/features/project/api'
 import GroupByToggle from './GroupByToggle'
 import type { GroupBy } from '@/features/timeline/lib'

@@ -3,32 +3,6 @@ import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Sha
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 
-// Shared filter state interface
-export interface FilterState {
-  assignees: Set<string>
-  labels: Set<string>
-  components: Set<string>
-  epicId: string | null
-  status: Set<string>
-  priority: Set<string>
-  type: Set<string>
-  search: string
-}
-
-export const INITIAL_FILTER: FilterState = {
-  assignees: new Set(),
-  labels: new Set(),
-  components: new Set(),
-  epicId: null,
-  status: new Set(),
-  priority: new Set(),
-  type: new Set(),
-  search: '',
-}
-
-export function hasActiveFilters(f: FilterState): boolean {
-  return f.assignees.size > 0 || f.labels.size > 0 || f.components.size > 0 || !!f.epicId || f.status.size > 0 || f.priority.size > 0 || f.type.size > 0 || !!f.search
-}
 
 // Generic filter dropdown with checkboxes
 function FilterDropdown({
@@ -346,12 +320,4 @@ export function SearchInput({
       />
     </div>
   )
-}
-
-// Set toggle utility
-export function toggleSet<T>(set: Set<T>, value: T): Set<T> {
-  const next = new Set(set)
-  if (next.has(value)) next.delete(value)
-  else next.add(value)
-  return next
 }

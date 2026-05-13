@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
-import { issueApi, type DependencyLink, type LinkedIssueInfo } from '@/features/issue/api'
+import { type DependencyLink, type LinkedIssueInfo } from '@/features/issue/api'
 import { cn } from '@/shared/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS } from '@/shared/config/constants'
 import { AlertTriangle, CheckCircle2, ArrowRight, GitBranch, ChevronDown, ChevronRight } from 'lucide-react'

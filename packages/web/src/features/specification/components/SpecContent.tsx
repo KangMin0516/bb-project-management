@@ -165,7 +165,7 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
       h5: createHeading(5),
       h6: createHeading(6),
     }
-  }, [commentCounts, issueLinksBySection, onSectionClick, onIssueClick, onCreateIssue])
+  }, [commentCounts, issueLinksBySection, onSectionClick, onCreateIssue])
 
   return (
     <div className="flex gap-6">

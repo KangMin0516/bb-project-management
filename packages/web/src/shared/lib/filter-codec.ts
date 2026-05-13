@@ -4,8 +4,7 @@
 // links stay short. Comma-separated values for Sets. URL-encoded for `q`.
 // deserialize(serialize(state)) === state for any concrete state.
 
-import { INITIAL_FILTER, type FilterState } from '@/shared/ui/FilterBar'
-
+import { INITIAL_FILTER, type FilterState } from '@/shared/ui/filterState'
 // ─── Field name registry ───────────────────────────────────────────
 // Keep param names short — they appear in every shared link.
 

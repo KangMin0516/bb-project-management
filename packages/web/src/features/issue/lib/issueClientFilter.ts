@@ -1,6 +1,5 @@
 import type { Issue } from '@/features/issue/api'
-import type { FilterState } from '@/shared/ui/FilterBar'
-
+import type { FilterState } from '@/shared/ui/filterState'
 /**
  * Re-applies filters the server can't enforce (label/component multi-
  * select, multi-status, multi-priority, multi-type) on top of the

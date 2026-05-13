@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
-import { issueApi, type Issue, type IssueLinkType } from '@/features/issue/api'
+import { type Issue, type IssueLinkType } from '@/features/issue/api'
 import { STATUS_COLORS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import PriorityBadge from '@/features/issue/components/badges/PriorityBadge'

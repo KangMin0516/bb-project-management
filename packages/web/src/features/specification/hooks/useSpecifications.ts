@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { specApi, type SpecStatus } from '@/features/specification/api'
+import { type SpecStatus } from '@/features/specification/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, uploadApi, type UpdateIssuePayload, type CreateIssuePayload } from '@/features/issue/api'
+import { type UpdateIssuePayload, type CreateIssuePayload } from '@/features/issue/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 

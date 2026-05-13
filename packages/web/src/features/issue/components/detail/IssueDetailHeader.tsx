@@ -7,7 +7,7 @@ import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { deriveBranchName } from '@/shared/lib/branch-name'
 import { copyToClipboard } from '@/shared/lib/copyToClipboard'
-import { copyIssueLink } from '@/features/issue/components/IssueActionMenu'
+import { copyIssueLink } from '@/features/issue/lib/copyIssueLink'
 import type { ShareContext } from '@/shared/types'
 
 interface IssueDetailHeaderProps {

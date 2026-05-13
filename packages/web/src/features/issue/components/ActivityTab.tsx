@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { issueApi, type Activity, type Comment } from '@/features/issue/api'
+import { type Activity, type Comment } from '@/features/issue/api'
 import { type ProjectMember } from '@/features/project/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { useAuthStore } from '@/features/auth/store'
