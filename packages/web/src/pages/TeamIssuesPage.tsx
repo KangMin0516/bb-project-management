@@ -1,12 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft } from 'lucide-react'
 import { dashboardApi, type GlobalIssue } from '@/features/dashboard/api'
 import { useAuthStore } from '@/features/auth/store'
 import { cn } from '@/shared/lib/utils'
-import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TYPE_ICONS } from '@/shared/config/constants'
-import { getDueBadge } from '@/shared/lib/time'
-import { ArrowLeft } from 'lucide-react'
+import TeamIssueRow from '@/features/dashboard/components/team/TeamIssueRow'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 
 const FILTER_CONFIG: Record<string, { title: string; description: string }> = {
@@ -18,6 +17,11 @@ const FILTER_CONFIG: Record<string, { title: string; description: string }> = {
   all: { title: 'All Active Issues', description: 'All issues that are not done or canceled' },
 }
 
+/**
+ * Admin filtered cross-project issue list. Lives next to TeamDashboardPage
+ * — opens issues in the IssueDetailPanel so corrections can happen in
+ * place without leaving the admin context.
+ */
 export default function TeamIssuesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -31,19 +35,16 @@ export default function TeamIssuesPage() {
     enabled: !!currentUser?.isSuperuser,
   })
 
-  const issues = data?.issues
   const grouped = useMemo(() => {
-    if (!issues) return []
-    const map = new Map<string, { project: { id: string; name: string; key: string }; issues: typeof issues }>()
-    for (const issue of issues) {
+    if (!data?.issues) return []
+    const map = new Map<string, { project: GlobalIssue['project']; issues: GlobalIssue[] }>()
+    for (const issue of data.issues) {
       const proj = issue.project
-      if (!map.has(proj.id)) {
-        map.set(proj.id, { project: proj, issues: [] })
-      }
+      if (!map.has(proj.id)) map.set(proj.id, { project: proj, issues: [] })
       map.get(proj.id)!.issues.push(issue)
     }
     return [...map.values()].sort((a, b) => b.issues.length - a.issues.length)
-  }, [issues])
+  }, [data?.issues])
 
   if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
 
@@ -56,27 +57,24 @@ export default function TeamIssuesPage() {
   }
 
   const cfg = FILTER_CONFIG[filter] ?? FILTER_CONFIG.all
-  const issueList = issues ?? []
+  const issueList = data.issues ?? []
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate('/admin/dashboard')}
           className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition"
+          aria-label="Back to team dashboard"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{cfg.title}</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {issueList.length} issues — {cfg.description}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{issueList.length} issues — {cfg.description}</p>
         </div>
       </div>
 
-      {/* Filter tabs */}
       <div className="mb-4 flex flex-wrap items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 w-fit">
         {Object.entries(FILTER_CONFIG).map(([key, { title }]) => (
           <button
@@ -86,7 +84,7 @@ export default function TeamIssuesPage() {
               'rounded-md px-3 py-1.5 text-xs font-medium transition',
               filter === key
                 ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300',
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
             )}
           >
             {title.replace(' Issues', '').replace('All Active ', 'All')}
@@ -94,7 +92,6 @@ export default function TeamIssuesPage() {
         ))}
       </div>
 
-      {/* Issues grouped by project */}
       {grouped.length === 0 ? (
         <p className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">No issues found</p>
       ) : (
@@ -109,68 +106,21 @@ export default function TeamIssuesPage() {
                 <span className="text-xs text-gray-400 dark:text-gray-500">({projectIssues.length})</span>
               </div>
               <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                {projectIssues.map((issue) => {
-                  const dueBadge = issue.dueDate ? getDueBadge(issue.dueDate) : null
-                  return (
-                    <button
-                      key={issue.id}
-                      onClick={() => setSelectedIssue(issue)}
-                      className={cn(
-                        'flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition',
-                        selectedIssue?.id === issue.id && 'bg-primary-50 dark:bg-primary-900/20',
-                      )}
-                    >
-                      <span className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[issue.status])} />
-                      <span className="shrink-0 text-xs">{TYPE_ICONS[issue.type] ?? '📌'}</span>
-                      <span className="shrink-0 text-xs font-mono text-gray-400 dark:text-gray-500">
-                        {project.key}-{issue.number}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-gray-100">
-                        {issue.title}
-                      </span>
-                      {issue.assignee ? (
-                        <span className="hidden sm:inline shrink-0 text-[10px] text-gray-500 dark:text-gray-400">
-                          {issue.assignee.name}
-                        </span>
-                      ) : (
-                        <span className="hidden sm:inline shrink-0 rounded bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400">
-                          Unassigned
-                        </span>
-                      )}
-                      {issue.labels?.length > 0 && (
-                        <div className="hidden lg:flex items-center gap-1">
-                          {issue.labels.slice(0, 2).map((l) => (
-                            <span
-                              key={l.label.id}
-                              className="rounded px-1.5 py-0.5 text-[10px] font-medium"
-                              style={{ backgroundColor: l.label.color + '20', color: l.label.color }}
-                            >
-                              {l.label.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <span className="hidden sm:inline rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                        {STATUS_LABELS[issue.status] ?? issue.status}
-                      </span>
-                      <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[issue.priority])}>
-                        {PRIORITY_LABELS[issue.priority] ?? issue.priority}
-                      </span>
-                      {dueBadge && (
-                        <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium', dueBadge.className)}>
-                          {dueBadge.text}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
+                {projectIssues.map((issue) => (
+                  <TeamIssueRow
+                    key={issue.id}
+                    issue={issue}
+                    projectKey={project.key}
+                    isSelected={selectedIssue?.id === issue.id}
+                    onClick={() => setSelectedIssue(issue)}
+                  />
+                ))}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Issue Detail Panel */}
       {selectedIssue && (
         <IssueDetailPanel
           projectId={selectedIssue.project.id}
