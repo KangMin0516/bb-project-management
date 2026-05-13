@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { projectApi } from '@/api/projects'
+import { projectApi } from '@/features/project/api'
 import { FolderKanban, Users, TicketCheck, Clock, Send, UserPlus } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
-import TemplateManager from '@/components/template/TemplateManager'
+import { cn } from '@/shared/lib/utils'
+import { useToastStore } from '@/shared/lib/toast'
+import { getErrorMessage } from '@/shared/lib/error'
+import TemplateManager from '@/features/template/components/TemplateManager'
 
 type Tab = 'projects' | 'templates'
 

@@ -9,7 +9,7 @@ import {
   INITIAL_FILTER,
   type FilterState,
 } from '@/shared/ui/FilterBar'
-import { deserializeFilter, serializeFilter } from '@/lib/filter-codec'
+import { deserializeFilter, serializeFilter } from '@/shared/lib/filter-codec'
 
 const SEARCH_DEBOUNCE_MS = 300
 

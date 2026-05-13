@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { dashboardApi, type GlobalIssue } from '@/api/dashboard'
-import { issueApi } from '@/api/issues'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_ORDER, TYPE_ICONS } from '@/lib/constants'
-import { getDueBadge, isOverdue, todayDateString, isFocusToday } from '@/lib/time'
+import { dashboardApi, type GlobalIssue } from '@/features/dashboard/api'
+import { issueApi } from '@/features/issue/api'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, PRIORITY_COLORS, PRIORITY_ORDER, TYPE_ICONS } from '@/shared/config/constants'
+import { getDueBadge, isOverdue, todayDateString, isFocusToday } from '@/shared/lib/time'
 import { Star, Zap, Clock, AlertTriangle, FolderKanban } from 'lucide-react'
 
 export default function GlobalDashboardPage() {

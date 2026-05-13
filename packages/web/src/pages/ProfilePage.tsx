@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { authApi } from '@/api/auth'
-import { useAuthStore } from '@/stores/auth'
-import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { authApi } from '@/features/auth/api'
+import { useAuthStore } from '@/features/auth/store'
+import { useToastStore } from '@/shared/lib/toast'
+import { getErrorMessage } from '@/shared/lib/error'
 
 export default function ProfilePage() {
   const { user, uploadAvatar, loadUser } = useAuthStore()

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { quickIssueApi, type ParsedIssue } from '@/features/issue/quick-issue-api'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { X, Zap, Loader2, ChevronRight, Check, ArrowLeft } from 'lucide-react'
 

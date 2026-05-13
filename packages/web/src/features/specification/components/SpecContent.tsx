@@ -7,7 +7,7 @@ import type { SpecSection, SpecComment, SpecIssueLink } from '@/features/specifi
 import { MessageSquare, Plus, ExternalLink, X } from 'lucide-react'
 import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
-import '@/components/markdown/markdown.css'
+import '@/shared/ui/markdown/markdown.css'
 
 export interface SpecContentHandle {
   scrollToSection: (sectionId: string) => void

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { userApi, type AdminUser } from '@/api/users'
-import { useAuthStore } from '@/stores/auth'
-import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { userApi, type AdminUser } from '@/entities/user/api'
+import { useAuthStore } from '@/features/auth/store'
+import { useToastStore } from '@/shared/lib/toast'
+import { getErrorMessage } from '@/shared/lib/error'
 import { Navigate } from 'react-router-dom'
 import {
   Search,
@@ -17,9 +17,9 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { DEBOUNCE_DELAY } from '@/lib/constants'
-import { useImagePreviewStore } from '@/stores/imagePreview'
+import { cn } from '@/shared/lib/utils'
+import { DEBOUNCE_DELAY } from '@/shared/config/constants'
+import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 const STATUS_TABS = [
   { key: '', label: 'All' },

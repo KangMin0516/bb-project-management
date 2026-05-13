@@ -1,4 +1,4 @@
-import CredentialManager from '@/components/settings/CredentialManager'
+import CredentialManager from '@/features/credentials/components/CredentialManager'
 
 export default function CredentialsPage() {
   return (

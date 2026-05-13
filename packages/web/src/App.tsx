@@ -1,6 +1,6 @@
 import { useEffect, Suspense } from 'react'
 import { BrowserRouter } from 'react-router-dom'
-import { useThemeStore } from '@/stores/theme'
+import { useThemeStore } from '@/shared/lib/theme'
 import { AppProviders } from '@/app/providers'
 import { AppRouter } from '@/app/router'
 import ErrorBoundary from '@/shared/ui/ErrorBoundary'

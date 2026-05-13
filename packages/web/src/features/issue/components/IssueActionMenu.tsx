@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MoreHorizontal, Link2, Trash2 } from 'lucide-react'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import type { ShareContext } from '@/shared/types'
 
 export type { ShareContext }

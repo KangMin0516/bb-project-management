@@ -3,7 +3,7 @@ import { useAuthStore } from '@/features/auth/store'
 import { useThemeStore, type Theme } from '@/shared/lib/theme'
 import { useQuery } from '@tanstack/react-query'
 import { useRef, useCallback, useMemo } from 'react'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { projectApi, type Project } from '@/features/project/api'
 import {
@@ -31,13 +31,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { useState, useEffect } from 'react'
-import CommandPalette from '@/components/search/CommandPalette'
-import QuickIssueModal from '@/components/issue/QuickIssueModal'
-import NotificationBell from '@/components/notification/NotificationBell'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import { useRegisterShortcuts } from '@/hooks/useRegisterShortcuts'
+import CommandPalette from '@/features/search/components/CommandPalette'
+import QuickIssueModal from '@/features/issue/components/QuickIssueModal'
+import NotificationBell from '@/features/notification/components/NotificationBell'
+import { useKeyboardShortcuts } from '@/shared/lib/useKeyboardShortcuts'
+import { useRegisterShortcuts } from '@/shared/lib/useRegisterShortcuts'
 import { useShortcutsStore } from '@/shared/lib/shortcuts'
-import ShortcutsHelpModal from '@/components/shortcuts/ShortcutsHelpModal'
+import ShortcutsHelpModal from '@/shared/ui/ShortcutsHelpModal'
 
 const THEME_OPTIONS: { value: Theme; icon: typeof Sun; title: string }[] = [
   { value: 'light', icon: Sun, title: 'Light' },

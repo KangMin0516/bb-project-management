@@ -6,7 +6,7 @@ import { projectApi } from '@/features/project/api'
 import { componentApi } from '@/features/project/component-api'
 import { X } from 'lucide-react'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
 interface CreateIssueModalProps {

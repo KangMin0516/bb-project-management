@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { templateApi, type CreateTemplatePayload } from '@/features/template/api'
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
 import { TYPE_ICONS } from '@/shared/config/constants'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 

@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Activity, type Comment } from '@/features/issue/api'
 import { type ProjectMember } from '@/features/project/api'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { useAuthStore } from '@/features/auth/store'
 import { getErrorMessage } from '@/shared/lib/error'
-import CommentInput from '@/components/comment/CommentInput'
-import CommentItem from '@/components/comment/CommentItem'
-import ActivityTimeline from '@/components/activity/ActivityTimeline'
+import CommentInput from '@/features/issue/components/comment/CommentInput'
+import CommentItem from '@/features/issue/components/comment/CommentItem'
+import ActivityTimeline from '@/features/issue/components/activity/ActivityTimeline'
 
 type TimelineItem =
   | { type: 'comment'; data: Comment; createdAt: string }

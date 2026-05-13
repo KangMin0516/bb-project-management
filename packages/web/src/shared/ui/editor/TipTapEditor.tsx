@@ -9,7 +9,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import TipTapToolbar from './TipTapToolbar'
 import { uploadApi } from '@/features/issue/api'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import './editor.css'
 
 const lowlight = createLowlight(common)

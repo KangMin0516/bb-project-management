@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectApi } from '@/api/projects'
-import { getErrorMessage } from '@/lib/error'
+import { projectApi } from '@/features/project/api'
+import { getErrorMessage } from '@/shared/lib/error'
 
 export default function NewProjectPage() {
   const [name, setName] = useState('')

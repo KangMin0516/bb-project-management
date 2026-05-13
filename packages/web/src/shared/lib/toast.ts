@@ -1,5 +1,5 @@
 import { toast as sonner } from 'sonner'
-import { TOAST_DURATION } from '@/lib/constants'
+import { TOAST_DURATION } from '@/shared/config/constants'
 
 export type ToastType = 'error' | 'success' | 'info'
 

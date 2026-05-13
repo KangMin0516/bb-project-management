@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, type MemberDetailResponse } from '@/api/dashboard'
-import { useAuthStore } from '@/stores/auth'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TYPE_ICONS, STANDUP_STATUS_CONFIG, getBestStandupStatus } from '@/lib/constants'
-import { getDueBadge } from '@/lib/time'
+import { dashboardApi, type MemberDetailResponse } from '@/features/dashboard/api'
+import { useAuthStore } from '@/features/auth/store'
+import { cn } from '@/shared/lib/utils'
+import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS, TYPE_ICONS, STANDUP_STATUS_CONFIG, getBestStandupStatus } from '@/shared/config/constants'
+import { getDueBadge } from '@/shared/lib/time'
 import { ArrowLeft, MessageSquare, Activity, ChevronDown, ChevronRight } from 'lucide-react'
 
 function formatDateLabel(dateStr: string): string {

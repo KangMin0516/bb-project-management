@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { standupApi, type StandupConfig, type StandupQuestion } from '@/api/standup'
-import { slackApi, type SlackChannel, type SlackUser } from '@/api/slack'
-import { useAuthStore } from '@/stores/auth'
-import { useToastStore } from '@/stores/toast'
-import { getErrorMessage } from '@/lib/error'
+import { standupApi, type StandupConfig, type StandupQuestion } from '@/features/standup/api'
+import { slackApi, type SlackChannel, type SlackUser } from '@/features/integrations/slack/api'
+import { useAuthStore } from '@/features/auth/store'
+import { useToastStore } from '@/shared/lib/toast'
+import { getErrorMessage } from '@/shared/lib/error'
 import { Trash2, Plus, Play, ChevronDown, ChevronRight } from 'lucide-react'
 
 const DAYS = [

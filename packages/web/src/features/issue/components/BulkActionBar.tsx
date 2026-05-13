@@ -4,7 +4,7 @@ import { issueApi } from '@/features/issue/api'
 import { STATUSES, STATUS_LABELS, PRIORITIES, PRIORITY_LABELS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import { X, Trash2 } from 'lucide-react'
-import { useToastStore } from '@/stores/toast'
+import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 
 interface BulkActionBarProps {
