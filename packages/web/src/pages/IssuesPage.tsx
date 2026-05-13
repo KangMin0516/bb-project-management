@@ -1,5 +1,5 @@
 import { useState, useCallback, useDeferredValue, useMemo, useEffect, useRef } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
@@ -9,8 +9,9 @@ import { getDueBadge, isIssueOverdue } from '@/lib/time'
 import {
   AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFiltersButton,
   DropdownFilters, SearchInput, hasActiveFilters, toggleSet,
-  type FilterState, INITIAL_FILTER,
 } from '@/components/filter/FilterBar'
+import { useFilterSearchParams } from '@/hooks/useFilterSearchParams'
+import { getBool, getEnum, setBool, setEnum, PARAM } from '@/lib/filter-codec'
 import { componentApi } from '@/api/components'
 import ViewToggle, { type ViewOption } from '@/components/view/ViewToggle'
 import IssueTreeView from '@/components/issue/IssueTreeView'
@@ -32,17 +33,23 @@ const VIEW_OPTIONS: ViewOption<ViewMode>[] = [
   { value: 'grouped', label: 'Lists', icon: <GitBranch className="h-3.5 w-3.5" /> },
 ]
 
+const SORT_FIELDS = ['number', 'status', 'priority', 'createdAt', 'dueDate'] as const
+const SORT_ORDERS = ['asc', 'desc'] as const
+const VIEW_MODES = ['list', 'grouped'] as const
+
 export default function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const location = useLocation()
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER)
+  const { filters, setFilters, setFiltersFull, resetFilters } = useFilterSearchParams()
   const deferredSearch = useDeferredValue(filters.search)
-  const [sortBy, setSortBy] = useState<SortField | ''>('')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    (localStorage.getItem('issues-view-mode') as ViewMode) || 'list'
-  )
-  const [showArchived, setShowArchived] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Page-specific extras live in URL alongside the shared FilterState.
+  const sortBy = getEnum(searchParams, PARAM.sort, [...SORT_FIELDS, ''] as const, '' as SortField | '')
+  const sortOrder = getEnum(searchParams, PARAM.order, SORT_ORDERS, 'desc')
+  const viewMode = getEnum(searchParams, PARAM.view, VIEW_MODES, 'list')
+  const showArchived = getBool(searchParams, PARAM.archived, false)
+
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -50,26 +57,73 @@ export default function IssuesPage() {
   const tableRef = useRef<HTMLTableSectionElement>(null)
   const queryClient = useQueryClient()
 
-  const handleViewChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode)
-    localStorage.setItem('issues-view-mode', mode)
-  }, [])
+  const mutateParams = useCallback(
+    (mutator: (p: URLSearchParams) => void) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          mutator(next)
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
 
-  const updateFilter = useCallback((patch: Partial<FilterState>) => {
-    setFilters((prev) => ({ ...prev, ...patch }))
-  }, [])
+  const handleViewChange = useCallback(
+    (mode: ViewMode) => {
+      mutateParams((p) => setEnum(p, PARAM.view, mode, 'list'))
+    },
+    [mutateParams],
+  )
 
-  const toggleAssignee = useCallback((id: string) => {
-    setFilters((prev) => ({ ...prev, assignees: toggleSet(prev.assignees, id) }))
-  }, [])
+  const setShowArchived = useCallback(
+    (value: boolean) => {
+      mutateParams((p) => setBool(p, PARAM.archived, value, false))
+    },
+    [mutateParams],
+  )
 
-  const toggleLabel = useCallback((id: string) => {
-    setFilters((prev) => ({ ...prev, labels: toggleSet(prev.labels, id) }))
-  }, [])
+  const setSortBy = useCallback(
+    (field: SortField | '') => {
+      mutateParams((p) => setEnum(p, PARAM.sort, field, '' as SortField | ''))
+    },
+    [mutateParams],
+  )
 
-  const toggleComponent = useCallback((id: string) => {
-    setFilters((prev) => ({ ...prev, components: toggleSet(prev.components, id) }))
-  }, [])
+  const setSortOrder = useCallback(
+    (dir: 'asc' | 'desc') => {
+      mutateParams((p) => setEnum(p, PARAM.order, dir, 'desc'))
+    },
+    [mutateParams],
+  )
+
+  const updateFilter = useCallback(
+    (patch: Partial<typeof filters>) => setFilters(patch),
+    [setFilters],
+  )
+
+  const toggleAssignee = useCallback(
+    (id: string) => {
+      setFiltersFull((prev) => ({ ...prev, assignees: toggleSet(prev.assignees, id) }))
+    },
+    [setFiltersFull],
+  )
+
+  const toggleLabel = useCallback(
+    (id: string) => {
+      setFiltersFull((prev) => ({ ...prev, labels: toggleSet(prev.labels, id) }))
+    },
+    [setFiltersFull],
+  )
+
+  const toggleComponent = useCallback(
+    (id: string) => {
+      setFiltersFull((prev) => ({ ...prev, components: toggleSet(prev.components, id) }))
+    },
+    [setFiltersFull],
+  )
 
   // Build query params — bulk load all issues (no pagination)
   // Server only supports single enum values, so only send single-select to server;
@@ -158,8 +212,10 @@ export default function IssuesPage() {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortBy(field)
-      setSortOrder('desc')
+      mutateParams((p) => {
+        setEnum(p, PARAM.sort, field, '' as SortField | '')
+        setEnum(p, PARAM.order, 'desc' as const, 'desc' as const)
+      })
     }
   }
 
@@ -332,7 +388,7 @@ export default function IssuesPage() {
         {(projectComponents?.length ?? 0) > 0 && <FilterDivider />}
         <ComponentChips components={projectComponents || []} selected={filters.components} onToggle={toggleComponent} />
         {hasActiveFilters(filters) && (
-          <ClearFiltersButton onClick={() => setFilters(INITIAL_FILTER)} />
+          <ClearFiltersButton onClick={resetFilters} />
         )}
       </div>
       )}

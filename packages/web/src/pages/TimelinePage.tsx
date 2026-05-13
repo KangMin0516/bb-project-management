@@ -1,15 +1,18 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { issueApi, type Issue } from '@/api/issues'
 import { projectApi } from '@/api/projects'
 import IssueDetailPanel from '@/components/issue/IssueDetailPanel'
 import { SearchInput, DropdownFilters, AssigneeAvatars, FilterDivider, ClearFiltersButton, toggleSet } from '@/components/filter/FilterBar'
+import { useFilterSearchParams } from '@/hooks/useFilterSearchParams'
+import { getEnum, setEnum, PARAM } from '@/lib/filter-codec'
 import { STATUS_COLORS, STATUS_BAR_COLORS, STATUS_LABELS, TYPE_ICONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 type GroupBy = 'epic' | 'type' | 'assignee'
+const GROUP_BY_OPTIONS = ['epic', 'type', 'assignee'] as const
 
 const NO_EPIC_KEY = '__no_epic__'
 
@@ -32,19 +35,48 @@ function startOfDay(d: Date): Date {
 
 export default function TimelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { filters, setFilters, setFiltersFull, resetFilters } = useFilterSearchParams()
+
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-  const [groupBy, setGroupBy] = useState<GroupBy>('epic')
+  const groupBy = getEnum<GroupBy>(searchParams, PARAM.group, GROUP_BY_OPTIONS, 'epic')
   const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
   const [hoveredIssue, setHoveredIssue] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Filters
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<Set<string>>(new Set())
-  const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
-  const [filterType, setFilterType] = useState<Set<string>>(new Set())
-  const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set())
+  const setGroupBy = useCallback(
+    (value: GroupBy) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          setEnum<GroupBy>(next, PARAM.group, value, 'epic')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  // Alias the FilterState fields the page reads to keep the diff small.
+  const { search, status: filterStatus, priority: filterPriority, type: filterType, assignees: selectedAssignees } = filters
+  const setSearch = useCallback((v: string) => setFilters({ search: v }), [setFilters])
+  const setFilterStatus = useCallback((v: Set<string>) => setFilters({ status: v }), [setFilters])
+  const setFilterPriority = useCallback((v: Set<string>) => setFilters({ priority: v }), [setFilters])
+  const setFilterType = useCallback((v: Set<string>) => setFilters({ type: v }), [setFilters])
+  const setSelectedAssignees = useCallback(
+    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+      setFiltersFull((prev) => ({
+        ...prev,
+        assignees:
+          typeof updater === 'function'
+            ? (updater as (p: Set<string>) => Set<string>)(prev.assignees)
+            : updater,
+      }))
+    },
+    [setFiltersFull],
+  )
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -387,13 +419,7 @@ export default function TimelinePage() {
           <AssigneeAvatars members={assignedMembers} selected={selectedAssignees} onToggle={toggleAssignee} />
           {hasFilters && (
             <ClearFiltersButton
-              onClick={() => {
-                setSearch('')
-                setFilterStatus(new Set())
-                setFilterPriority(new Set())
-                setFilterType(new Set())
-                setSelectedAssignees(new Set())
-              }}
+              onClick={resetFilters}
             />
           )}
         </div>
