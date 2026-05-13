@@ -1,2 +1,18 @@
 packages:
   - "packages/*"
+
+# pnpm 10 blocks lifecycle scripts unless the package is whitelisted here.
+# Without this list, `install --frozen-lockfile` fails with
+# ERR_PNPM_IGNORED_BUILDS during docker build.
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@rolldown/binding-linux-x64-musl"
+  - "@swc/core"
+  - "@unrs/resolver-binding-linux-x64-musl"
+  - bcrypt
+  - core-js
+  - esbuild
+  - lightningcss
+  - prisma
