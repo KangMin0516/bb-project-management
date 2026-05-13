@@ -18,7 +18,18 @@ async function main() {
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    console.log(`Admin user already exists: ${email}`);
+    // Heal any prior bad-state seed: the very first seed predated the explicit
+    // status assignment below, so an existing admin row may still be PENDING.
+    // Make sure the seeded admin is always ACTIVE + superuser.
+    if (existing.status !== 'ACTIVE' || !existing.isSuperuser) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { status: 'ACTIVE', isSuperuser: true },
+      });
+      console.log(`Admin user healed → ACTIVE + superuser: ${email}`);
+    } else {
+      console.log(`Admin user already exists: ${email}`);
+    }
     return;
   }
 
@@ -30,6 +41,7 @@ async function main() {
       name: 'Admin',
       passwordHash,
       isSuperuser: true,
+      status: 'ACTIVE',
     },
   });
 
