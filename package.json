@@ -15,5 +15,20 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@rolldown/binding-linux-x64-musl",
+      "@swc/core",
+      "@unrs/resolver-binding-linux-x64-musl",
+      "bcrypt",
+      "core-js",
+      "esbuild",
+      "lightningcss",
+      "prisma"
+    ]
   }
 }
