@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # =============================================================================
 # BB Project Management - Backend Dockerfile (NestJS)
 # =============================================================================
@@ -16,7 +17,19 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/api/package.json packages/api/
 
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+# CLI flags pin pnpm fetch behaviour explicitly. Earlier attempts to set the
+# same values via .npmrc were silently ignored by corepack-spawned pnpm in
+# Alpine - CLI form is unambiguous and survives any future config-reading
+# changes. The BuildKit cache mount keeps the pnpm store across builds so
+# slow-registry pain is paid once, not per push.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
+    corepack enable pnpm && \
+    pnpm install --frozen-lockfile \
+      --config.fetch-timeout=600000 \
+      --config.fetch-retries=5 \
+      --config.fetch-retry-mintimeout=10000 \
+      --config.fetch-retry-maxtimeout=60000 \
+      --config.network-concurrency=4
 
 # =============================================================================
 # Builder stage
