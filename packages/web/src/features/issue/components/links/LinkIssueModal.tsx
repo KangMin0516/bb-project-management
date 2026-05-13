@@ -8,6 +8,7 @@ import PriorityBadge from '@/features/issue/components/badges/PriorityBadge'
 import { LINK_TYPES, getLinkTypeLabel } from '@/features/issue/lib/linkType'
 import { useIssueLinkMutations } from '@/features/issue/hooks/useIssueLinkMutations'
 import ModalShell from './ModalShell'
+import { issueRepository } from '@/features/issue/repository'
 
 interface LinkIssueModalProps {
   projectId: string

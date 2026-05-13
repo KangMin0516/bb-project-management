@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import { issueApi, type UpdateIssuePayload } from '@/features/issue/api'
+import type { UpdateIssuePayload } from '@/features/issue/api'
+import { issueRepository } from '@/features/issue/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { ASSIGNMENT_UNDO_DURATION } from '@/shared/config/constants'
@@ -59,7 +60,7 @@ export function useAssignmentWithUndo({ projectId, issueId, members, onSuccess }
         action: {
           label: 'Undo',
           onAction: () => {
-            issueApi
+            issueRepository
               .update(projectId, issueId, { [opts.field]: prevId, silent: true } as UpdateIssuePayload)
               .then(onSuccess)
               .catch((err) =>

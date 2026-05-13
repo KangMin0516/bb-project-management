@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type UpdateIssuePayload, type CreateIssuePayload } from '@/features/issue/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { issueRepository } from '@/features/issue/repository'
 
 /**
  * Bundles every mutation IssueDetailPanel needs (update / delete / file /

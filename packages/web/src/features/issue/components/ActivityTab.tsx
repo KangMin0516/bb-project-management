@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/shared/lib/error'
 import CommentInput from '@/features/issue/components/comment/CommentInput'
 import CommentItem from '@/features/issue/components/comment/CommentItem'
 import ActivityTimeline from '@/features/issue/components/activity/ActivityTimeline'
+import { issueRepository } from '@/features/issue/repository'
 
 type TimelineItem =
   | { type: 'comment'; data: Comment; createdAt: string }

@@ -5,6 +5,7 @@ import { type DependencyLink, type LinkedIssueInfo } from '@/features/issue/api'
 import { cn } from '@/shared/lib/utils'
 import { STATUS_COLORS, PRIORITY_COLORS } from '@/shared/config/constants'
 import { AlertTriangle, CheckCircle2, ArrowRight, GitBranch, ChevronDown, ChevronRight } from 'lucide-react'
+import { issueRepository } from '@/features/issue/repository'
 
 type FilterMode = 'all' | 'blocked' | 'resolved'
 

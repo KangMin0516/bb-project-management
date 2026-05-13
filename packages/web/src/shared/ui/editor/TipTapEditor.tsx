@@ -11,6 +11,7 @@ import TipTapToolbar from './TipTapToolbar'
 
 import { useToastStore } from '@/shared/lib/toast'
 import './editor.css'
+import { issueRepository } from '@/features/issue/repository'
 
 const lowlight = createLowlight(common)
 
