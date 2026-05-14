@@ -84,7 +84,8 @@ export class ExternalController {
     @Query('days') days?: string,
   ) {
     const parsed = days ? parseInt(days, 10) : 7;
-    const window = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 90) : 7;
+    const window =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 90) : 7;
     return this.externalService.getDigest(projectKey, window);
   }
 

@@ -7,7 +7,12 @@ import { SpecificationModule } from '../specification/specification.module.js';
 import { IssueSpecLinkModule } from '../issue-spec-link/issue-spec-link.module.js';
 
 @Module({
-  imports: [ApiKeyModule, IssueModule, SpecificationModule, IssueSpecLinkModule],
+  imports: [
+    ApiKeyModule,
+    IssueModule,
+    SpecificationModule,
+    IssueSpecLinkModule,
+  ],
   controllers: [ExternalController],
   providers: [ExternalService],
 })

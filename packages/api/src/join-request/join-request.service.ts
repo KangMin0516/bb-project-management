@@ -114,9 +114,13 @@ export class JoinRequestService {
     });
     if (!request) throw new NotFoundException('Join request not found');
     if (request.projectId !== projectId)
-      throw new BadRequestException('Join request does not belong to this project');
+      throw new BadRequestException(
+        'Join request does not belong to this project',
+      );
     if (request.status !== 'PENDING')
-      throw new BadRequestException('This join request has already been resolved');
+      throw new BadRequestException(
+        'This join request has already been resolved',
+      );
     return request;
   }
 

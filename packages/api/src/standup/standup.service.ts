@@ -1037,7 +1037,7 @@ export class StandupService {
       }
     }
 
-    parts.push('\n🎯 = Today\'s Focus  ✅ = Completed Today');
+    parts.push("\n🎯 = Today's Focus  ✅ = Completed Today");
     const text = parts.join('\n');
 
     await client.chat.postMessage({

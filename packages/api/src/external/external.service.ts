@@ -198,9 +198,7 @@ export class ExternalService {
 
     const now = new Date();
     const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    const upcomingUntil = new Date(
-      now.getTime() + days * 24 * 60 * 60 * 1000,
-    );
+    const upcomingUntil = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
     const issues = await this.prisma.issue.findMany({
       where: { projectId: project.id, archivedAt: null },
@@ -283,10 +281,7 @@ export class ExternalService {
 
     const overdue = issues
       .filter(
-        (i) =>
-          i.dueDate &&
-          i.dueDate < now &&
-          !TERMINAL_STATUSES.has(i.status),
+        (i) => i.dueDate && i.dueDate < now && !TERMINAL_STATUSES.has(i.status),
       )
       .sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime())
       .map(summarize);
