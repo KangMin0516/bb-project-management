@@ -1,7 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { OutboxEventBus } from '../outbox/outbox-event-bus.js';
 import { StandupService } from './standup.service.js';
+
+/** Routing key for the catch-up-capable standup trigger. */
+export const STANDUP_TRIGGER_EVENT = 'StandupTrigger';
+
+interface StandupTriggerPayload {
+  configId: string;
+  /** ISO of the scheduled fire time — handler uses for logging only. */
+  scheduledFor: string;
+}
 
 @Injectable()
 export class StandupScheduler {
@@ -10,6 +20,7 @@ export class StandupScheduler {
   constructor(
     private prisma: PrismaService,
     private standupService: StandupService,
+    private outboxBus: OutboxEventBus,
   ) {}
 
   @Cron('0 */5 * * * *') // Every 5 minutes — check for overdue reminders
@@ -24,25 +35,38 @@ export class StandupScheduler {
     }
   }
 
-  @Cron('0 * * * * *') // Every minute at :00
-  async checkAndTriggerStandups() {
+  /**
+   * Per-minute planner. For each enabled standup config:
+   *   1. Compute today's scheduled fire time in the config timezone.
+   *   2. If `now >= scheduledTime` and we haven't triggered for today
+   *      yet, enqueue an outbox event and stamp `lastTriggeredAt`.
+   *
+   * The outbox publisher delivers the event via the registered handler
+   * (`StandupService.triggerStandup`). When the API process is down
+   * during the scheduled minute, the next per-minute tick after
+   * recovery still satisfies the catch-up condition, so the standup
+   * fires (late, but not lost). Same-minute double-firing is prevented
+   * by the `lastTriggeredAt = startOfToday(tz)` guard.
+   */
+  @Cron('0 * * * * *')
+  async checkAndQueueStandups() {
     const configs = await this.prisma.standupConfig.findMany({
       where: { enabled: true },
     });
 
     for (const config of configs) {
       try {
-        await this.processConfig(config);
+        await this.queueIfDue(config);
       } catch (err) {
         this.logger.error(
-          `Failed to process standup config ${config.id}`,
+          `Failed to queue standup ${config.id}`,
           err instanceof Error ? err.stack : String(err),
         );
       }
     }
   }
 
-  private async processConfig(config: {
+  private async queueIfDue(config: {
     id: string;
     name: string;
     timezone: string;
@@ -50,104 +74,210 @@ export class StandupScheduler {
     cronMinute: string;
     cronDayOfWeek: string;
     lastTriggeredAt: Date | null;
-  }) {
+  }): Promise<void> {
     const now = new Date();
 
-    // Get current time in config timezone
-    const hourStr = new Intl.DateTimeFormat('en-US', {
-      timeZone: config.timezone,
-      hour: '2-digit',
-      hour12: false,
-    })
-      .format(now)
-      .replace(/\u202f/g, '')
-      .trim();
-
-    const minuteStr = new Intl.DateTimeFormat('en-US', {
-      timeZone: config.timezone,
-      minute: '2-digit',
-    })
-      .format(now)
-      .replace(/\u202f/g, '')
-      .trim();
-
-    const currentHour = parseInt(hourStr, 10);
-    const currentMinute = parseInt(minuteStr, 10);
-
-    // Check day of week
+    // Day-of-week gate in the config timezone.
     const dayFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: config.timezone,
       weekday: 'short',
     });
-    const dayStr = dayFormatter.format(now).toLowerCase();
     const dayNum = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(
-      dayStr,
+      dayFormatter.format(now).toLowerCase(),
     );
+    if (!matchesCronField(config.cronDayOfWeek, dayNum)) return;
 
-    if (!this.matchesCronField(config.cronDayOfWeek, dayNum)) return;
-    if (!this.matchesCronField(config.cronHour, currentHour)) return;
-    if (!this.matchesCronField(config.cronMinute, currentMinute)) return;
-
-    // Dedup: check if already triggered today at this time
-    if (config.lastTriggeredAt) {
-      const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: config.timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-      const todayStr = dateFormatter.format(now);
-      const lastStr = dateFormatter.format(config.lastTriggeredAt);
-
-      if (todayStr === lastStr) {
-        const lastHour = parseInt(
-          new Intl.DateTimeFormat('en-US', {
-            timeZone: config.timezone,
-            hour: '2-digit',
-            hour12: false,
-          })
-            .format(config.lastTriggeredAt)
-            .replace(/\u202f/g, '')
-            .trim(),
-          10,
-        );
-        const lastMinute = parseInt(
-          new Intl.DateTimeFormat('en-US', {
-            timeZone: config.timezone,
-            minute: '2-digit',
-          })
-            .format(config.lastTriggeredAt)
-            .replace(/\u202f/g, '')
-            .trim(),
-          10,
-        );
-
-        if (lastHour === currentHour && lastMinute === currentMinute) {
-          return; // Already triggered
-        }
-      }
+    // We only support single-value hour / minute fields (not lists or
+    // ranges) for the scheduled fire time — historically the UI only
+    // allowed one value per slot. Lists/ranges still work for
+    // dayOfWeek above because matchesCronField handles them.
+    const targetHour = parseInt(config.cronHour, 10);
+    const targetMinute = parseInt(config.cronMinute, 10);
+    if (Number.isNaN(targetHour) || Number.isNaN(targetMinute)) {
+      this.logger.warn(
+        `Config ${config.id} has non-numeric hour/minute (${config.cronHour}:${config.cronMinute}) — skipping`,
+      );
+      return;
     }
 
-    this.logger.log(`Triggering standup: ${config.name}`);
-    await this.standupService.triggerStandup(config.id);
+    // Compute the date string for "today in tz" — used to decide
+    // whether `lastTriggeredAt` already covers today.
+    const todayStr = formatDateInTz(now, config.timezone);
+    const lastStr = config.lastTriggeredAt
+      ? formatDateInTz(config.lastTriggeredAt, config.timezone)
+      : null;
+    if (lastStr === todayStr) return; // Already fired today.
+
+    // Compute the actual scheduled instant in UTC. Use Intl trick:
+    // build a Date as if naive UTC then shift by the tz offset for
+    // that moment. Avoids needing a tz library for this small case.
+    const scheduledInstant = scheduledTodayInTz(
+      now,
+      config.timezone,
+      targetHour,
+      targetMinute,
+    );
+    if (now < scheduledInstant) return; // Not yet due.
+
+    // Atomic claim — set lastTriggeredAt only if not already set for
+    // today. Concurrent scheduler ticks lose the race; only the
+    // winner enqueues the event.
+    const claimed = await this.claimToday(config.id, scheduledInstant);
+    if (!claimed) return;
+
+    const payload: StandupTriggerPayload = {
+      configId: config.id,
+      scheduledFor: scheduledInstant.toISOString(),
+    };
+    await this.outboxBus.publish({
+      type: STANDUP_TRIGGER_EVENT,
+      aggregateType: 'StandupConfig',
+      aggregateId: config.id,
+      payload,
+    });
+
+    this.logger.log(
+      `Queued standup ${config.name} for ${scheduledInstant.toISOString()}`,
+    );
   }
 
   /**
-   * Match a cron-style field value.
-   * Supports: "*", single number "9", range "1-5", comma-separated "1,3,5"
+   * Atomically set `lastTriggeredAt = scheduledInstant` only when the
+   * existing value is null or older than the start of today in the
+   * config's local date. Returns true if we won the race.
    */
-  private matchesCronField(field: string, value: number): boolean {
-    if (field === '*') return true;
-
-    const parts = field.split(',');
-    for (const part of parts) {
-      if (part.includes('-')) {
-        const [min, max] = part.split('-').map(Number);
-        if (value >= min && value <= max) return true;
-      } else {
-        if (parseInt(part, 10) === value) return true;
-      }
-    }
-    return false;
+  private async claimToday(
+    configId: string,
+    scheduledInstant: Date,
+  ): Promise<boolean> {
+    const result = await this.prisma.standupConfig.updateMany({
+      where: {
+        id: configId,
+        OR: [
+          { lastTriggeredAt: null },
+          { lastTriggeredAt: { lt: scheduledInstant } },
+        ],
+      },
+      data: { lastTriggeredAt: scheduledInstant },
+    });
+    return result.count > 0;
   }
+
+  /**
+   * Handler invoked by the outbox publisher. Resolves the config and
+   * actually fires the standup. State-check idempotency: skip if the
+   * config is no longer enabled or no longer exists.
+   */
+  async handleStandupTrigger(payload: StandupTriggerPayload): Promise<void> {
+    const config = await this.prisma.standupConfig.findUnique({
+      where: { id: payload.configId },
+      select: { id: true, enabled: true, name: true },
+    });
+    if (!config) {
+      this.logger.debug(
+        `Skipping standup trigger — config ${payload.configId} no longer exists`,
+      );
+      return;
+    }
+    if (!config.enabled) {
+      this.logger.debug(
+        `Skipping standup trigger — config ${config.name} is disabled`,
+      );
+      return;
+    }
+    await this.standupService.triggerStandup(payload.configId);
+  }
+}
+
+/** YYYY-MM-DD as observed in the given timezone. */
+function formatDateInTz(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Returns the Date instance representing `targetHour:targetMinute`
+ * local-time in `timeZone` on the same local calendar day as `now`.
+ *
+ * Works without bringing in luxon/date-fns-tz by building a candidate
+ * UTC instant for that wall-clock time, then computing the actual UTC
+ * offset of the zone at that instant and adjusting once. A second
+ * adjustment is performed if the first guess straddled a DST
+ * boundary. Two iterations are sufficient for all real zones.
+ */
+function scheduledTodayInTz(
+  now: Date,
+  timeZone: string,
+  targetHour: number,
+  targetMinute: number,
+): Date {
+  // Today's wall-clock date components in tz.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const year = parseInt(lookup.year, 10);
+  const month = parseInt(lookup.month, 10);
+  const day = parseInt(lookup.day, 10);
+
+  // Initial guess: that wall-clock time interpreted as UTC.
+  let guess = new Date(
+    Date.UTC(year, month - 1, day, targetHour, targetMinute, 0),
+  );
+  for (let i = 0; i < 2; i++) {
+    const offsetMs = tzOffsetAt(guess, timeZone);
+    const corrected = new Date(guess.getTime() - offsetMs);
+    if (Math.abs(corrected.getTime() - guess.getTime()) < 1000) {
+      return corrected;
+    }
+    guess = corrected;
+  }
+  return guess;
+}
+
+/** Returns the offset (ms) such that `localWallClock = utc + offset`. */
+function tzOffsetAt(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(instant);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const localUtcMs = Date.UTC(
+    parseInt(lookup.year, 10),
+    parseInt(lookup.month, 10) - 1,
+    parseInt(lookup.day, 10),
+    parseInt(lookup.hour, 10) % 24,
+    parseInt(lookup.minute, 10),
+    parseInt(lookup.second, 10),
+  );
+  return localUtcMs - instant.getTime();
+}
+
+function matchesCronField(field: string, value: number): boolean {
+  if (field === '*') return true;
+  const parts = field.split(',');
+  for (const part of parts) {
+    if (part.includes('-')) {
+      const [min, max] = part.split('-').map(Number);
+      if (value >= min && value <= max) return true;
+    } else {
+      if (parseInt(part, 10) === value) return true;
+    }
+  }
+  return false;
 }

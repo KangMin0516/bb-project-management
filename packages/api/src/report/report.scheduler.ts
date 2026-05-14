@@ -1,8 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { OutboxEventBus } from '../outbox/outbox-event-bus.js';
 import { ReportService } from './report.service.js';
 import { MgmtDigestService } from './mgmt-digest.service.js';
+
+/** Routing key for the catch-up-capable daily report. */
+export const DAILY_REPORT_EVENT = 'DailyReportTrigger';
+
+export type ReportSlot = 'morning' | 'lunch' | 'evening';
+
+interface DailyReportPayload {
+  projectId: string;
+  configId: string;
+  slot: ReportSlot;
+  scheduledFor: string;
+}
 
 @Injectable()
 export class ReportScheduler {
@@ -12,27 +25,38 @@ export class ReportScheduler {
     private prisma: PrismaService,
     private reportService: ReportService,
     private mgmtDigestService: MgmtDigestService,
+    private outboxBus: OutboxEventBus,
   ) {}
 
-  @Cron('0 * * * * *') // Every minute at :00
-  async checkAndSendReports() {
+  /**
+   * Per-minute planner. For each enabled report config, enqueue
+   * outbox events for any of the three slots whose scheduled time
+   * has passed and which hasn't fired today yet.
+   *
+   * Survives process downtime: when the next tick after recovery
+   * sees `now > scheduledTime` and `*LastSent` is still pre-today,
+   * it enqueues normally. The outbox publisher fires the handler
+   * which posts to Slack — late but not missed.
+   */
+  @Cron('0 * * * * *')
+  async checkAndQueueReports() {
     const configs = await this.prisma.dailyReportConfig.findMany({
       where: { enabled: true },
     });
 
     for (const config of configs) {
       try {
-        await this.processConfig(config);
+        await this.queueIfDue(config);
       } catch (err) {
         this.logger.error(
-          `Failed to process report config ${config.id}`,
+          `Failed to queue report for project ${config.projectId}`,
           err instanceof Error ? err.stack : String(err),
         );
       }
     }
   }
 
-  private async processConfig(config: {
+  private async queueIfDue(config: {
     id: string;
     projectId: string;
     timezone: string;
@@ -46,64 +70,40 @@ export class ReportScheduler {
     eveningTime: string;
     eveningChannelId: string | null;
     eveningLastSent: Date | null;
-  }) {
-    // Get current time in config timezone
+  }): Promise<void> {
     const now = new Date();
-    const localTime = new Intl.DateTimeFormat('en-US', {
-      timeZone: config.timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(now);
 
-    // Parse HH:mm from formatted string
-    const currentHHMM = localTime.replace(/\u202f/g, '').trim();
-
-    // Check weekend
     if (config.skipWeekends) {
-      const dayFormatter = new Intl.DateTimeFormat('en-US', {
+      const dayStr = new Intl.DateTimeFormat('en-US', {
         timeZone: config.timezone,
         weekday: 'short',
-      });
-      const dayStr = dayFormatter.format(now);
-      if (dayStr === 'Sat' || dayStr === 'Sun') {
-        return;
-      }
+      }).format(now);
+      if (dayStr === 'Sat' || dayStr === 'Sun') return;
     }
 
-    // Get today's date string in the config timezone for dedup
-    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: config.timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const todayStr = dateFormatter.format(now); // YYYY-MM-DD
-
-    // Check each report time
-    const reports: Array<{
-      type: 'morning' | 'lunch' | 'evening';
+    const slots: Array<{
+      slot: ReportSlot;
       time: string;
       channelId: string | null;
       lastSent: Date | null;
-      lastSentField: string;
+      lastSentField: 'morningLastSent' | 'lunchLastSent' | 'eveningLastSent';
     }> = [
       {
-        type: 'morning',
+        slot: 'morning',
         time: config.morningTime,
         channelId: config.morningChannelId,
         lastSent: config.morningLastSent,
         lastSentField: 'morningLastSent',
       },
       {
-        type: 'lunch',
+        slot: 'lunch',
         time: config.lunchTime,
         channelId: config.lunchChannelId,
         lastSent: config.lunchLastSent,
         lastSentField: 'lunchLastSent',
       },
       {
-        type: 'evening',
+        slot: 'evening',
         time: config.eveningTime,
         channelId: config.eveningChannelId,
         lastSent: config.eveningLastSent,
@@ -111,56 +111,89 @@ export class ReportScheduler {
       },
     ];
 
-    for (const report of reports) {
-      if (!report.channelId) continue;
-      if (currentHHMM !== report.time) continue;
+    const todayStr = formatDateInTz(now, config.timezone);
 
-      // Dedup: check if already sent today for this time
-      if (report.lastSent) {
-        const lastSentDate = new Intl.DateTimeFormat('en-CA', {
-          timeZone: config.timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        }).format(report.lastSent);
+    for (const s of slots) {
+      if (!s.channelId) continue;
 
-        const lastSentTime = new Intl.DateTimeFormat('en-US', {
-          timeZone: config.timezone,
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })
-          .format(report.lastSent)
-          .replace(/\u202f/g, '')
-          .trim();
+      const [hourStr, minuteStr] = s.time.split(':');
+      const hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
 
-        if (lastSentDate === todayStr && lastSentTime === report.time) {
-          continue; // Already sent
-        }
-      }
+      const lastStr = s.lastSent
+        ? formatDateInTz(s.lastSent, config.timezone)
+        : null;
+      if (lastStr === todayStr) continue;
+
+      const scheduledInstant = scheduledTodayInTz(
+        now,
+        config.timezone,
+        hour,
+        minute,
+      );
+      if (now < scheduledInstant) continue;
+
+      const claimed = await this.claimSlot(
+        config.id,
+        s.lastSentField,
+        scheduledInstant,
+      );
+      if (!claimed) continue;
+
+      const payload: DailyReportPayload = {
+        projectId: config.projectId,
+        configId: config.id,
+        slot: s.slot,
+        scheduledFor: scheduledInstant.toISOString(),
+      };
+      await this.outboxBus.publish({
+        type: DAILY_REPORT_EVENT,
+        aggregateType: 'DailyReportConfig',
+        aggregateId: config.id,
+        payload,
+      });
 
       this.logger.log(
-        `Sending ${report.type} report for project ${config.projectId}`,
+        `Queued ${s.slot} report for project ${config.projectId} at ${scheduledInstant.toISOString()}`,
       );
-
-      try {
-        await this.reportService.sendReport(config.projectId, report.type);
-
-        // Update lastSent
-        await this.prisma.dailyReportConfig.update({
-          where: { id: config.id },
-          data: { [report.lastSentField]: now },
-        });
-      } catch (err) {
-        this.logger.error(
-          `Failed to send ${report.type} report for project ${config.projectId}`,
-          err instanceof Error ? err.stack : String(err),
-        );
-      }
     }
   }
 
+  private async claimSlot(
+    configId: string,
+    field: 'morningLastSent' | 'lunchLastSent' | 'eveningLastSent',
+    scheduledInstant: Date,
+  ): Promise<boolean> {
+    const result = await this.prisma.dailyReportConfig.updateMany({
+      where: {
+        id: configId,
+        OR: [{ [field]: null }, { [field]: { lt: scheduledInstant } }],
+      },
+      data: { [field]: scheduledInstant },
+    });
+    return result.count > 0;
+  }
+
+  /** Outbox handler. */
+  async handleDailyReportTrigger(payload: DailyReportPayload): Promise<void> {
+    const config = await this.prisma.dailyReportConfig.findUnique({
+      where: { id: payload.configId },
+      select: { enabled: true },
+    });
+    if (!config || !config.enabled) {
+      this.logger.debug(
+        `Skipping ${payload.slot} report for ${payload.projectId} — config disabled/missing`,
+      );
+      return;
+    }
+    await this.reportService.sendReport(payload.projectId, payload.slot);
+  }
+
   // ─── Management Digest ────────────────────────────────────
+  // Kept on plain @Cron — less critical than per-project reports.
+  // If the process misses these ticks, the next day's digest still
+  // fires; PMs can pull the dashboard for the missed day.
 
   @Cron('0 30 7 * * 1-5', { timeZone: 'Asia/Seoul' })
   async sendMorningDigest() {
@@ -185,4 +218,69 @@ export class ReportScheduler {
       );
     }
   }
+}
+
+function formatDateInTz(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function scheduledTodayInTz(
+  now: Date,
+  timeZone: string,
+  targetHour: number,
+  targetMinute: number,
+): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const year = parseInt(lookup.year, 10);
+  const month = parseInt(lookup.month, 10);
+  const day = parseInt(lookup.day, 10);
+
+  let guess = new Date(
+    Date.UTC(year, month - 1, day, targetHour, targetMinute, 0),
+  );
+  for (let i = 0; i < 2; i++) {
+    const offsetMs = tzOffsetAt(guess, timeZone);
+    const corrected = new Date(guess.getTime() - offsetMs);
+    if (Math.abs(corrected.getTime() - guess.getTime()) < 1000) {
+      return corrected;
+    }
+    guess = corrected;
+  }
+  return guess;
+}
+
+function tzOffsetAt(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(instant);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const localUtcMs = Date.UTC(
+    parseInt(lookup.year, 10),
+    parseInt(lookup.month, 10) - 1,
+    parseInt(lookup.day, 10),
+    parseInt(lookup.hour, 10) % 24,
+    parseInt(lookup.minute, 10),
+    parseInt(lookup.second, 10),
+  );
+  return localUtcMs - instant.getTime();
 }
