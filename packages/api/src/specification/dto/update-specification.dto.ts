@@ -35,7 +35,8 @@ export class UpdateSpecificationDto {
   status?: SpecStatus;
 
   @ApiPropertyOptional({
-    description: 'Absolute display order within the project. Lower comes first.',
+    description:
+      'Absolute display order within the project. Lower comes first.',
     minimum: 0,
   })
   @IsOptional()

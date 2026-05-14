@@ -32,7 +32,9 @@ export class ExternalUpdateIssueDto {
   @IsEnum(IssuePriority)
   priority?: IssuePriority;
 
-  @ApiPropertyOptional({ description: 'Assignee email (empty string or null to clear)' })
+  @ApiPropertyOptional({
+    description: 'Assignee email (empty string or null to clear)',
+  })
   @IsOptional()
   @IsString()
   assigneeEmail?: string | null;

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectApi } from '@/api/projects'
-import { getErrorMessage } from '@/lib/error'
+import { projectRepository } from '@/features/project/repository'
+import { getErrorMessage } from '@/shared/lib/error'
 
 export default function NewProjectPage() {
   const [name, setName] = useState('')
@@ -13,11 +13,11 @@ export default function NewProjectPage() {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: () => projectApi.create({ name, key, description: description || undefined }),
+    mutationFn: () => projectRepository.create({ name, key, description: description || undefined }),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       // Seed default labels
-      projectApi.seedLabels(project.id).catch(() => {})
+      projectRepository.seedLabels(project.id).catch(() => {})
       navigate(`/projects/${project.key}/settings`)
     },
     onError: (err: unknown) => {

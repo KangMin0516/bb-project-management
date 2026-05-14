@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth'
-import { getErrorMessage } from '@/lib/error'
+import { useAuthStore } from '@/features/auth/store'
+import { getErrorMessage } from '@/shared/lib/error'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')

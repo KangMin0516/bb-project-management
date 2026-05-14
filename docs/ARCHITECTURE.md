@@ -212,83 +212,473 @@ bb-project-management/
 
 ## 6. Domain Model (ER)
 
-The Prisma schema has 30 models and 7 enums. Below is the load-bearing core; integrations (Slack, GitHub, standup, reports) are listed in §7.
+The Prisma schema has 30 models and 7 enums. To keep mermaid's auto-layout
+readable, the model is split into **eight focused sub-diagrams** — each one
+covers a single subdomain with ≤6 entities. The "spider" entity (`USER` or
+`PROJECT` or `ISSUE`) is repeated in each diagram it participates in.
+
+For exhaustive per-model field / index / cascade detail see
+[`docs/architecture/backend/entities.md`](./architecture/backend/entities.md).
+
+| § | Subdomain | Entities |
+|---|---|---|
+| 6.a | Identity & sessions | USER, API_KEY, NOTIFICATION, ISSUE_TEMPLATE, PROJECT_JOIN_REQUEST |
+| 6.b | Project workspace | PROJECT, PROJECT_MEMBER, PROJECT_CREDENTIAL |
+| 6.c | Issue & change log | ISSUE, ACTIVITY, COMMENT, ATTACHMENT, ISSUE_LINK |
+| 6.d | Issue taxonomy | LABEL, ISSUE_LABEL, COMPONENT, ISSUE_COMPONENT |
+| 6.e | Specifications | SPECIFICATION, SPEC_SECTION, SPEC_COMMENT, ISSUE_SPEC_LINK |
+| 6.f | Slack + daily reports | SLACK_INTEGRATION, DAILY_REPORT_CONFIG |
+| 6.g | Standup bot | STANDUP_CONFIG + question / member / report / answer (6 models) |
+| 6.h | GitHub integration | GITHUB_INTEGRATION, GITHUB_PULL_REQUEST, GITHUB_PR_ISSUE_LINK |
+
+### 6.a Identity & sessions
 
 ```mermaid
 erDiagram
-  USER ||--o{ PROJECT_MEMBER : "memberships"
   USER ||--o{ API_KEY : "issues"
   USER ||--o{ NOTIFICATION : "receives"
-  USER ||--o{ ATTACHMENT : "uploads"
   USER ||--o{ ISSUE_TEMPLATE : "creates"
-
-  PROJECT ||--o{ PROJECT_MEMBER : "has members"
-  PROJECT ||--o{ ISSUE : "contains"
-  PROJECT ||--o{ LABEL : "owns"
-  PROJECT ||--o{ COMPONENT : "owns"
-  PROJECT ||--o{ SPECIFICATION : "owns"
-  PROJECT ||--o{ PROJECT_CREDENTIAL : "owns"
-  PROJECT ||--o| GITHUB_INTEGRATION : "1:1"
-  PROJECT ||--o| DAILY_REPORT_CONFIG : "1:1"
-  PROJECT ||--o{ PROJECT_JOIN_REQUEST : "receives"
-
-  ISSUE ||--o{ ISSUE_LABEL : "tagged"
-  ISSUE ||--o{ ISSUE_COMPONENT : "categorized"
-  ISSUE ||--o{ ACTIVITY : "change log"
-  ISSUE ||--o{ COMMENT : "discussion"
-  ISSUE ||--o{ ATTACHMENT : "files"
-  ISSUE ||--o{ ISSUE_LINK : "source links"
-  ISSUE ||--o{ ISSUE_LINK : "target links"
-  ISSUE ||--o{ ISSUE_SPEC_LINK : "to specs"
-  ISSUE ||--o{ GITHUB_PR_ISSUE_LINK : "PRs"
-  ISSUE ||--o{ ISSUE : "parent/children (self)"
-
-  LABEL ||--o{ ISSUE_LABEL : ""
-  COMPONENT ||--o{ ISSUE_COMPONENT : ""
-
-  SPECIFICATION ||--o{ SPEC_SECTION : "anchored"
-  SPECIFICATION ||--o{ SPEC_COMMENT : "threads"
-  SPECIFICATION ||--o{ ISSUE_SPEC_LINK : "linked from issues"
-
-  GITHUB_INTEGRATION ||--o{ GITHUB_PULL_REQUEST : "stores PRs"
-  GITHUB_PULL_REQUEST ||--o{ GITHUB_PR_ISSUE_LINK : "links to issues"
+  USER ||--o{ PROJECT_JOIN_REQUEST : "requests"
+  USER ||--o{ PROJECT_JOIN_REQUEST : "resolves"
 
   USER {
-    string id PK
+    uuid   id PK
     string email UK
-    string passwordHash
-    string slackUserId UK "nullable"
+    string name
+    string passwordHash "bcrypt cost 12"
+    string avatar "nullable"
     enum   status "PENDING|ACTIVE|REJECTED|DELETED"
+    string slackUserId UK "nullable"
     bool   isSuperuser
-    string refreshToken "bcrypt-hashed, single slot"
+    string refreshToken "nullable, bcrypt-hashed, single slot"
+    date   createdAt
+    date   updatedAt
   }
+
+  API_KEY {
+    uuid   id PK
+    string key UK "bcrypt-hashed"
+    string keyPrefix "varchar(8), indexed"
+    string name "varchar(100)"
+    date   lastUsed "nullable"
+    uuid   userId FK "cascade"
+    date   createdAt
+  }
+
+  NOTIFICATION {
+    uuid   id PK
+    string type "varchar(20), NOT enum"
+    string message "varchar(500)"
+    bool   isRead
+    uuid   userId FK "cascade (recipient)"
+    uuid   issueId FK "nullable, cascade"
+    string projectId "no FK constraint"
+    string actorId "no FK constraint"
+    date   createdAt
+  }
+
+  ISSUE_TEMPLATE {
+    uuid   id PK
+    string name "varchar(100)"
+    enum   type "IssueType"
+    text   description "markdown body"
+    uuid   creatorId FK "cascade"
+    date   createdAt
+    date   updatedAt
+  }
+
+  PROJECT_JOIN_REQUEST {
+    uuid   id PK
+    enum   status "PENDING|APPROVED|REJECTED"
+    string message "varchar(500) nullable"
+    string rejectionReason "varchar(500) nullable"
+    uuid   requesterId FK "cascade"
+    uuid   projectId FK "cascade"
+    uuid   resolvedById FK "nullable, SetNull"
+    date   resolvedAt "nullable"
+    date   createdAt
+  }
+```
+
+### 6.b Project workspace
+
+```mermaid
+erDiagram
+  PROJECT ||--o{ PROJECT_MEMBER : "has members"
+  PROJECT ||--o{ PROJECT_CREDENTIAL : "owns secrets"
+  USER    ||--o{ PROJECT_MEMBER : "memberships"
+  USER    ||--o{ PROJECT_CREDENTIAL : "createdBy"
 
   PROJECT {
-    string id PK
-    string key UK "human key (e.g., BBPM)"
+    uuid   id PK
+    string key UK "human prefix (e.g., BBPM)"
     string name
+    string description "nullable"
+    date   createdAt
+    date   updatedAt
   }
 
+  PROJECT_MEMBER {
+    uuid   id PK
+    enum   role "ADMIN|PM|DEVELOPER, default DEVELOPER"
+    uuid   userId FK "cascade, UNIQUE(user,project)"
+    uuid   projectId FK "cascade"
+    date   createdAt
+  }
+
+  PROJECT_CREDENTIAL {
+    uuid   id PK
+    string name
+    string serviceType
+    string description "nullable"
+    string url "nullable"
+    json   entries "[{key,value,sensitive}]"
+    uuid   projectId FK "cascade"
+    uuid   createdById FK "Restrict (default)"
+    date   createdAt
+    date   updatedAt
+  }
+```
+
+### 6.c Issue & change log
+
+The issue itself plus its append-only history (activity), discussion
+(comments), files (attachments), and typed cross-issue relations.
+
+```mermaid
+erDiagram
+  PROJECT ||--o{ ISSUE : "contains"
+  ISSUE   ||--o{ ACTIVITY : "change log"
+  ISSUE   ||--o{ COMMENT : "discussion"
+  ISSUE   ||--o{ ATTACHMENT : "files"
+  COMMENT ||--o{ ATTACHMENT : "comment files"
+  ISSUE   ||--o{ ISSUE_LINK : "source"
+  ISSUE   ||--o{ ISSUE_LINK : "target"
+  ISSUE   ||--o{ ISSUE : "parent/children (self)"
+
   ISSUE {
-    string id PK
-    int    number "auto-increment per project"
-    string title
-    text   description
+    uuid   id PK
+    int    number "UNIQUE(projectId, number), MAX+1, no lock"
+    string title "varchar(500)"
+    text   description "nullable"
     enum   status "BACKLOG|TODO|IN_PROGRESS|REVIEW_QA|DONE|CANCELED"
     enum   priority "HIGH|MEDIUM|LOW"
     enum   type "EPIC|TASK|BUG|SUB_TASK"
-    int    order "fractional order in column, ORDER_GAP=1000"
+    int    order "fractional, ORDER_GAP=1000"
     date   startDate "nullable"
     date   dueDate "nullable"
-    date   focusDate "nullable, @db.Date (UTC midnight)"
-    bool   isRecheck "set on backflow to IN_PROGRESS"
-    date   archivedAt "auto-archive DONE/CANCELED after 3d"
+    date   focusDate "nullable, @db.Date"
+    bool   isRecheck "backflow flag"
+    date   archivedAt "auto 3d after DONE/CANCELED"
+    uuid   projectId FK "cascade"
+    uuid   assigneeId FK "nullable, SetNull"
+    uuid   reviewerAssigneeId FK "nullable, SetNull"
+    uuid   creatorId FK "nullable, SetNull"
+    uuid   parentId FK "nullable, self"
   }
 
   ACTIVITY {
-    string field "string-typed, ad-hoc: status, assigneeId, github_pr_linked, ..."
+    uuid   id PK
+    string field "varchar(50), NOT enum"
     string oldValue "nullable"
     string newValue "nullable"
+    uuid   issueId FK "cascade"
+    uuid   userId FK "nullable, SetNull"
+    date   createdAt
+  }
+
+  COMMENT {
+    uuid   id PK
+    text   content "markdown"
+    uuid   issueId FK "cascade"
+    uuid   userId FK "nullable, SetNull"
+    date   createdAt
+    date   updatedAt
+  }
+
+  ATTACHMENT {
+    uuid   id PK
+    string fileName "varchar(500)"
+    int    fileSize
+    string mimeType "varchar(200)"
+    string url "S3 URL"
+    uuid   issueId FK "nullable, cascade"
+    uuid   commentId FK "nullable, cascade"
+    uuid   uploaderId FK "cascade"
+    date   createdAt
+  }
+
+  ISSUE_LINK {
+    uuid   id PK
+    enum   type "BLOCKS|IS_BLOCKED_BY|RELATES_TO|DUPLICATES|IS_DUPLICATED_BY"
+    uuid   sourceIssueId FK "cascade"
+    uuid   targetIssueId FK "cascade"
+    uuid   creatorId FK "nullable, SetNull"
+    date   createdAt
+  }
+```
+
+### 6.d Issue taxonomy (labels, components)
+
+Two parallel M:N facets. Both unique per project (you can have a `Bug` label
+in project A and project B independently).
+
+```mermaid
+erDiagram
+  PROJECT   ||--o{ LABEL : "owns"
+  PROJECT   ||--o{ COMPONENT : "owns"
+  LABEL     ||--o{ ISSUE_LABEL : ""
+  COMPONENT ||--o{ ISSUE_COMPONENT : ""
+  ISSUE     ||--o{ ISSUE_LABEL : "tagged"
+  ISSUE     ||--o{ ISSUE_COMPONENT : "categorized"
+  USER      ||--o{ COMPONENT : "leads / default-assignee"
+
+  LABEL {
+    uuid   id PK
+    string name "varchar(50), UNIQUE per project"
+    string color "varchar(7), default #6B7280"
+    uuid   projectId FK "cascade"
+  }
+
+  ISSUE_LABEL {
+    uuid   issueId PK_FK "cascade"
+    uuid   labelId PK_FK "cascade"
+  }
+
+  COMPONENT {
+    uuid   id PK
+    string name "varchar(100), UNIQUE per project"
+    string description "nullable"
+    uuid   projectId FK "cascade"
+    uuid   leadId FK "nullable, SetNull"
+    uuid   defaultAssigneeId FK "nullable, SetNull (auto-assign on tag)"
+    date   createdAt
+    date   updatedAt
+  }
+
+  ISSUE_COMPONENT {
+    uuid   issueId PK_FK "cascade"
+    uuid   componentId PK_FK "cascade"
+  }
+```
+
+### 6.e Specifications & cross-links to issues
+
+```mermaid
+erDiagram
+  PROJECT       ||--o{ SPECIFICATION : "owns"
+  SPECIFICATION ||--o{ SPEC_SECTION : "anchored"
+  SPECIFICATION ||--o{ SPEC_COMMENT : "threads"
+  SPEC_SECTION  ||--o{ SPEC_COMMENT : "section pin"
+  SPEC_COMMENT  ||--o{ SPEC_COMMENT : "replies (self)"
+  SPECIFICATION ||--o{ ISSUE_SPEC_LINK : "linked from issues"
+  ISSUE         ||--o{ ISSUE_SPEC_LINK : "to specs"
+
+  SPECIFICATION {
+    uuid   id PK
+    string title "varchar(200)"
+    text   content "markdown"
+    string category "varchar(50), nullable"
+    enum   status "DRAFT|REVIEW|APPROVED|DEPRECATED"
+    int    order
+    uuid   projectId FK "cascade"
+    uuid   creatorId FK "cascade"
+    date   createdAt
+    date   updatedAt
+  }
+
+  SPEC_SECTION {
+    uuid   id PK
+    string sectionId "varchar(100), slug, UNIQUE(spec,sectionId)"
+    int    level "heading level 1-6"
+    string title "varchar(300)"
+    int    order
+    uuid   specId FK "cascade"
+  }
+
+  SPEC_COMMENT {
+    uuid   id PK
+    text   content
+    bool   resolved
+    uuid   specId FK "cascade"
+    uuid   sectionId FK "nullable, SetNull"
+    uuid   userId FK "cascade"
+    uuid   parentId FK "nullable, self, cascade"
+    date   createdAt
+    date   updatedAt
+  }
+
+  ISSUE_SPEC_LINK {
+    uuid   id PK
+    uuid   issueId FK "cascade"
+    uuid   specId FK "cascade"
+    string sectionSlug "varchar(100), default '', UNIQUE(issue,spec,slug)"
+    date   createdAt
+  }
+```
+
+### 6.f Slack + daily reports
+
+```mermaid
+erDiagram
+  USER              ||--o{ SLACK_INTEGRATION : "installs"
+  PROJECT           ||--o| DAILY_REPORT_CONFIG : "1:1"
+  SLACK_INTEGRATION ||--o{ DAILY_REPORT_CONFIG : "DMs from"
+
+  SLACK_INTEGRATION {
+    uuid   id PK
+    string teamId UK "Slack workspace id"
+    string teamName
+    string botToken "AES-256-CBC encrypted (iv:cipher)"
+    uuid   installedById FK "no cascade"
+    date   createdAt
+    date   updatedAt
+  }
+
+  DAILY_REPORT_CONFIG {
+    uuid   id PK
+    bool   enabled
+    string timezone "default Asia/Seoul"
+    bool   skipWeekends
+    string morningTime "HH:mm, default 09:00"
+    string morningChannelId "nullable"
+    date   morningLastSent "dedup"
+    string lunchTime "HH:mm, default 13:00"
+    string lunchChannelId "nullable"
+    date   lunchLastSent "dedup"
+    string eveningTime "HH:mm, default 18:00"
+    string eveningChannelId "nullable"
+    date   eveningLastSent "dedup"
+    uuid   projectId UK_FK "1:1"
+    uuid   slackIntegrationId FK
+    date   createdAt
+    date   updatedAt
+  }
+```
+
+### 6.g Standup bot
+
+Six models capture the bot's state machine: config (schedule + roster), the
+question bank, and per-day reports + answers.
+
+```mermaid
+erDiagram
+  SLACK_INTEGRATION       ||--o{ STANDUP_CONFIG : "DMs from"
+  STANDUP_CONFIG          ||--o{ STANDUP_CONFIG_QUESTION : "question set"
+  STANDUP_CONFIG          ||--o{ STANDUP_CONFIG_MEMBER : "roster"
+  STANDUP_CONFIG          ||--o{ STANDUP_REPORT : "instances"
+  STANDUP_QUESTION        ||--o{ STANDUP_CONFIG_QUESTION : "used in"
+  STANDUP_QUESTION        ||--o{ STANDUP_ANSWER : "answered with"
+  STANDUP_REPORT          ||--o{ STANDUP_ANSWER : "answers"
+
+  STANDUP_QUESTION {
+    uuid   id PK
+    string text "varchar(500)"
+    string ignoreText "skip words, default 'nothing nope none no -'"
+    int    order
+    date   createdAt
+  }
+
+  STANDUP_CONFIG {
+    uuid   id PK
+    string name "varchar(255)"
+    text   greeting "supports {{username}}, {{config_name}}"
+    text   goodbye
+    string channelId "summary destination"
+    string cronHour "supports *, 1-5, 1,3,5"
+    string cronMinute
+    string cronDayOfWeek "default 1-5"
+    string timezone "default Asia/Seoul"
+    bool   enabled
+    uuid   slackIntegrationId FK "cascade"
+    date   lastTriggeredAt "dedup"
+    date   createdAt
+    date   updatedAt
+  }
+
+  STANDUP_CONFIG_QUESTION {
+    uuid   configId PK_FK "cascade"
+    uuid   questionId PK_FK "cascade"
+    int    order
+  }
+
+  STANDUP_CONFIG_MEMBER {
+    uuid   configId PK_FK "cascade"
+    string slackUserId PK
+    string username "nullable"
+    bool   isAway "skip when true"
+  }
+
+  STANDUP_REPORT {
+    uuid   id PK
+    enum   status "ACTIVE|ANSWERED|AWAY|CANCELED|UNANSWERED"
+    string slackUserId
+    string username "nullable"
+    int    currentQuestionOrder "bot state pointer"
+    uuid   configId FK "cascade"
+    date   remindedAt "nullable, set after nudge"
+    date   createdAt
+    date   updatedAt
+  }
+
+  STANDUP_ANSWER {
+    uuid   id PK
+    text   answer "nullable (skip)"
+    string messageTs "Slack correlation"
+    int    order
+    uuid   reportId FK "cascade"
+    uuid   questionId FK "cascade, UNIQUE(report,question)"
+  }
+```
+
+### 6.h GitHub integration
+
+```mermaid
+erDiagram
+  USER                ||--o{ GITHUB_INTEGRATION : "installs"
+  PROJECT             ||--o| GITHUB_INTEGRATION : "1:1"
+  GITHUB_INTEGRATION  ||--o{ GITHUB_PULL_REQUEST : "stores PRs"
+  GITHUB_PULL_REQUEST ||--o{ GITHUB_PR_ISSUE_LINK : "links"
+  ISSUE               ||--o{ GITHUB_PR_ISSUE_LINK : "PRs"
+
+  GITHUB_INTEGRATION {
+    uuid   id PK
+    string accessToken "AES-256-CBC encrypted PAT"
+    string webhookSecret "HMAC SHA-256 per project"
+    string ownerLogin
+    string repoName "nullable"
+    string onPrOpenStatus "nullable, target IssueStatus"
+    string onPrMergeStatus "nullable, target IssueStatus"
+    bool   autoLinkEnabled
+    uuid   projectId UK_FK "1:1, cascade"
+    uuid   installedById FK "no cascade"
+    date   createdAt
+    date   updatedAt
+  }
+
+  GITHUB_PULL_REQUEST {
+    uuid   id PK
+    int    githubId "GitHub PR id"
+    int    number
+    string title "varchar(500)"
+    string url
+    string state "varchar(20), GitHub string"
+    string authorLogin
+    string authorAvatar "nullable"
+    string repoFullName
+    string baseBranch
+    string headBranch
+    date   mergedAt "nullable"
+    uuid   integrationId FK "cascade, UNIQUE(integration,githubId)"
+    date   createdAt
+    date   updatedAt
+  }
+
+  GITHUB_PR_ISSUE_LINK {
+    uuid   id PK
+    uuid   pullRequestId FK "cascade"
+    uuid   issueId FK "cascade, UNIQUE(pr,issue)"
+    date   createdAt
   }
 ```
 

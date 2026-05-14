@@ -66,9 +66,7 @@ export class AuthService {
     }
 
     if (user.status === 'REJECTED') {
-      throw new ForbiddenException(
-        'Your registration request was rejected.',
-      );
+      throw new ForbiddenException('Your registration request was rejected.');
     }
 
     if (user.status === 'DELETED') {
