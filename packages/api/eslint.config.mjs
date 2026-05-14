@@ -50,10 +50,23 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
-  // Layer boundaries (M0 refactor per refactor-plan.md §3.2). Files
-  // outside the new layer patterns stay "untyped" — the plugin skips
-  // them entirely, so existing services keep compiling unchanged.
-  // Currently `warn`; flip to `error` once a full module migrates.
+  // Layer boundaries (M0 refactor per refactor-plan.md §3.2).
+  // Severity is `error` (was `warn` during M0–M2) — three modules
+  // (JoinRequest, Project, Issue) plus the Dashboard split are fully
+  // migrated, so a regression in dependency direction is now a real
+  // bug, not a stylistic note. Files outside the layer patterns stay
+  // "untyped" and the plugin skips them, so legacy services keep
+  // compiling unchanged.
+  //
+  // KNOWN LIMITATION: under our ESM `"module": "nodenext"` setup,
+  // relative imports carry a `.js` suffix that maps to `.ts` source.
+  // `eslint-plugin-boundaries` v6's bundled resolver does not follow
+  // that convention reliably even with `eslint-import-resolver-
+  // typescript` configured — unresolved targets fall through silently
+  // and no rule fires. Severity is kept at `error` as future-proofing
+  // (when the resolver chain catches up, lint will start catching
+  // crossings without further config changes). Until then, code
+  // review + the folder layout are the real enforcement.
   {
     files: ['src/**/*.ts'],
     plugins: { boundaries },
@@ -66,10 +79,19 @@ export default tseslint.config(
         { type: 'shared', pattern: 'src/common/**/*' },
       ],
       'boundaries/ignore': ['**/*.spec.ts', '**/*.test.ts'],
+      // TS resolver: without it the plugin can't follow ESM `.js`-
+      // suffixed imports back to their `.ts` source, every cross-layer
+      // import looks "unresolved", and no rule ever fires.
+      'import/resolver': {
+        typescript: {
+          project: ['./tsconfig.json'],
+          alwaysTryTypes: true,
+        },
+      },
     },
     rules: {
       'boundaries/dependencies': [
-        'warn',
+        'error',
         {
           default: 'allow',
           rules: [
