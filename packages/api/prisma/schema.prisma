@@ -763,3 +763,31 @@ model GitHubPrIssueLink {
   @@index([issueId])
   @@map("github_pr_issue_links")
 }
+
+// ─── Outbox ────────────────────────────────────────────────
+//
+// Transactional outbox for at-least-once delivery of side-effects
+// (Slack DMs, future webhooks, etc.). Rows are written INSIDE the
+// same $transaction as the business write; OutboxPublisher polls
+// undelivered rows on a 5s cron and dispatches via handler registry.
+
+model OutboxEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventType     String   @map("event_type")
+  aggregateType String   @map("aggregate_type")
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  payload       Json
+
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+  deliveredAt   DateTime? @map("delivered_at") @db.Timestamptz
+  attempts      Int      @default(0)
+  lastError     String?  @map("last_error")
+  nextRetryAt   DateTime @default(now()) @map("next_retry_at") @db.Timestamptz
+
+  sequenceNo    BigInt   @default(autoincrement()) @map("sequence_no")
+
+  @@index([nextRetryAt], map: "idx_outbox_undelivered")
+  @@index([aggregateType, aggregateId, sequenceNo], map: "idx_outbox_aggregate")
+  @@index([deliveredAt], map: "idx_outbox_cleanup")
+  @@map("outbox_events")
+}
