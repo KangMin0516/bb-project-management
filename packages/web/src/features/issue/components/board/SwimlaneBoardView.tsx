@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback } from 'react'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
@@ -14,6 +14,8 @@ interface SwimlaneBoardViewProps {
   board: Record<string, Issue[]>
   projectKey: string
   onIssueClick: (issue: Issue) => void
+  /** Open the Epic detail panel when the swimlane title is clicked. */
+  onEpicClick?: (epic: Issue) => void
   onReorder: (issueId: string, status: string, order: number) => void
   onEpicChange?: (issueId: string, newParentId: string | null) => void
   onAddClick?: (status: string) => void
@@ -22,12 +24,20 @@ interface SwimlaneBoardViewProps {
   onToggleExpand: (issueId: string) => void
   onChildClick: (child: ChildIssue) => void
   onChildStatusToggle: (child: ChildIssue) => void
+  /** Only show swimlanes whose epic owner is in this set. Empty = no filter. */
+  epicOwnersFilter?: Set<string>
+  /** Available epics for the inline "change Epic" chip on cards. */
+  epics?: Issue[]
+  /** Lifted collapse state — toolbar Expand/Collapse all needs to mutate it. */
+  collapsedEpics: Set<string>
+  onCollapseToggle: (epicId: string | null) => void
 }
 
 export default function SwimlaneBoardView({
   board,
   projectKey,
   onIssueClick,
+  onEpicClick,
   onReorder,
   onEpicChange,
   onAddClick,
@@ -36,9 +46,11 @@ export default function SwimlaneBoardView({
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
+  epicOwnersFilter,
+  epics,
+  collapsedEpics,
+  onCollapseToggle,
 }: SwimlaneBoardViewProps) {
-  const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
-
   const { swimlanes } = useMemo(() => {
     const epicMap = new Map<string, Issue>()
     const epicChildren = new Map<string, Record<string, Issue[]>>()
@@ -95,18 +107,15 @@ export default function SwimlaneBoardView({
       lanes.push({ epic: null, issues: noEpicIssues })
     }
 
-    return { swimlanes: lanes }
-  }, [board])
+    // Filter by epic owner (swimlane-level). Lanes without an owner —
+    // unassigned epics or the "No Epic" bucket — are hidden when the
+    // filter is active.
+    const filtered = epicOwnersFilter && epicOwnersFilter.size > 0
+      ? lanes.filter((l) => l.epic?.assigneeId && epicOwnersFilter.has(l.epic.assigneeId))
+      : lanes
 
-  const toggleCollapse = useCallback((epicId: string | null) => {
-    const key = epicId || '__no_epic__'
-    setCollapsedEpics((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }, [])
+    return { swimlanes: filtered }
+  }, [board, epicOwnersFilter])
 
   const handleDragEnd = useCallback((result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -152,14 +161,17 @@ export default function SwimlaneBoardView({
               issues={lane.issues}
               projectKey={projectKey}
               isCollapsed={collapsedEpics.has(key)}
-              onToggleCollapse={() => toggleCollapse(lane.epic?.id || null)}
+              onToggleCollapse={() => onCollapseToggle(lane.epic?.id || null)}
               onIssueClick={onIssueClick}
+              onEpicClick={onEpicClick}
               onAddClick={onAddClick}
               childrenMap={childrenMap}
               expandedIssues={expandedIssues}
               onToggleExpand={onToggleExpand}
               onChildClick={onChildClick}
               onChildStatusToggle={onChildStatusToggle}
+              epics={epics}
+              onEpicChange={onEpicChange}
             />
           )
         })}
