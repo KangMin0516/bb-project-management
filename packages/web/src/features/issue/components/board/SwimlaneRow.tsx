@@ -83,9 +83,12 @@ export default memo(function SwimlaneRow({
   const droppablePrefix = epic ? epic.id : '__no_epic__'
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Swimlane Header */}
-      <div className="flex w-full items-center gap-2 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700">
+      <div className={cn(
+        'flex w-full items-center gap-2 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700',
+        isCollapsed ? 'rounded-xl' : 'rounded-t-xl',
+      )}>
         {epic && dragHandleProps && (
           <span
             {...dragHandleProps}
