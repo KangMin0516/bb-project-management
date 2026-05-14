@@ -33,6 +33,23 @@ export default tseslint.config(
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
+  // Test files — relax the type-checked rules. ESLint's parser cannot
+  // resolve types from `@jest/globals` under our ts-jest ESM setup, so
+  // every `describe()`/`it()`/`expect(...).toBe(...)` is flagged as
+  // "unsafe call of a type that could not be resolved". ts-jest itself
+  // resolves them correctly (the suite runs); only the IDE/lint view
+  // is wrong. Turning these rules off here keeps the production code
+  // strict while letting test code pass.
+  {
+    files: ['src/**/*.spec.ts', 'test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
   // Layer boundaries (M0 refactor per refactor-plan.md §3.2). Files
   // outside the new layer patterns stay "untyped" — the plugin skips
   // them entirely, so existing services keep compiling unchanged.
