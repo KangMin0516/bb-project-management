@@ -28,6 +28,6 @@ import { OutboxRepository } from './outbox.repository.js';
     OutboxRetentionScheduler,
     OutboxHealthService,
   ],
-  exports: [OutboxEventBus, OutboxHandlerRegistry],
+  exports: [OutboxEventBus, OutboxHandlerRegistry, OutboxRepository],
 })
 export class OutboxModule {}
