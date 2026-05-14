@@ -1,11 +1,16 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SlackService } from '../slack/slack.service.js';
+import {
+  MESSAGING_PORT,
+  type MessageBlock,
+  type MessagingPort,
+} from '../common/ports/messaging.port.js';
 import { NotificationService } from '../notification/notification.service.js';
 import { USER_SELECT } from '../common/constants.js';
 import type { CreateJoinRequestDto } from './dto/create-join-request.dto.js';
@@ -17,7 +22,7 @@ export class JoinRequestService {
 
   constructor(
     private prisma: PrismaService,
-    private slackService: SlackService,
+    @Inject(MESSAGING_PORT) private messaging: MessagingPort,
     private notificationService: NotificationService,
   ) {}
 
@@ -226,10 +231,8 @@ export class JoinRequestService {
     project: { id: string; name: string; key: string };
     message: string | null;
   }) {
-    const slackStatus = await this.slackService.getStatus();
-    if (!slackStatus.connected || !slackStatus.integrationId) {
-      return;
-    }
+    const status = await this.messaging.getWorkspaceStatus();
+    if (!status.connected) return;
 
     const adminsAndPms = await this.prisma.projectMember.findMany({
       where: {
@@ -241,61 +244,41 @@ export class JoinRequestService {
       },
     });
 
+    // P9 — FRONTEND_URL bypass intentionally preserved until M3 ConfigService cleanup.
     const frontendUrl = process.env.FRONTEND_URL ?? 'https://pm.burningbros.kr';
     const settingsUrl = `${frontendUrl}/projects/${joinRequest.project.key}/settings?tab=requests`;
 
-    const blocks = [
-      {
-        type: 'header',
-        text: { type: 'plain_text', text: '📋 Project join request' },
-      },
+    const blocks: MessageBlock[] = [
+      { type: 'header', text: '📋 Project join request' },
       {
         type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*${joinRequest.requester.name}* has requested to join *${joinRequest.project.name}*.`,
-        },
+        text: `*${joinRequest.requester.name}* has requested to join *${joinRequest.project.name}*.`,
       },
       ...(joinRequest.message
-        ? [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `> ${joinRequest.message}`,
-              },
-            },
-          ]
+        ? ([
+            { type: 'section', text: `> ${joinRequest.message}` },
+          ] satisfies MessageBlock[])
         : []),
       {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Approve / Reject' },
-            url: settingsUrl,
-            style: 'primary',
-          },
-        ],
+        type: 'button_link',
+        text: 'Approve / Reject',
+        url: settingsUrl,
+        style: 'primary',
       },
     ];
-
-    const text = `${joinRequest.requester.name} has requested to join ${joinRequest.project.name}.`;
+    const fallbackText = `${joinRequest.requester.name} has requested to join ${joinRequest.project.name}.`;
 
     for (const member of adminsAndPms) {
-      if (member.user.slackUserId) {
-        try {
-          await this.slackService.sendMessage(
-            slackStatus.integrationId,
-            member.user.slackUserId,
-            blocks,
-            text,
-          );
-        } catch (err) {
-          this.logger.warn(
-            `Failed to send Slack DM to ${member.user.slackUserId}: ${(err as Error).message}`,
-          );
-        }
+      if (!member.user.slackUserId) continue;
+      const result = await this.messaging.sendDirectMessage(
+        member.user.slackUserId,
+        fallbackText,
+        blocks,
+      );
+      if (!result.delivered) {
+        this.logger.warn(
+          `Failed to DM admin ${member.user.slackUserId}: ${result.reason}`,
+        );
       }
     }
   }
