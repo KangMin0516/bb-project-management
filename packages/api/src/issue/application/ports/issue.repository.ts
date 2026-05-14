@@ -148,4 +148,68 @@ export interface IssueRepository {
     assigneeId: string,
     actorId: string,
   ): Promise<void>;
+
+  // ─── Phase 3: Reorder / Remove / Bulk ──────────────────────
+
+  /** Hard-delete an issue by id. Cascade per Prisma schema. */
+  delete(issueId: string): Promise<void>;
+
+  /**
+   * Atomic kanban reorder. Single `$transaction`:
+   *   1. update issue's status + order + nested activity (if any)
+   *   2. detect order-collision with neighbors in target column
+   *   3. renormalize the whole column when needed
+   * Returns the updated row with the standard ISSUE_INCLUDE shape.
+   */
+  reorderInTransaction(payload: ReorderIssuePayload): Promise<unknown>;
+
+  /**
+   * Minimal projection used by bulk operations. Returns only the
+   * fields needed to compute activity diffs + notification meta —
+   * keeps the SELECT cheap when N is large.
+   */
+  findMinimalForBulk(projectId: string, ids: string[]): Promise<BulkIssueRow[]>;
+
+  /**
+   * Atomic bulk update: per-issue update with nested activities +
+   * per-issue side-effect callback (used to schedule notifications).
+   * The callback runs AFTER each row's update commits within the
+   * transaction so notification ordering matches legacy.
+   */
+  bulkUpdateInTransaction(
+    rows: BulkIssueRow[],
+    fieldUpdates: {
+      status?: string;
+      priority?: string;
+      assigneeId?: string | null;
+    },
+    actorId: string,
+    onIssueUpdated: (row: BulkIssueRow) => void,
+  ): Promise<void>;
+
+  /** Hard-delete `ids` scoped to project. Returns affected count. */
+  bulkDelete(projectId: string, ids: string[]): Promise<number>;
+}
+
+export interface ReorderIssuePayload {
+  projectId: string;
+  issueId: string;
+  targetStatus: IssueStatusLiteral;
+  targetOrder: number;
+  /** Whether to clear archivedAt (caller computes from current state). */
+  resetArchive: boolean;
+  /** undefined = leave isRecheck alone; boolean = set explicitly. */
+  recheckUpdate: boolean | undefined;
+  /** Activity rows to nest-create. Empty when status doesn't change. */
+  activities: ActivityRowToWrite[];
+  actorId: string;
+}
+
+export interface BulkIssueRow {
+  id: string;
+  status: IssueStatusLiteral;
+  priority: IssuePriorityLiteral;
+  assigneeId: string | null;
+  number: number;
+  title: string;
 }

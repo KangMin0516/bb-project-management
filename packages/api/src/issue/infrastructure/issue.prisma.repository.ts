@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ISSUE_INCLUDE } from '../application/issue-query.service.js';
 import type {
+  BulkIssueRow,
   ChildIssue,
   CreateIssuePayload,
   IssueRepository,
   IssueRowForUpdate,
   IssueTypeLiteral,
   RecentActivityRow,
+  ReorderIssuePayload,
   UpdateIssuePayload,
 } from '../application/ports/issue.repository.js';
 
@@ -262,10 +264,187 @@ export class IssuePrismaRepository implements IssueRepository {
       }),
     ]);
   }
+
+  // ─── Phase 3: Reorder / Remove / Bulk ──────────────────────
+
+  async delete(issueId: string): Promise<void> {
+    await this.prisma.issue.delete({ where: { id: issueId } });
+  }
+
+  async reorderInTransaction(payload: ReorderIssuePayload): Promise<unknown> {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.issue.update({
+        where: { id: payload.issueId },
+        data: {
+          status: payload.targetStatus,
+          order: payload.targetOrder,
+          ...(payload.resetArchive ? { archivedAt: null } : {}),
+          ...(payload.recheckUpdate !== undefined
+            ? { isRecheck: payload.recheckUpdate }
+            : {}),
+          ...(payload.activities.length > 0 && {
+            activities: {
+              create: payload.activities.map((a) => ({
+                ...a,
+                userId: payload.actorId,
+              })),
+            },
+          }),
+        },
+        include: ISSUE_INCLUDE,
+      });
+
+      // Renormalize if the new order collides with a neighbor's order
+      // (sparse-integer space drifted close together over many drags).
+      const neighbors = await tx.issue.findMany({
+        where: {
+          projectId: payload.projectId,
+          status: payload.targetStatus,
+          id: { not: payload.issueId },
+          order: {
+            gte: payload.targetOrder - 1,
+            lte: payload.targetOrder + 1,
+          },
+        },
+        select: { order: true },
+      });
+      const needsRenormalize = neighbors.some(
+        (n) => Math.abs(n.order - payload.targetOrder) < 0.001,
+      );
+      if (needsRenormalize) {
+        const allInColumn = await tx.issue.findMany({
+          where: {
+            projectId: payload.projectId,
+            status: payload.targetStatus,
+          },
+          orderBy: { order: 'asc' },
+          select: { id: true },
+        });
+        await Promise.all(
+          allInColumn.map((issue, idx) =>
+            tx.issue.update({
+              where: { id: issue.id },
+              data: { order: (idx + 1) * ORDER_GAP },
+            }),
+          ),
+        );
+      }
+
+      return updated;
+    });
+  }
+
+  async findMinimalForBulk(
+    projectId: string,
+    ids: string[],
+  ): Promise<BulkIssueRow[]> {
+    if (ids.length === 0) return [];
+    return this.prisma.issue.findMany({
+      where: { id: { in: ids }, projectId },
+      select: {
+        id: true,
+        status: true,
+        priority: true,
+        assigneeId: true,
+        number: true,
+        title: true,
+      },
+    });
+  }
+
+  async bulkUpdateInTransaction(
+    rows: BulkIssueRow[],
+    fieldUpdates: {
+      status?: string;
+      priority?: string;
+      assigneeId?: string | null;
+    },
+    actorId: string,
+    onIssueUpdated: (row: BulkIssueRow) => void,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        const activities: {
+          field: string;
+          oldValue: string | null;
+          newValue: string | null;
+        }[] = [];
+        if (
+          fieldUpdates.status !== undefined &&
+          fieldUpdates.status !== row.status
+        ) {
+          activities.push({
+            field: 'status',
+            oldValue: row.status,
+            newValue: fieldUpdates.status,
+          });
+        }
+        if (
+          fieldUpdates.priority !== undefined &&
+          fieldUpdates.priority !== row.priority
+        ) {
+          activities.push({
+            field: 'priority',
+            oldValue: row.priority,
+            newValue: fieldUpdates.priority,
+          });
+        }
+        if (
+          fieldUpdates.assigneeId !== undefined &&
+          fieldUpdates.assigneeId !== row.assigneeId
+        ) {
+          activities.push({
+            field: 'assigneeId',
+            oldValue: row.assigneeId,
+            newValue: fieldUpdates.assigneeId,
+          });
+        }
+        if (activities.length === 0) continue;
+
+        await tx.issue.update({
+          where: { id: row.id },
+          data: {
+            ...(fieldUpdates.status !== undefined && {
+              status: fieldUpdates.status as IssueStatusLiteralPrismaInput,
+            }),
+            ...(fieldUpdates.priority !== undefined && {
+              priority:
+                fieldUpdates.priority as IssuePriorityLiteralPrismaInput,
+            }),
+            ...(fieldUpdates.assigneeId !== undefined && {
+              assigneeId: fieldUpdates.assigneeId,
+            }),
+            activities: {
+              create: activities.map((a) => ({ ...a, userId: actorId })),
+            },
+          },
+        });
+        onIssueUpdated(row);
+      }
+    });
+  }
+
+  async bulkDelete(projectId: string, ids: string[]): Promise<number> {
+    const result = await this.prisma.issue.deleteMany({
+      where: { id: { in: ids }, projectId },
+    });
+    return result.count;
+  }
 }
 
-// Silence unused-import warnings for the typed-but-not-instantiated
-// helper types — they appear only in method signatures via
-// `IssueRepository`. Keeping these imports explicit lets editor jump-
-// to-definition work without the inferred-from-interface dance.
+// Local aliases for the Prisma enum unions. Importing the generated
+// enums in the .ts world adds noise (they're values + types); keeping
+// the cast-site narrow at the bulk update keeps the rest of the
+// repository free of `as`.
+type IssueStatusLiteralPrismaInput =
+  | 'BACKLOG'
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'REVIEW_QA'
+  | 'DONE'
+  | 'CANCELED';
+type IssuePriorityLiteralPrismaInput = 'HIGH' | 'MEDIUM' | 'LOW';
+
+// Silence unused-import warnings for typed-but-not-instantiated
+// helpers used only in method signatures via `IssueRepository`.
 void ({} as IssueTypeLiteral | undefined);
