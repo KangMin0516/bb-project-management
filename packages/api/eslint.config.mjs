@@ -1,12 +1,13 @@
 // @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import boundaries from 'eslint-plugin-boundaries';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: ['eslint.config.mjs', 'generated/**', 'dist/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -29,7 +30,62 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+  // Layer boundaries (M0 refactor per refactor-plan.md §3.2). Files
+  // outside the new layer patterns stay "untyped" — the plugin skips
+  // them entirely, so existing services keep compiling unchanged.
+  // Currently `warn`; flip to `error` once a full module migrates.
+  {
+    files: ['src/**/*.ts'],
+    plugins: { boundaries },
+    settings: {
+      'boundaries/elements': [
+        { type: 'domain', pattern: 'src/*/domain/**/*' },
+        { type: 'application', pattern: 'src/*/application/**/*' },
+        { type: 'infrastructure', pattern: 'src/*/infrastructure/**/*' },
+        { type: 'interface', pattern: 'src/*/interface/**/*' },
+        { type: 'shared', pattern: 'src/common/**/*' },
+      ],
+      'boundaries/ignore': ['**/*.spec.ts', '**/*.test.ts'],
+    },
+    rules: {
+      'boundaries/dependencies': [
+        'warn',
+        {
+          default: 'allow',
+          rules: [
+            {
+              from: { type: 'domain' },
+              disallow: {
+                to: {
+                  type: [
+                    'application',
+                    'infrastructure',
+                    'interface',
+                    'shared',
+                  ],
+                },
+              },
+              message:
+                'Domain layer must be framework-free. Move infra/orchestration to application/infrastructure.',
+            },
+            {
+              from: { type: 'application' },
+              disallow: { to: { type: ['infrastructure', 'interface'] } },
+              message:
+                'Application must depend on domain + ports only. Inject infrastructure via DI.',
+            },
+            {
+              from: { type: 'infrastructure' },
+              disallow: { to: { type: ['interface'] } },
+              message:
+                'Infrastructure adapters must not depend on controllers.',
+            },
+          ],
+        },
+      ],
     },
   },
 );
