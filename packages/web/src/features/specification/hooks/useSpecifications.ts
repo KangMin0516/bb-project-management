@@ -30,19 +30,19 @@ export function useSpecifications(projectId: string, selectedId: string | null) 
   const create = useMutation({
     mutationFn: (data: { title: string; content: string; category?: string }) => specRepository.create(projectId, data),
     onSuccess: invalidateList,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create specification')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create specification'), 'error'),
   })
 
   const update = useMutation({
     mutationFn: (data: { content?: string; status?: SpecStatus }) => specRepository.update(projectId, selectedId!, data),
     onSuccess: () => { invalidateList(); invalidateDetail() },
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update specification')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update specification'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: () => specRepository.remove(projectId, selectedId!),
     onSuccess: invalidateList,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete specification')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete specification'), 'error'),
   })
 
   return { list: list.data, detail: detail.data, isLoading: list.isLoading, create, update, remove }

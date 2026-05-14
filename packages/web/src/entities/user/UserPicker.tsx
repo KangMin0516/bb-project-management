@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import UserAvatar from './UserAvatar'
 
 interface MemberOption {
@@ -12,45 +19,50 @@ interface UserPickerProps {
   emptyLabel?: string
 }
 
+/** Sentinel for the "no user" option — Radix Select rejects empty values. */
+const NO_USER = '__none__'
+
 /**
  * Dropdown for picking a user from a member list, with optional "no
- * selection" (id='') first option. Renders absolutely-positioned beneath
- * its parent — the parent provides the click-outside behaviour.
+ * selection" option as the first entry. Renders as a shadcn Select so
+ * focus trap, keyboard nav, and theme tokens stay consistent with the
+ * other pickers in the issue panel. `defaultOpen` mirrors the previous
+ * always-visible-on-mount behaviour (parent puts UserPicker into edit
+ * mode the moment the user clicks the field).
  */
 export default function UserPicker({ members, value, onChange, emptyLabel = 'Unassigned' }: UserPickerProps) {
-  return (
-    <div className="relative">
-      <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-1 shadow-lg max-h-52 overflow-y-auto">
-        <UserOption selected={!value} onClick={() => onChange('')}>
-          <UserAvatar user={null} />
-          {emptyLabel}
-        </UserOption>
-        {members.map((m) => (
-          <UserOption key={m.user.id} selected={value === m.user.id} onClick={() => onChange(m.user.id)}>
-            <UserAvatar user={m.user} />
-            {m.user.name}
-          </UserOption>
-        ))}
-      </div>
-    </div>
-  )
-}
+  const selected = members.find((m) => m.user.id === value)?.user
 
-function UserOption({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  const selectedClass = selected
-    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-    : 'text-gray-700 dark:text-gray-300'
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-600 ${selectedClass}`}>
-      {children}
-    </button>
+    <Select
+      defaultOpen
+      value={value || NO_USER}
+      onValueChange={(v) => onChange(v === NO_USER ? '' : v)}
+    >
+      <SelectTrigger className="h-8 text-sm">
+        <SelectValue>
+          <span className="flex items-center gap-2">
+            <UserAvatar user={selected ?? null} />
+            <span className="truncate">{selected ? selected.name : emptyLabel}</span>
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_USER}>
+          <span className="flex items-center gap-2">
+            <UserAvatar user={null} />
+            {emptyLabel}
+          </span>
+        </SelectItem>
+        {members.map((m) => (
+          <SelectItem key={m.user.id} value={m.user.id}>
+            <span className="flex items-center gap-2">
+              <UserAvatar user={m.user} />
+              {m.user.name}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }

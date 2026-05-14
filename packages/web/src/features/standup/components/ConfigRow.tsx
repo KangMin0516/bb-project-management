@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Play, Trash2 } from 'lucide-react'
 import type { StandupConfig, StandupQuestion } from '@/features/standup/api'
 import type { SlackChannel, SlackUser } from '@/features/integrations/slack/api'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import ConfigForm from './ConfigForm'
 
 interface ConfigRowProps {
@@ -70,9 +71,13 @@ export default function ConfigRow({
           <Play className="h-3.5 w-3.5" />
         </button>
         <button
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation()
-            if (confirm(`Delete "${config.name}"?`)) onDelete()
+            if (await confirmDialog({
+              title: `Delete "${config.name}"?`,
+              confirmLabel: 'Delete',
+              destructive: true,
+            })) onDelete()
           }}
           className="text-gray-400 dark:text-gray-500 hover:text-red-500"
           aria-label={`Delete ${config.name}`}

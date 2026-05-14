@@ -12,13 +12,13 @@ export function useSpecLinkMutations(projectId: string, issueId: string, onCreat
     mutationFn: (data: { specId: string; sectionSlug?: string }) =>
       issueRepository.createSpecLink(projectId, issueId, data),
     onSuccess: () => { invalidate(); onCreated?.() },
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to link spec')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to link spec'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (linkId: string) => issueRepository.deleteSpecLink(projectId, issueId, linkId),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove spec link')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove spec link'), 'error'),
   })
 
   return { create, remove }

@@ -43,7 +43,7 @@ export function useAssignmentWithUndo({ projectId, issueId, members, onSuccess }
 
       const payload = { [opts.field]: nextId } as UpdateIssuePayload
       issueRepository.update(projectId, issueId, payload).then(onSuccess).catch((err: unknown) => {
-        useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
+        useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'), 'error')
       })
 
       if (!nextId) return
@@ -64,7 +64,7 @@ export function useAssignmentWithUndo({ projectId, issueId, members, onSuccess }
               .update(projectId, issueId, { [opts.field]: prevId, silent: true } as UpdateIssuePayload)
               .then(onSuccess)
               .catch((err) =>
-                useToastStore.getState().addToast(getErrorMessage(err, `Failed to undo ${role} change`)),
+                useToastStore.getState().addToast(getErrorMessage(err, `Failed to undo ${role} change`), 'error'),
               )
           },
         },

@@ -2,6 +2,14 @@ import { Download, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { SPEC_STATUS_COLORS } from '@/shared/config/constants'
 import type { SpecDetail, SpecStatus } from '@/features/specification/api'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 const STATUSES: SpecStatus[] = ['DRAFT', 'REVIEW', 'APPROVED', 'DEPRECATED']
 
@@ -53,13 +61,14 @@ export default function SpecHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <select
-          value={spec.status}
-          onChange={(e) => onStatusChange(e.target.value as SpecStatus)}
-          className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs"
-        >
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <Select value={spec.status} onValueChange={(v) => onStatusChange(v as SpecStatus)}>
+          <SelectTrigger className="h-8 w-auto text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
         {!editing ? (
           <ActionButton onClick={onEdit}>Edit</ActionButton>
         ) : (
@@ -106,8 +115,12 @@ function ActionButton({ onClick, primary, disabled, title, children }: { onClick
 function DeleteButton({ onClick }: { onClick: () => void }) {
   return (
     <button
-      onClick={() => {
-        if (confirm('Delete this specification?')) onClick()
+      onClick={async () => {
+        if (await confirmDialog({
+          title: 'Delete this specification?',
+          confirmLabel: 'Delete',
+          destructive: true,
+        })) onClick()
       }}
       className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
     >

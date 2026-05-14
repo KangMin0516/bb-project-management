@@ -5,6 +5,7 @@ import { AppProviders } from '@/app/providers'
 import { AppRouter } from '@/app/router'
 import ErrorBoundary from '@/shared/ui/ErrorBoundary'
 import ImagePreviewModal from '@/shared/ui/atoms/ImagePreviewModal'
+import { ConfirmDialogHost } from '@/shared/ui/confirm-dialog'
 import { Toaster } from 'sonner'
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
       </ErrorBoundary>
       <Toaster position="bottom-right" richColors />
       <ImagePreviewModal />
+      <ConfirmDialogHost />
     </AppProviders>
   )
 }

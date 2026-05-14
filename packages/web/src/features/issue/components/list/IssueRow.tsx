@@ -4,6 +4,7 @@ import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
 import { cn } from '@/shared/lib/utils'
 import UserAvatar from '@/entities/user/UserAvatar'
 import IssueActionMenu from '@/features/issue/components/IssueActionMenu'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 
 interface IssueRowProps {
   issue: Issue
@@ -85,8 +86,12 @@ export default function IssueRow({ issue, projectKey, isSelected, isFocused, onO
           projectKey={projectKey}
           issueNumber={issue.number}
           context="issues"
-          onDelete={() => {
-            if (confirm('Delete this issue?')) onDelete(issue.id)
+          onDelete={async () => {
+            if (await confirmDialog({
+              title: 'Delete this issue?',
+              confirmLabel: 'Delete',
+              destructive: true,
+            })) onDelete(issue.id)
           }}
         />
       </td>

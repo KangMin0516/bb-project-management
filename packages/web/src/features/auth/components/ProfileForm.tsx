@@ -23,9 +23,9 @@ export default function ProfileForm({ isSaving, onSave }: ProfileFormProps) {
     if (!file) return
     try {
       await uploadAvatar(file)
-      useToastStore.getState().addToast('Avatar updated')
+      useToastStore.getState().addToast('Avatar updated', 'success')
     } catch (err) {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload avatar'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload avatar'), 'error')
     }
     e.target.value = ''
   }

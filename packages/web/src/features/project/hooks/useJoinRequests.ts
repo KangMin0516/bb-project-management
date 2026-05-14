@@ -24,14 +24,14 @@ export function useJoinRequests(projectId: string, enabled: boolean) {
   const approve = useMutation({
     mutationFn: (requestId: string) => projectRepository.approveJoinRequest(projectId, requestId),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve request')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to approve request'), 'error'),
   })
 
   const reject = useMutation({
     mutationFn: ({ requestId, reason }: { requestId: string; reason?: string }) =>
       projectRepository.rejectJoinRequest(projectId, requestId, reason ? { reason } : undefined),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject request')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reject request'), 'error'),
   })
 
   return { requests: requestsQuery.data, approve, reject }

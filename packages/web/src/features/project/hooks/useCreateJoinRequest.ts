@@ -18,7 +18,7 @@ export function useCreateJoinRequest(onSuccess?: () => void) {
       onSuccess?.()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to send join request'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to send join request'), 'error')
     },
   })
 }

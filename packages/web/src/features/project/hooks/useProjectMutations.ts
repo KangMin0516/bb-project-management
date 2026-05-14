@@ -14,7 +14,7 @@ export function useProjectMutations(projectId: string, onDeleted?: () => void) {
   const update = useMutation({
     mutationFn: (data: { name: string; description?: string }) => projectRepository.update(projectId, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update project')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update project'), 'error'),
   })
 
   const remove = useMutation({
@@ -23,7 +23,7 @@ export function useProjectMutations(projectId: string, onDeleted?: () => void) {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       onDeleted?.()
     },
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete project')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete project'), 'error'),
   })
 
   return { update, remove }

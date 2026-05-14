@@ -4,8 +4,18 @@ import type { ProjectMember } from '@/features/project/api'
 import type { User } from '@/entities/user/api'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 import SettingsSection from './SettingsSection'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 const ROLES = ['ADMIN', 'PM', 'DEVELOPER'] as const
+
+/** Sentinel — Radix Select rejects empty string item values. */
+const NO_USER = '__none__'
 
 interface MembersSectionProps {
   members: ProjectMember[] | undefined
@@ -55,13 +65,14 @@ function MemberRow({
         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{member.user.name}</div>
         <div className="text-xs text-gray-500 dark:text-gray-400">{member.user.email}</div>
       </div>
-      <select
-        value={member.role}
-        onChange={(e) => onChangeRole(e.target.value)}
-        className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none"
-      >
-        {ROLES.map((r) => <option key={r} value={r}>{r === 'DEVELOPER' ? 'Developer' : r}</option>)}
-      </select>
+      <Select value={member.role} onValueChange={onChangeRole}>
+        <SelectTrigger className="h-8 w-auto text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ROLES.map((r) => <SelectItem key={r} value={r}>{r === 'DEVELOPER' ? 'Developer' : r}</SelectItem>)}
+        </SelectContent>
+      </Select>
       <button onClick={onRemove} className="text-gray-400 dark:text-gray-500 hover:text-red-500" aria-label={`Remove ${member.user.name}`}>
         <Trash2 className="h-4 w-4" />
       </button>
@@ -87,23 +98,30 @@ function AddMemberForm({
 
   return (
     <div className="mt-3 flex items-center gap-2">
-      <select
-        value={userId}
-        onChange={(e) => setUserId(e.target.value)}
-        className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none"
-      >
-        <option value="">Select user...</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-        ))}
-      </select>
-      <select
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
-      >
-        {ROLES.map((r) => <option key={r} value={r}>{r === 'DEVELOPER' ? 'Developer' : r}</option>)}
-      </select>
+      <div className="flex-1">
+        <Select
+          value={userId || NO_USER}
+          onValueChange={(v) => setUserId(v === NO_USER ? '' : v)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_USER}>Select user...</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Select value={role} onValueChange={setRole}>
+        <SelectTrigger className="w-auto">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ROLES.map((r) => <SelectItem key={r} value={r}>{r === 'DEVELOPER' ? 'Developer' : r}</SelectItem>)}
+        </SelectContent>
+      </Select>
       <button
         onClick={submit}
         disabled={!userId}

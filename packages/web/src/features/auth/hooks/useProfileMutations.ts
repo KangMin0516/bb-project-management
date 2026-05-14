@@ -16,15 +16,15 @@ export function useProfileMutations() {
     mutationFn: (data: { name: string }) => authApi.updateProfile(data),
     onSuccess: () => {
       loadUser()
-      useToastStore.getState().addToast('Profile updated')
+      useToastStore.getState().addToast('Profile updated', 'success')
     },
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update profile')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update profile'), 'error'),
   })
 
   const changePassword = useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) => authApi.changePassword(data),
-    onSuccess: () => useToastStore.getState().addToast('Password changed successfully'),
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change password')),
+    onSuccess: () => useToastStore.getState().addToast('Password changed successfully', 'success'),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change password'), 'error'),
   })
 
   return { updateProfile, changePassword }

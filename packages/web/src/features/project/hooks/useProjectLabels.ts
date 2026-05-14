@@ -16,13 +16,13 @@ export function useProjectLabels(projectId: string) {
   const create = useMutation({
     mutationFn: (data: { name: string; color: string }) => projectRepository.createLabel(projectId, data),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create label')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create label'), 'error'),
   })
 
   const seed = useMutation({
     mutationFn: () => projectRepository.seedLabels(projectId),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels'), 'error'),
   })
 
   return { labels: labelsQuery.data, create, seed }

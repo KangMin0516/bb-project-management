@@ -13,7 +13,13 @@ export function useOutsideClick(
   useEffect(() => {
     if (!enabled) return
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Element | null
+      // Clicks inside a Radix popper portal (Select / Popover / Dropdown
+      // content) originate outside `ref` because the content lives in a
+      // body-level portal. Treat them as inside so the consumer doesn't
+      // close before the Radix component can commit its value.
+      if (target?.closest?.('[data-radix-popper-content-wrapper]')) return
+      if (ref.current && !ref.current.contains(target as Node)) {
         onOutside()
       }
     }

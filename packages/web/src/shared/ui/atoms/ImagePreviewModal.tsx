@@ -1,11 +1,18 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/shared/ui/dialog'
 
 export default function ImagePreviewModal() {
   const { url, alt, close, open } = useImagePreviewStore()
 
-  // Global click handler for images inside .tiptap-editor and .markdown-body
+  // Global click handler for images inside .tiptap-editor and .markdown-body.
+  // Kept as-is — the store decides when to show the lightbox.
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
@@ -26,34 +33,35 @@ export default function ImagePreviewModal() {
     return () => document.removeEventListener('click', handleClick)
   }, [open])
 
-  useEffect(() => {
-    if (!url) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [url, close])
-
-  if (!url) return null
+  // The lightbox is open whenever the store has a url; Dialog handles
+  // Esc + click-outside via onOpenChange.
+  const isOpen = !!url
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70"
-      onClick={close}
-    >
-      <button
+    <Dialog open={isOpen} onOpenChange={(next) => { if (!next) close() }}>
+      <DialogContent
+        hideCloseButton
+        className="max-w-[95vw] w-auto border-0 bg-transparent shadow-none p-0 gap-0"
         onClick={close}
-        className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition"
       >
-        <X className="h-5 w-5" />
-      </button>
-      <img
-        src={url}
-        alt={alt}
-        className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
-    </div>
+        <DialogTitle className="sr-only">Image preview</DialogTitle>
+        <DialogDescription className="sr-only">{alt || 'Preview image'}</DialogDescription>
+        <button
+          onClick={close}
+          className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition z-10"
+          aria-label="Close preview"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        {url && (
+          <img
+            src={url}
+            alt={alt}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

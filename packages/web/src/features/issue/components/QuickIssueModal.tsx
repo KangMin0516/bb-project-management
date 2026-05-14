@@ -3,7 +3,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { quickIssueApi, type ParsedIssue } from '@/features/issue/quick-issue-api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
-import { X, Zap, Loader2, ChevronRight, Check, ArrowLeft } from 'lucide-react'
+import { Zap, Loader2, ChevronRight, Check, ArrowLeft } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/shared/ui/dialog'
+import { useDeferredClose } from '@/shared/lib/useDeferredClose'
 
 interface QuickIssueModalProps {
   onClose: () => void
@@ -25,20 +32,13 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
+  const { open, requestClose } = useDeferredClose(onClose)
   const [step, setStep] = useState<Step>('input')
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState<ParsedIssue | null>(null)
   const [candidates, setCandidates] = useState<{ id: string; key: string; name: string }[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const queryClient = useQueryClient()
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
 
   useEffect(() => {
     if (step === 'input') inputRef.current?.focus()
@@ -57,7 +57,7 @@ export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
       }
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to parse'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to parse'), 'error')
     },
   })
 
@@ -77,11 +77,11 @@ export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['issues'] })
       queryClient.invalidateQueries({ queryKey: ['board'] })
-      useToastStore.getState().addToast(`Issue ${result.issueKey} created`)
-      onClose()
+      useToastStore.getState().addToast(`Issue ${result.issueKey} created`, 'success')
+      requestClose()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create issue'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create issue'), 'error')
     },
   })
 
@@ -99,13 +99,10 @@ export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
   const isCreating = createMutation.isPending
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/40" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
-        className="w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-xl top-[15vh] translate-y-0">
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 px-4 py-3 pr-12">
           {step !== 'input' && (
             <button
               onClick={() => { setStep('input'); setParsed(null) }}
@@ -115,13 +112,11 @@ export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
             </button>
           )}
           <Zap className="h-4 w-4 text-amber-500" />
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quick Issue</h2>
+          <DialogTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quick Issue</DialogTitle>
+          <DialogDescription className="sr-only">Create an issue from natural-language input</DialogDescription>
           <kbd className="ml-auto rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
             {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+N
           </kbd>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Input Step */}
@@ -259,7 +254,7 @@ export default function QuickIssueModal({ onClose }: QuickIssueModalProps) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -18,30 +18,30 @@ export function useStandupConfigs() {
     mutationFn: (data: Record<string, unknown>) => standupApi.createConfig(data),
     onSuccess: () => {
       invalidate()
-      useToastStore.getState().addToast('Config created')
+      useToastStore.getState().addToast('Config created', 'success')
     },
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => standupApi.updateConfig(id, data),
     onSuccess: () => {
       invalidate()
-      useToastStore.getState().addToast('Config updated')
+      useToastStore.getState().addToast('Config updated', 'success')
     },
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => standupApi.deleteConfig(id),
     onSuccess: invalidate,
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   const trigger = useMutation({
     mutationFn: (id: string) => standupApi.triggerConfig(id),
-    onSuccess: () => useToastStore.getState().addToast('Standup triggered!'),
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onSuccess: () => useToastStore.getState().addToast('Standup triggered!', 'success'),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   const toggleEnabled = useMutation({

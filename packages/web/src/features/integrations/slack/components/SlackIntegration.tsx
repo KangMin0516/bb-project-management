@@ -15,10 +15,10 @@ export default function SlackIntegration() {
     mutationFn: () => slackApi.disconnect(status!.integrationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['slack-status'] })
-      useToastStore.getState().addToast('Slack disconnected')
+      useToastStore.getState().addToast('Slack disconnected', 'success')
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to disconnect'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to disconnect'), 'error')
     },
   })
 
@@ -27,7 +27,7 @@ export default function SlackIntegration() {
       const { url } = await slackApi.getInstallUrl()
       window.location.href = url
     } catch (err) {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to start Slack connection'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to start Slack connection'), 'error')
     }
   }
 

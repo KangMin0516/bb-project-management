@@ -5,6 +5,16 @@ import { STATUSES, STATUS_LABELS } from '@/shared/config/constants'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { GitFork, Unplug, Copy, Eye, EyeOff, Info } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+
+/** Sentinel — Radix Select rejects empty string item values. */
+const NO_CHANGE = '__none__'
 
 export default function GitHubIntegration({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient()
@@ -20,11 +30,11 @@ export default function GitHubIntegration({ projectId }: { projectId: string }) 
     mutationFn: () => githubApi.connect(projectId, { accessToken: pat }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['github-status', projectId] })
-      useToastStore.getState().addToast('GitHub connected')
+      useToastStore.getState().addToast('GitHub connected', 'success')
       setPat('')
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to connect GitHub'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to connect GitHub'), 'error')
     },
   })
 
@@ -32,10 +42,10 @@ export default function GitHubIntegration({ projectId }: { projectId: string }) 
     mutationFn: () => githubApi.disconnect(projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['github-status', projectId] })
-      useToastStore.getState().addToast('GitHub disconnected')
+      useToastStore.getState().addToast('GitHub disconnected', 'success')
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to disconnect'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to disconnect'), 'error')
     },
   })
 
@@ -46,13 +56,13 @@ export default function GitHubIntegration({ projectId }: { projectId: string }) 
       queryClient.invalidateQueries({ queryKey: ['github-status', projectId] })
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update config'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update config'), 'error')
     },
   })
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
-    useToastStore.getState().addToast('Copied to clipboard')
+    useToastStore.getState().addToast('Copied to clipboard', 'success')
   }
 
   if (isLoading) {
@@ -184,29 +194,41 @@ export default function GitHubIntegration({ projectId }: { projectId: string }) 
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <span className="w-28 text-xs text-gray-500 dark:text-gray-400">PR Opened &rarr;</span>
-                <select
-                  value={status.onPrOpenStatus || ''}
-                  onChange={(e) => updateConfigMutation.mutate({ onPrOpenStatus: e.target.value || undefined })}
-                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">No change</option>
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <Select
+                    value={status.onPrOpenStatus || NO_CHANGE}
+                    onValueChange={(v) => updateConfigMutation.mutate({ onPrOpenStatus: v === NO_CHANGE ? undefined : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_CHANGE}>No change</SelectItem>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className="w-28 text-xs text-gray-500 dark:text-gray-400">PR Merged &rarr;</span>
-                <select
-                  value={status.onPrMergeStatus || ''}
-                  onChange={(e) => updateConfigMutation.mutate({ onPrMergeStatus: e.target.value || undefined })}
-                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">No change</option>
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <Select
+                    value={status.onPrMergeStatus || NO_CHANGE}
+                    onValueChange={(v) => updateConfigMutation.mutate({ onPrMergeStatus: v === NO_CHANGE ? undefined : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_CHANGE}>No change</SelectItem>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
