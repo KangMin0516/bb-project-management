@@ -21,6 +21,7 @@ import IssueSubtasks from '@/features/issue/components/detail/IssueSubtasks'
 import ActivityTab from '@/features/issue/components/ActivityTab'
 import LinkedIssues from '@/features/issue/components/LinkedIssues'
 import LinkedPullRequests from '@/features/issue/components/LinkedPullRequests'
+import IssueCommentsReadOnly from '@/features/issue/components/detail/IssueCommentsReadOnly'
 
 interface IssueDetailPanelProps {
   projectId: string
@@ -182,6 +183,8 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
                 issueId={issue.id}
                 prLinks={detail?.githubPrLinks}
               />
+
+              <IssueCommentsReadOnly projectId={projectId} issueId={issue.id} />
             </div>
           )}
 
