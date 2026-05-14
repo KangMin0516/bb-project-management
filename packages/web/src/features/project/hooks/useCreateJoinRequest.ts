@@ -11,7 +11,7 @@ export function useCreateJoinRequest(onSuccess?: () => void) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ projectId, message }: { projectId: string; message?: string }) =>
-      projectRepository.createJoinRequest(projectId, message ? { message } : undefined),
+      projectRepository.requestToJoin(projectId, message ? { message } : undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects-all'] })
       useToastStore.getState().addToast('Join request sent', 'success')

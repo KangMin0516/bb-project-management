@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
+import { toggleSet } from '@/shared/ui/filterState'
 
 
 // Generic filter dropdown with checkboxes

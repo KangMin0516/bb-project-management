@@ -35,16 +35,17 @@ export default function TeamIssuesPage() {
     enabled: !!currentUser?.isSuperuser,
   })
 
+  const issues = data?.issues
   const grouped = useMemo(() => {
-    if (!data?.issues) return []
+    if (!issues) return []
     const map = new Map<string, { project: GlobalIssue['project']; issues: GlobalIssue[] }>()
-    for (const issue of data.issues) {
+    for (const issue of issues) {
       const proj = issue.project
       if (!map.has(proj.id)) map.set(proj.id, { project: proj, issues: [] })
       map.get(proj.id)!.issues.push(issue)
     }
     return [...map.values()].sort((a, b) => b.issues.length - a.issues.length)
-  }, [data?.issues])
+  }, [issues])
 
   if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
 

@@ -53,6 +53,7 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         enabled: config.enabled,
         timezone: config.timezone,

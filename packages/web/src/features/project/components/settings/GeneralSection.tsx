@@ -17,10 +17,10 @@ export default function GeneralSection({ project, onSave }: GeneralSectionProps)
   const [description, setDescription] = useState('')
 
   useEffect(() => {
-    if (project) {
-      setName(project.name)
-      setDescription(project.description || '')
-    }
+    if (!project) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(project.name)
+    setDescription(project.description || '')
   }, [project])
 
   return (

@@ -35,13 +35,16 @@ export function useFilterSearchParams(): FilterControls {
   // Refs for the debounced search write
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestFiltersRef = useRef<FilterState>(filters)
-  latestFiltersRef.current = filters
+  useEffect(() => {
+    latestFiltersRef.current = filters
+  })
 
   // Sync state ← URL when the URL changes externally (back/forward, deep link).
   useEffect(() => {
     const urlState = deserializeFilter(searchParams)
     // Avoid loops: only update if the URL diverges from the current state.
     if (!sameFilter(urlState, latestFiltersRef.current)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFiltersState(urlState)
     }
   }, [searchParams])

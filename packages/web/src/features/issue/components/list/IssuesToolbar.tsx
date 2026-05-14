@@ -5,14 +5,13 @@ import { AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFilter
 import ViewToggle, { type ViewOption } from '@/shared/ui/ViewToggle'
 import { cn } from '@/shared/lib/utils'
 import type { Label } from '@/features/project/api'
-import type { User } from '@/entities/user/api'
 import type { ViewMode } from '@/features/issue/hooks/useIssueListUrlState'
 
 interface IssuesToolbarProps {
   filters: FilterState
   setFilters: (next: Partial<FilterState>) => void
   resetFilters: () => void
-  members: User[]
+  members: { id: string; name: string; avatar: string | null }[]
   projectLabels: Label[]
   projectComponents: { id: string; name: string }[]
   viewMode: ViewMode

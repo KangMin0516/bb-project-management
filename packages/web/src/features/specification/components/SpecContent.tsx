@@ -37,7 +37,9 @@ const SpecContent = forwardRef<SpecContentHandle, SpecContentProps>(function Spe
   const [popoverIssue, setPopoverIssue] = useState<SpecIssueLink | null>(null)
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const popoverIssueRef = useRef(popoverIssue)
-  popoverIssueRef.current = popoverIssue
+  useEffect(() => {
+    popoverIssueRef.current = popoverIssue
+  })
 
   // Count unresolved comments per section
   const commentCounts = useMemo(() => {

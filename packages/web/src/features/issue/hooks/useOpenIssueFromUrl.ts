@@ -11,7 +11,9 @@ export function useOpenIssueFromUrl(
   const [searchParams, setSearchParams] = useSearchParams()
 
   const onSelectRef = useRef(onSelect)
-  onSelectRef.current = onSelect
+  useEffect(() => {
+    onSelectRef.current = onSelect
+  })
 
   useEffect(() => {
     const openId = searchParams.get('open')

@@ -56,7 +56,8 @@ export default function GlobalDashboardPage() {
     [focusIssues, myIssues],
   )
 
-  const openIssue = (issue: GlobalIssue) => navigate(`/projects/${issue.project.key}/board?open=${issue.id}`)
+  const openIssue = (issue: { id: string; project: { key: string } }) =>
+    navigate(`/projects/${issue.project.key}/board?open=${issue.id}`)
 
   const handleToggleFocus = (issue: GlobalIssue) => {
     const focused = isFocusToday(issue.focusDate)

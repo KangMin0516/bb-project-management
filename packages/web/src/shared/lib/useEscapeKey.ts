@@ -7,7 +7,9 @@ import { useEffect, useRef } from 'react'
  */
 export function useEscapeKey(onEscape: () => void) {
   const handlerRef = useRef(onEscape)
-  handlerRef.current = onEscape
+  useEffect(() => {
+    handlerRef.current = onEscape
+  })
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

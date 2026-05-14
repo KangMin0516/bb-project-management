@@ -61,16 +61,16 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
     queryFn: templateApi.list,
   })
 
-  // Auto-fill description from template when type changes
+  // Auto-fill description from template when type changes. We sync local
+  // editor state to async-loaded template data — the effect is the correct
+  // boundary for that one-way "server → form" copy.
   const [descriptionTouched, setDescriptionTouched] = useState(false)
   useEffect(() => {
     if (descriptionTouched) return
     const match = templates?.find((t) => t.type === type)
-    if (match?.description) {
-      setDescription(match.description)
-    } else {
-      setDescription('')
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (match?.description) setDescription(match.description)
+    else setDescription('')
   }, [type, templates, descriptionTouched])
 
   const parentOptions = useMemo(() => {

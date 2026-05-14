@@ -23,6 +23,7 @@ export default function InfoTooltip({ lines, className, iconClassName }: InfoToo
 
     const rect = triggerRef.current.getBoundingClientRect()
     const spaceBelow = window.innerHeight - rect.bottom
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPosition(spaceBelow < 180 ? 'top' : 'bottom')
   }, [open])
 

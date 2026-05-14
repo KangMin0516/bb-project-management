@@ -28,15 +28,16 @@ export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssu
 
   const { create } = useIssueLinkMutations(projectId, issueId, onClose)
 
+  const items = issuesData?.items
   const filteredIssues = useMemo(() => {
-    if (!issuesData?.items) return []
+    if (!items) return []
     const q = searchQuery.toLowerCase()
-    return issuesData.items.filter((issue: Issue) => {
+    return items.filter((issue: Issue) => {
       if (issue.id === issueId) return false
       if (!searchQuery) return true
       return issue.title.toLowerCase().includes(q) || String(issue.number).includes(q)
     })
-  }, [issuesData?.items, searchQuery, issueId])
+  }, [items, searchQuery, issueId])
 
   return (
     <ModalShell title="Link Issue" onClose={onClose}>

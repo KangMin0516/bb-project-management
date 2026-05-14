@@ -65,6 +65,7 @@ export default function IssuesPage() {
     const state = location.state as { selectedIssueId?: string } | null
     if (state?.selectedIssueId) {
       const issue = list.items.find((i) => i.id === state.selectedIssueId)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (issue) setSelectedIssue(issue)
       window.history.replaceState({}, '')
     }

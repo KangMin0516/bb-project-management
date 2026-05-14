@@ -42,7 +42,7 @@ export default function SwimlaneBoardView({
   const { swimlanes } = useMemo(() => {
     const epicMap = new Map<string, Issue>()
     const epicChildren = new Map<string, Record<string, Issue[]>>()
-    let noEpicIssues: Record<string, Issue[]> = {}
+    const noEpicIssues: Record<string, Issue[]> = {}
 
     // First pass: find all epics
     for (const issues of Object.values(board)) {

@@ -26,17 +26,18 @@ export default function MemberTasksPage() {
     enabled: !!userId && !!currentUser?.isSuperuser,
   })
 
+  const issues = data?.issues
   const groupedByProject = useMemo(() => {
-    if (!data?.issues) return []
+    if (!issues) return []
     type Issue = MemberDetailResponse['issues'][number]
     const map = new Map<string, { project: Issue['project']; issues: Issue[] }>()
-    for (const issue of data.issues) {
+    for (const issue of issues) {
       const proj = issue.project
       if (!map.has(proj.id)) map.set(proj.id, { project: proj, issues: [] })
       map.get(proj.id)!.issues.push(issue)
     }
     return [...map.values()].sort((a, b) => b.issues.length - a.issues.length)
-  }, [data?.issues])
+  }, [issues])
 
   if (!currentUser?.isSuperuser) return <Navigate to="/" replace />
 

@@ -159,8 +159,13 @@ function SpecRow({
 }) {
   return (
     <div
+      // @hello-pangea/dnd requires spreading these provided refs/props onto the
+      // draggable element; the new react-hooks lint mistakes them for stale refs.
+      // eslint-disable-next-line react-hooks/refs
       ref={dragProvided.innerRef}
+      // eslint-disable-next-line react-hooks/refs
       {...dragProvided.draggableProps}
+      // eslint-disable-next-line react-hooks/refs
       {...dragProvided.dragHandleProps}
       onClick={onClick}
       className={cn(

@@ -1,5 +1,7 @@
 import { notificationApi, type Notification } from '@/features/notification/api'
 
+export type { Notification } from '@/features/notification/api'
+
 /**
  * Repository layer for in-app notifications. Wraps the HTTP client with
  * domain-named methods so the bell component reads like business intent.

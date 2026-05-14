@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useCallback, type RefObject } from 'react'
 import { useRegisterShortcuts } from '@/shared/lib/useRegisterShortcuts'
 
 interface UseIssueDetailShortcutsOptions {
@@ -15,7 +15,9 @@ interface UseIssueDetailShortcutsOptions {
  */
 export function useIssueDetailShortcuts({ panelRef, disabled }: UseIssueDetailShortcutsOptions) {
   const disabledRef = useRef(disabled)
-  disabledRef.current = disabled
+  useEffect(() => {
+    disabledRef.current = disabled
+  })
 
   const triggerField = useCallback((fieldId: string) => {
     const btn = panelRef.current?.querySelector(`[data-field-trigger="${fieldId}"]`) as HTMLButtonElement | null

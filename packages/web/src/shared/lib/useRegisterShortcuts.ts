@@ -6,7 +6,9 @@ export function useRegisterShortcuts(
   shortcuts: Omit<ShortcutDefinition, 'scope'>[],
 ) {
   const shortcutsRef = useRef(shortcuts)
-  shortcutsRef.current = shortcuts
+  useEffect(() => {
+    shortcutsRef.current = shortcuts
+  })
 
   // Scope lifecycle — push/pop once
   useEffect(() => {
