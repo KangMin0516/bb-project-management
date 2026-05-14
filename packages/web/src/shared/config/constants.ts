@@ -1,10 +1,11 @@
-export const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED'] as const
+export const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'RECHECK', 'DONE', 'CANCELED'] as const
 
 export const STATUS_LABELS: Record<string, string> = {
   BACKLOG: 'Backlog',
   TODO: 'To Do',
   IN_PROGRESS: 'In Progress',
   REVIEW_QA: 'Review/QA',
+  RECHECK: 'Recheck',
   DONE: 'Done',
   CANCELED: 'Canceled',
 }
@@ -14,6 +15,7 @@ export const STATUS_COLORS: Record<string, string> = {
   TODO: 'bg-blue-400',
   IN_PROGRESS: 'bg-yellow-400',
   REVIEW_QA: 'bg-purple-400',
+  RECHECK: 'bg-orange-400',
   DONE: 'bg-green-400',
   CANCELED: 'bg-red-400',
 }
@@ -63,6 +65,7 @@ export const STATUS_BAR_COLORS: Record<string, string> = {
   TODO: 'bg-blue-400',
   IN_PROGRESS: 'bg-yellow-400',
   REVIEW_QA: 'bg-purple-400',
+  RECHECK: 'bg-orange-400',
   DONE: 'bg-green-400',
   CANCELED: 'bg-red-400',
 }
@@ -80,6 +83,7 @@ export const STATUS_BADGE_COLORS: Record<string, string> = {
   TODO: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
   IN_PROGRESS: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400',
   REVIEW_QA: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
+  RECHECK: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
   DONE: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
   CANCELED: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
 }
@@ -89,8 +93,9 @@ export const EPIC_STATUS_ORDER: Record<string, number> = {
   TODO: 1,
   BACKLOG: 2,
   REVIEW_QA: 3,
-  DONE: 4,
-  CANCELED: 5,
+  RECHECK: 4,
+  DONE: 5,
+  CANCELED: 6,
 }
 
 export const STANDUP_STATUSES = ['ANSWERED', 'ACTIVE', 'UNANSWERED', 'AWAY', 'CANCELED'] as const

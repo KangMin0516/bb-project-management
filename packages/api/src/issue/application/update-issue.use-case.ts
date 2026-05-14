@@ -36,6 +36,7 @@ type TrackedField = (typeof TRACKED_FIELDS)[number];
 
 const LATER_STAGES: ReadonlySet<IssueStatusLiteral> = new Set([
   'REVIEW_QA',
+  'RECHECK',
   'DONE',
   'CANCELED',
 ]);
