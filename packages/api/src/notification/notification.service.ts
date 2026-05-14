@@ -1,7 +1,16 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SlackService } from '../slack/slack.service.js';
+import {
+  MESSAGING_PORT,
+  type MessageBlock,
+  type MessagingPort,
+} from '../common/ports/messaging.port.js';
 import { NOTIFICATION_LIMIT } from '../common/constants.js';
 
 type NotificationType =
@@ -61,7 +70,7 @@ export class NotificationService {
 
   constructor(
     private prisma: PrismaService,
-    private slackService: SlackService,
+    @Inject(MESSAGING_PORT) private messaging: MessagingPort,
     private config: ConfigService,
   ) {}
 
@@ -208,27 +217,15 @@ export class NotificationService {
         ? `You've ${verbPast} ${issueKey} "${issueTitle}" by ${actorName}`
         : data.message;
 
-    const blocks: unknown[] = [
+    const blocks: MessageBlock[] = [
+      { type: 'section', text: `${headerEmoji} ${headerLabel}` },
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `${headerEmoji} ${headerLabel}`,
-        },
-      },
-      {
-        type: 'section',
+        type: 'fields',
         fields: [
-          {
-            type: 'mrkdwn',
-            text: issueKey
-              ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
-              : `*${escapeSlack(issueTitle || data.message)}*`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `${byFieldLabel}\n${escapeSlack(actorName)}`,
-          },
+          issueKey
+            ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
+            : `*${escapeSlack(issueTitle || data.message)}*`,
+          `${byFieldLabel}\n${escapeSlack(actorName)}`,
         ],
       },
     ];
@@ -236,23 +233,26 @@ export class NotificationService {
     const url = this.buildIssueUrl(projectKey, data.issueId);
     if (url) {
       blocks.push({
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'View in BB-PM' },
-            url,
-            style: 'primary',
-          },
-        ],
+        type: 'button_link',
+        text: 'View in BB-PM',
+        url,
+        style: 'primary',
       });
     }
 
-    await this.slackService.sendDirectMessage(
+    const result = await this.messaging.sendDirectMessage(
       recipient.slackUserId,
       fallbackText,
       blocks,
     );
+    // Adapter swallows internally and logs; this branch is for the rare
+    // case we want to surface a delivery miss to per-notification metrics
+    // later — keeps the in-app row authoritative regardless.
+    if (!result.delivered) {
+      this.logger.debug(
+        `Slack DM not delivered for ${data.type} → ${recipient.slackUserId}: ${result.reason}`,
+      );
+    }
   }
 
   private buildIssueUrl(projectKey: string, issueId?: string): string | null {
