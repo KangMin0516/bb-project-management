@@ -1,5 +1,6 @@
 import type { Issue, User } from '../../../generated/prisma/client.js';
-import { pushMrkdwnBlocks } from './utils.js';
+import type { MessageBlock } from '../../common/ports/messaging.port.js';
+import { pushMrkdwnSections } from './utils.js';
 
 type IssueWithAssignee = Issue & {
   assignee: User | null;
@@ -21,7 +22,7 @@ export function formatEveningReport(
   totalDone: number,
   totalAll: number,
   baseUrl: string,
-): { blocks: unknown[]; text: string } {
+): { blocks: MessageBlock[]; text: string } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -29,28 +30,15 @@ export function formatEveningReport(
     year: 'numeric',
   });
 
-  const blocks: unknown[] = [];
-
-  // Header
-  blocks.push({
-    type: 'header',
-    text: {
-      type: 'plain_text',
-      text: `[${projectName}] End of Day -- ${dateStr}`,
-      emoji: true,
-    },
-  });
-
-  // Summary stats
-  blocks.push({
-    type: 'section',
-    text: {
-      type: 'mrkdwn',
+  const headerText = `[${projectName}] End of Day -- ${dateStr}`;
+  const blocks: MessageBlock[] = [
+    { type: 'header', text: headerText },
+    {
+      type: 'section',
       text: `:bar_chart: *Today's Summary*\n  :white_check_mark: Completed: ${completedToday.length}  |  :arrows_counterclockwise: In Progress: ${inProgress.length}  |  :sparkles: Created: ${createdTodayCount}`,
     },
-  });
+  ];
 
-  // Completed Today
   if (completedToday.length > 0) {
     blocks.push({ type: 'divider' });
     const lines = completedToday.map((i) => {
@@ -59,11 +47,9 @@ export function formatEveningReport(
       const assignee = i.assignee?.name ?? 'Unassigned';
       return `  ${link}  ${i.title}    :bust_in_silhouette: ${assignee}`;
     });
-
-    pushMrkdwnBlocks(blocks, `:white_check_mark: *Completed Today*`, lines);
+    pushMrkdwnSections(blocks, `:white_check_mark: *Completed Today*`, lines);
   }
 
-  // Still in progress
   if (inProgress.length > 0) {
     blocks.push({ type: 'divider' });
     const lines = inProgress.map((i) => {
@@ -73,15 +59,13 @@ export function formatEveningReport(
       const prio = priorityEmoji[i.priority] ?? '';
       return `  ${link}  ${i.title}  :bust_in_silhouette: ${assignee}  ${prio}`;
     });
-
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       `:arrows_counterclockwise: *Still In Progress*`,
       lines,
     );
   }
 
-  // Overdue
   if (overdueIssues.length > 0) {
     blocks.push({ type: 'divider' });
     const lines = overdueIssues.map((i) => {
@@ -96,26 +80,19 @@ export function formatEveningReport(
         : '';
       return `  ${link}  ${i.title}       :bust_in_silhouette: ${assignee}  :calendar: ${dueStr}`;
     });
-
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       `:warning: *Overdue (${overdueIssues.length})*`,
       lines,
     );
   }
 
-  // Overall progress
   const percent = totalAll > 0 ? Math.round((totalDone / totalAll) * 100) : 0;
   blocks.push({ type: 'divider' });
   blocks.push({
     type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: `:chart_with_upwards_trend: Overall: ${totalDone}/${totalAll} done (${percent}%)`,
-      },
-    ],
+    text: `:chart_with_upwards_trend: Overall: ${totalDone}/${totalAll} done (${percent}%)`,
   });
 
-  return { blocks, text: `[${projectName}] End of Day -- ${dateStr}` };
+  return { blocks, text: headerText };
 }
