@@ -1,4 +1,5 @@
 import { memo, useMemo, useRef, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import { cn } from '@/shared/lib/utils'
@@ -7,6 +8,7 @@ import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/sha
 import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
 import { ChevronRight, ChevronDown, Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { issueRepository } from '@/features/issue/repository'
 import {
   Command,
   CommandEmpty,
@@ -19,6 +21,7 @@ import {
 interface IssueCardProps {
   issue: Issue
   projectKey: string
+  projectId: string
   onClick: () => void
   childIssues?: ChildIssue[]
   isExpanded?: boolean
@@ -36,6 +39,7 @@ interface IssueCardProps {
 export default memo(function IssueCard({
   issue,
   projectKey,
+  projectId,
   onClick,
   childIssues,
   isExpanded,
@@ -57,9 +61,33 @@ export default memo(function IssueCard({
   const dueBadge = useMemo(() => getDueBadge(issue.dueDate), [issue.dueDate])
   const overdue = isIssueOverdue(issue)
   const childList = childIssues || []
-  const hasChildren = childList.length > 0
-  const doneCount = childList.filter((c) => c.status === 'DONE').length
-  const totalCount = childList.length
+
+  // _count.children is the authoritative total from DB. childList may be
+  // smaller if the board API hit its per-column limit. If they mismatch
+  // when the user expands, fetch the full children list.
+  const dbTotal = issue._count?.children ?? childList.length
+  const totalCount = Math.max(dbTotal, childList.length)
+  const hasMissing = isExpanded && childList.length < totalCount
+
+  const { data: fetchedChildren } = useQuery({
+    queryKey: ['issue', projectId, issue.id, 'children'],
+    queryFn: () => issueRepository.findOne(projectId, issue.id).then((d) => d.children),
+    enabled: hasMissing,
+    staleTime: 30_000,
+  })
+
+  const displayList: ChildIssue[] = fetchedChildren && fetchedChildren.length > childList.length
+    ? fetchedChildren.map((c) => ({
+        id: c.id,
+        number: c.number,
+        title: c.title,
+        status: c.status,
+        priority: c.priority,
+        assignee: c.assignee ? { id: c.assignee.id, name: c.assignee.name, avatar: c.assignee.avatar } : null,
+      }))
+    : childList
+  const hasChildren = totalCount > 0
+  const doneCount = displayList.filter((c) => c.status === 'DONE').length
 
   return (
     <div ref={cardRef}>
@@ -165,10 +193,10 @@ export default memo(function IssueCard({
               </span>
             )}
           </div>
-          {(issue.assignee || childList.length > 0) && (() => {
+          {(issue.assignee || displayList.length > 0) && (() => {
             // Collect unique sub-task assignees that differ from the task assignee
             const subAssignees = new Map<string, { name: string; avatar: string | null }>()
-            for (const child of childList) {
+            for (const child of displayList) {
               if (child.assignee && child.assignee.id !== issue.assigneeId) {
                 subAssignees.set(child.assignee.id, child.assignee)
               }
@@ -212,12 +240,12 @@ export default memo(function IssueCard({
       {/* Expanded child issues */}
       {isExpanded && hasChildren && (
         <div className="rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
-          {childList.map((child, idx) => (
+          {displayList.map((child, idx) => (
             <div
               key={child.id}
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700',
-                idx < childList.length - 1 && 'border-b border-gray-100 dark:border-gray-700',
+                idx < displayList.length - 1 && 'border-b border-gray-100 dark:border-gray-700',
               )}
             >
               <button

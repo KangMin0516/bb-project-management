@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from 'react'
-import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
+import { useMemo, useCallback, useRef } from 'react'
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import SwimlaneRow from './SwimlaneRow'
@@ -13,6 +13,7 @@ interface SwimlaneData {
 interface SwimlaneBoardViewProps {
   board: Record<string, Issue[]>
   projectKey: string
+  projectId: string
   onIssueClick: (issue: Issue) => void
   /** Open the Epic detail panel when the swimlane title is clicked. */
   onEpicClick?: (epic: Issue) => void
@@ -31,11 +32,14 @@ interface SwimlaneBoardViewProps {
   /** Lifted collapse state — toolbar Expand/Collapse all needs to mutate it. */
   collapsedEpics: Set<string>
   onCollapseToggle: (epicId: string | null) => void
+  /** Persist the new order when an Epic swimlane is dragged or moved by arrow. */
+  onSwimlaneReorder?: (epicId: string, status: string, newOrder: number) => void
 }
 
 export default function SwimlaneBoardView({
   board,
   projectKey,
+  projectId,
   onIssueClick,
   onEpicClick,
   onReorder,
@@ -50,7 +54,33 @@ export default function SwimlaneBoardView({
   epics,
   collapsedEpics,
   onCollapseToggle,
+  onSwimlaneReorder,
 }: SwimlaneBoardViewProps) {
+  // Horizontal scroll sync — each SwimlaneRow registers its columns
+  // container here so scrolling one mirrors to the others. RAF + a
+  // syncing flag prevent feedback loops.
+  const scrollContainersRef = useRef<Set<HTMLDivElement>>(new Set())
+  const isSyncingRef = useRef(false)
+
+  const onColumnsScroll = useCallback((source: HTMLDivElement) => {
+    if (isSyncingRef.current) return
+    isSyncingRef.current = true
+    const left = source.scrollLeft
+    for (const el of scrollContainersRef.current) {
+      if (el !== source && el.scrollLeft !== left) el.scrollLeft = left
+    }
+    requestAnimationFrame(() => {
+      isSyncingRef.current = false
+    })
+  }, [])
+
+  const registerScrollContainer = useCallback((el: HTMLDivElement | null) => {
+    if (el) scrollContainersRef.current.add(el)
+  }, [])
+
+  const unregisterScrollContainer = useCallback((el: HTMLDivElement) => {
+    scrollContainersRef.current.delete(el)
+  }, [])
   const { swimlanes } = useMemo(() => {
     const epicMap = new Map<string, Issue>()
     const epicChildren = new Map<string, Record<string, Issue[]>>()
@@ -82,17 +112,20 @@ export default function SwimlaneBoardView({
       }
     }
 
-    // Build swimlanes sorted by epic status priority, then by child count
+    // Build swimlanes sorted by user-controlled epic.order (primary).
+    // EPIC_STATUS_ORDER is the tie-breaker for epics created in different
+    // columns that happen to share an `order` value (the per-column gap
+    // means duplicates are common pre-drag).
     const lanes: SwimlaneData[] = []
 
     const epicEntries = [...epicMap.entries()]
     epicEntries.sort((a, b) => {
+      const orderA = a[1].order ?? 0
+      const orderB = b[1].order ?? 0
+      if (orderA !== orderB) return orderA - orderB
       const statusA = EPIC_STATUS_ORDER[a[1].status] ?? 99
       const statusB = EPIC_STATUS_ORDER[b[1].status] ?? 99
-      if (statusA !== statusB) return statusA - statusB
-      const countA = Object.values(epicChildren.get(a[0]) || {}).reduce((s, arr) => s + arr.length, 0)
-      const countB = Object.values(epicChildren.get(b[0]) || {}).reduce((s, arr) => s + arr.length, 0)
-      return countB - countA
+      return statusA - statusB
     })
 
     for (const [epicId, epic] of epicEntries) {
@@ -118,9 +151,22 @@ export default function SwimlaneBoardView({
   }, [board, epicOwnersFilter])
 
   const handleDragEnd = useCallback((result: DropResult) => {
-    const { destination, source, draggableId } = result
+    const { destination, source, draggableId, type } = result
     if (!destination) return
     if (destination.droppableId === source.droppableId && destination.index === source.index) return
+
+    // Swimlane reorder — change Epic.order, keep status the same.
+    if (type === 'swimlane') {
+      if (!onSwimlaneReorder) return
+      const epicId = draggableId.replace(/^swimlane-/, '')
+      const epic = swimlanes.find((l) => l.epic?.id === epicId)?.epic
+      if (!epic) return
+      const epicLanes = swimlanes.filter((l) => l.epic).map((l) => l.epic!) as Issue[]
+      const without = epicLanes.filter((e) => e.id !== epicId)
+      const newOrder = calculateDropOrder(without, destination.index)
+      onSwimlaneReorder(epicId, epic.status, newOrder)
+      return
+    }
 
     // Parse droppableId: "{epicId}:{status}"
     const destParts = destination.droppableId.split(':')
@@ -147,40 +193,109 @@ export default function SwimlaneBoardView({
 
     const newOrder = calculateDropOrder(destIssues, destination.index)
     onReorder(draggableId, destStatus, newOrder)
-  }, [swimlanes, onReorder, onEpicChange])
+  }, [swimlanes, onReorder, onEpicChange, onSwimlaneReorder])
+
+  // Epic lanes are draggable to reorder; "No Epic" lane stays pinned at the bottom.
+  const epicLanes = swimlanes.filter((l) => l.epic)
+  const noEpicLane = swimlanes.find((l) => !l.epic)
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex flex-col gap-3">
-        {swimlanes.map((lane) => {
-          const key = lane.epic?.id || '__no_epic__'
-          return (
-            <SwimlaneRow
-              key={key}
-              epic={lane.epic}
-              issues={lane.issues}
-              projectKey={projectKey}
-              isCollapsed={collapsedEpics.has(key)}
-              onToggleCollapse={() => onCollapseToggle(lane.epic?.id || null)}
-              onIssueClick={onIssueClick}
-              onEpicClick={onEpicClick}
-              onAddClick={onAddClick}
-              childrenMap={childrenMap}
-              expandedIssues={expandedIssues}
-              onToggleExpand={onToggleExpand}
-              onChildClick={onChildClick}
-              onChildStatusToggle={onChildStatusToggle}
-              epics={epics}
-              onEpicChange={onEpicChange}
-            />
-          )
-        })}
-        {swimlanes.length === 0 && (
-          <div className="flex h-40 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-            No issues found
+      <Droppable droppableId="swimlanes-root" type="swimlane">
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className="flex flex-col gap-3"
+          >
+            {epicLanes.map((lane, idx) => {
+              const key = lane.epic!.id
+              const isFirst = idx === 0
+              const isLast = idx === epicLanes.length - 1
+              const moveLane = (direction: 'up' | 'down') => {
+                if (!onSwimlaneReorder) return
+                const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+                if (targetIdx < 0 || targetIdx >= epicLanes.length) return
+                const others = epicLanes.filter((_, i) => i !== idx).map((l) => l.epic!) as Issue[]
+                // When moving down, destination index is one past the target; calculateDropOrder slots before it.
+                const insertIdx = direction === 'up' ? targetIdx : targetIdx
+                const newOrder = calculateDropOrder(others, insertIdx)
+                onSwimlaneReorder(lane.epic!.id, lane.epic!.status, newOrder)
+              }
+              return (
+                <Draggable
+                  key={key}
+                  draggableId={`swimlane-${key}`}
+                  index={idx}
+                  isDragDisabled={!onSwimlaneReorder}
+                >
+                  {(dragProvided, snapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      className={snapshot.isDragging ? 'opacity-90' : undefined}
+                    >
+                      <SwimlaneRow
+                        epic={lane.epic}
+                        issues={lane.issues}
+                        projectKey={projectKey}
+                        projectId={projectId}
+                        isCollapsed={collapsedEpics.has(key)}
+                        onToggleCollapse={() => onCollapseToggle(key)}
+                        onIssueClick={onIssueClick}
+                        onEpicClick={onEpicClick}
+                        onAddClick={onAddClick}
+                        childrenMap={childrenMap}
+                        expandedIssues={expandedIssues}
+                        onToggleExpand={onToggleExpand}
+                        onChildClick={onChildClick}
+                        onChildStatusToggle={onChildStatusToggle}
+                        epics={epics}
+                        onEpicChange={onEpicChange}
+                        dragHandleProps={dragProvided.dragHandleProps ?? undefined}
+                        onMoveUp={isFirst ? undefined : () => moveLane('up')}
+                        onMoveDown={isLast ? undefined : () => moveLane('down')}
+                        registerScrollContainer={registerScrollContainer}
+                        unregisterScrollContainer={unregisterScrollContainer}
+                        onColumnsScroll={onColumnsScroll}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              )
+            })}
+            {provided.placeholder}
+            {noEpicLane && (
+              <SwimlaneRow
+                epic={null}
+                issues={noEpicLane.issues}
+                projectKey={projectKey}
+                projectId={projectId}
+                isCollapsed={collapsedEpics.has('__no_epic__')}
+                onToggleCollapse={() => onCollapseToggle(null)}
+                onIssueClick={onIssueClick}
+                onEpicClick={onEpicClick}
+                onAddClick={onAddClick}
+                childrenMap={childrenMap}
+                expandedIssues={expandedIssues}
+                onToggleExpand={onToggleExpand}
+                onChildClick={onChildClick}
+                onChildStatusToggle={onChildStatusToggle}
+                epics={epics}
+                onEpicChange={onEpicChange}
+                registerScrollContainer={registerScrollContainer}
+                unregisterScrollContainer={unregisterScrollContainer}
+                onColumnsScroll={onColumnsScroll}
+              />
+            )}
+            {swimlanes.length === 0 && (
+              <div className="flex h-40 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                No issues found
+              </div>
+            )}
           </div>
         )}
-      </div>
+      </Droppable>
     </DragDropContext>
   )
 }

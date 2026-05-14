@@ -1,6 +1,6 @@
 import { Archive, Rows3, ChevronsUpDown, FoldVertical } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
-import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, EpicOwnerAvatars, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters } from '@/shared/ui/FilterBar'
+import { FiltersPopover, ClearFiltersButton, SearchInput } from '@/shared/ui/FilterBar'
 import { cn } from '@/shared/lib/utils'
 import type { FilterState } from '@/shared/ui/filterState'
 interface BoardToolbarProps {
@@ -49,26 +49,26 @@ export default function BoardToolbar({
   onCollapseAll,
 }: BoardToolbarProps) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <SearchInput value={filters.search} onChange={(v) => setFilters({ search: v })} />
-      <DropdownFilters
-        status={filters.status}
-        priority={filters.priority}
-        type={filters.type}
-        onStatusChange={(v) => setFilters({ status: v })}
-        onPriorityChange={(v) => setFilters({ priority: v })}
-        onTypeChange={(v) => setFilters({ type: v })}
+      <FiltersPopover
+        filters={filters}
+        setStatus={(v) => setFilters({ status: v })}
+        setPriority={(v) => setFilters({ priority: v })}
+        setType={(v) => setFilters({ type: v })}
+        toggleAssignee={toggleAssignee}
+        toggleLabel={toggleLabel}
+        toggleComponent={toggleComponent}
+        setEpicId={setEpicId}
+        toggleEpicOwner={toggleEpicOwner}
+        assignedMembers={assignedMembers}
+        boardLabels={boardLabels}
+        boardComponents={boardComponents}
+        boardEpics={boardEpics}
+        epicOwners={epicOwners}
+        hideEpicOwner={!groupByEpic}
       />
-      <FilterDivider />
-      <AssigneeAvatars members={assignedMembers} selected={filters.assignees} onToggle={toggleAssignee} />
-      <LabelChips labels={boardLabels} selected={filters.labels} onToggle={toggleLabel} />
-      <ComponentChips components={boardComponents} selected={filters.components} onToggle={toggleComponent} />
-      <EpicChips epics={boardEpics} selectedId={filters.epicId} onSelect={setEpicId} />
-      {groupByEpic && (
-        <EpicOwnerAvatars owners={epicOwners} selected={filters.epicOwners} onToggle={toggleEpicOwner} />
-      )}
       {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
-      <FilterDivider />
       <ToggleButton
         active={showArchived}
         onClick={() => setShowArchived(!showArchived)}

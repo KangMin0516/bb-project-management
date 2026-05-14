@@ -211,9 +211,11 @@ export default function BoardPage() {
           <SwimlaneBoardView
             board={filteredBoardForSwimlane || {}}
             projectKey={projectKey}
+            projectId={projectId}
             onIssueClick={setSelectedIssue}
             onEpicClick={setSelectedIssue}
             onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
+            onSwimlaneReorder={(epicId, status, order) => reorder.mutate({ issueId: epicId, status, order })}
             onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
             onAddClick={setCreateModal}
             childrenMap={childrenMap}
@@ -235,6 +237,7 @@ export default function BoardPage() {
                   status={status}
                   issues={filteredBoard?.[status] || []}
                   projectKey={projectKey}
+                  projectId={projectId}
                   onIssueClick={setSelectedIssue}
                   onAddClick={setCreateModal}
                   childrenMap={childrenMap}
