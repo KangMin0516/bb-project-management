@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { OutboxModule } from './outbox/outbox.module.js';
 import { PrismaModule } from './prisma/index.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
@@ -42,9 +44,11 @@ import { AppController } from './app.controller.js';
       envFilePath: '../../.env',
     }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot({ wildcard: false, maxListeners: 50 }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 30 }]),
     CommonModule,
     PrismaModule,
+    OutboxModule,
     AuthModule,
     UserModule,
     ProjectModule,
