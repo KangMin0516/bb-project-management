@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes } from 'lucide-react'
+import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 import { toggleSet } from '@/shared/ui/filterState'
@@ -157,6 +157,44 @@ export function ComponentChips({
             className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
           />
           <span className="truncate text-xs text-gray-700 dark:text-gray-300">{comp.name}</span>
+        </label>
+      ))}
+    </FilterDropdown>
+  )
+}
+
+// Epic owner filter dropdown — narrows swimlanes by who owns the Epic.
+export function EpicOwnerAvatars({
+  owners,
+  selected,
+  onToggle,
+}: {
+  owners: { id: string; name: string; avatar: string | null }[]
+  selected: Set<string>
+  onToggle: (id: string) => void
+}) {
+  if (owners.length === 0) return null
+  return (
+    <FilterDropdown label="Epic Owner" icon={UserCircle} selectedCount={selected.size}>
+      {owners.map((owner) => (
+        <label
+          key={owner.id}
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+        >
+          <input
+            type="checkbox"
+            checked={selected.has(owner.id)}
+            onChange={() => onToggle(owner.id)}
+            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+          />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden">
+            {owner.avatar ? (
+              <img src={owner.avatar} alt={owner.name} className="h-full w-full object-cover" />
+            ) : (
+              owner.name.charAt(0).toUpperCase()
+            )}
+          </div>
+          <span className="truncate text-xs text-gray-700 dark:text-gray-300">{owner.name}</span>
         </label>
       ))}
     </FilterDropdown>

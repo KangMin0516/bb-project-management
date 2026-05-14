@@ -18,6 +18,8 @@ interface BoardColumnProps {
   onChildClick?: (child: ChildIssue) => void
   onChildStatusToggle?: (child: ChildIssue) => void
   focusedIssueId?: string | null
+  epics?: Issue[]
+  onEpicChange?: (issueId: string, newParentId: string | null) => void
 }
 
 export default memo(function BoardColumn({
@@ -32,6 +34,8 @@ export default memo(function BoardColumn({
   onChildClick,
   onChildStatusToggle,
   focusedIssueId,
+  epics,
+  onEpicChange,
 }: BoardColumnProps) {
   return (
     <div className="flex w-72 shrink-0 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
@@ -73,6 +77,8 @@ export default memo(function BoardColumn({
                       onChildClick={onChildClick}
                       onChildStatusToggle={onChildStatusToggle}
                       isFocused={focusedIssueId === issue.id}
+                      epics={epics}
+                      onEpicChange={onEpicChange}
                     />
                   </div>
                 )}

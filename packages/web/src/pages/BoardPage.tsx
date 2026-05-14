@@ -31,6 +31,17 @@ export default function BoardPage() {
   const [createModal, setCreateModal] = useState<string | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
+  // Lifted so the toolbar's Expand all / Collapse all can mutate it.
+  const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
+
+  const toggleCollapse = useCallback((epicId: string | null) => {
+    const key = epicId || '__no_epic__'
+    setCollapsedEpics((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }, [])
 
   // swimlane defaults to true; explicit '0' opts out.
   const groupByEpic = !searchParams.has(PARAM.swimlane) ? true : getBool(searchParams, PARAM.swimlane, true)
@@ -71,6 +82,24 @@ export default function BoardPage() {
     boardEpics,
     flatBoardIssues,
   } = useBoardDerivations(board)
+
+  const expandAllSwimlanes = useCallback(() => setCollapsedEpics(new Set()), [])
+  const collapseAllSwimlanes = useCallback(() => {
+    const keys = boardEpics.map((e) => e.id)
+    keys.push('__no_epic__')
+    setCollapsedEpics(new Set(keys))
+  }, [boardEpics])
+
+  // Unique Epic owners (epic.assignee) for the Epic Owner filter chip.
+  const epicOwners = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string; avatar: string | null }>()
+    for (const ep of boardEpics) {
+      if (ep.assignee && !seen.has(ep.assignee.id)) {
+        seen.set(ep.assignee.id, ep.assignee)
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [boardEpics])
 
   // ?open= deep-link: opens the detail panel when the issue is on the board.
   const allBoardIssues = useMemo(() => (board ? Object.values(board).flat() : undefined), [board])
@@ -154,15 +183,19 @@ export default function BoardPage() {
           toggleLabel={(id) => setFilters({ labels: toggleSet(filters.labels, id) })}
           toggleComponent={(id) => setFilters({ components: toggleSet(filters.components, id) })}
           setEpicId={(id) => setFilters({ epicId: id })}
+          toggleEpicOwner={(id) => setFilters({ epicOwners: toggleSet(filters.epicOwners, id) })}
           assignedMembers={assignedMembers}
           boardLabels={boardLabels}
           boardComponents={boardComponents}
           boardEpics={boardEpics}
+          epicOwners={epicOwners}
           hasFilters={hasFilters}
           showArchived={showArchived}
           setShowArchived={setShowArchived}
           groupByEpic={groupByEpic}
           setGroupByEpic={setGroupByEpic}
+          onExpandAll={expandAllSwimlanes}
+          onCollapseAll={collapseAllSwimlanes}
         />
       </div>
 
@@ -176,6 +209,7 @@ export default function BoardPage() {
             board={filteredBoardForSwimlane || {}}
             projectKey={projectKey}
             onIssueClick={setSelectedIssue}
+            onEpicClick={setSelectedIssue}
             onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
             onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
             onAddClick={setCreateModal}
@@ -184,6 +218,10 @@ export default function BoardPage() {
             onToggleExpand={toggleExpand}
             onChildClick={openChild}
             onChildStatusToggle={toggleChildStatus}
+            epicOwnersFilter={filters.epicOwners}
+            epics={boardEpics}
+            collapsedEpics={collapsedEpics}
+            onCollapseToggle={toggleCollapse}
           />
         ) : (
           <DragDropContext onDragEnd={handleDragEnd}>
@@ -202,6 +240,8 @@ export default function BoardPage() {
                   onChildClick={openChild}
                   onChildStatusToggle={toggleChildStatus}
                   focusedIssueId={focusedIssueId}
+                  epics={boardEpics}
+                  onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
                 />
               ))}
             </div>

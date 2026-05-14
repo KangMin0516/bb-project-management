@@ -1,11 +1,20 @@
-import { memo, useMemo, useRef, useEffect } from 'react'
+import { memo, useMemo, useRef, useEffect, useState } from 'react'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import { cn } from '@/shared/lib/utils'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/shared/config/constants'
 import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, Check } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/shared/ui/command'
 
 interface IssueCardProps {
   issue: Issue
@@ -18,6 +27,10 @@ interface IssueCardProps {
   onChildStatusToggle?: (child: ChildIssue) => void
   compact?: boolean
   isFocused?: boolean
+  /** Available epics for the inline "change Epic" chip. */
+  epics?: Issue[]
+  /** Called when the user picks a new Epic from the chip. */
+  onEpicChange?: (issueId: string, newParentId: string | null) => void
 }
 
 export default memo(function IssueCard({
@@ -31,6 +44,8 @@ export default memo(function IssueCard({
   onChildStatusToggle,
   compact,
   isFocused,
+  epics,
+  onEpicChange,
 }: IssueCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -67,6 +82,13 @@ export default memo(function IssueCard({
           <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
             {projectKey}-{issue.number}
           </span>
+          {(issue.type === 'TASK' || issue.type === 'BUG') && onEpicChange && epics && (
+            <EpicChip
+              issue={issue}
+              epics={epics}
+              onChange={(newParentId) => onEpicChange(issue.id, newParentId)}
+            />
+          )}
           {issue.isRecheck && (
             <span className="rounded bg-orange-100 dark:bg-orange-900/40 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-400">
               Recheck
@@ -252,3 +274,74 @@ export default memo(function IssueCard({
     </div>
   )
 })
+
+const NO_EPIC = '__none__'
+
+/**
+ * Inline Epic picker rendered as a small chip on Task/Bug cards.
+ * Stops propagation so the click doesn't bubble up to the card's
+ * onClick (open detail) or the dnd drag handle.
+ */
+function EpicChip({
+  issue,
+  epics,
+  onChange,
+}: {
+  issue: Issue
+  epics: Issue[]
+  onChange: (newParentId: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const parent = issue.parent && issue.parent.type === 'EPIC' ? issue.parent : null
+  const label = parent ? parent.title : 'No epic'
+  const currentValue = parent ? parent.id : NO_EPIC
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
+          className={cn(
+            'inline-flex max-w-[120px] items-center gap-0.5 truncate rounded px-1 py-0.5 text-[10px] font-medium transition',
+            parent
+              ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'
+              : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500',
+          )}
+          title={parent ? `Epic: ${label}` : 'No epic — click to set'}
+        >
+          <span>⚡</span>
+          <span className="truncate">{label}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
+        <Command>
+          <CommandInput placeholder="Search epic..." />
+          <CommandList>
+            <CommandEmpty>No matches</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="No epic"
+                onSelect={() => { onChange(null); setOpen(false) }}
+              >
+                <Check className={cn('h-4 w-4', currentValue === NO_EPIC ? 'opacity-100' : 'opacity-0')} />
+                No epic
+              </CommandItem>
+              {epics.map((ep) => (
+                <CommandItem
+                  key={ep.id}
+                  value={`${ep.number} ${ep.title}`}
+                  onSelect={() => { onChange(ep.id); setOpen(false) }}
+                >
+                  <Check className={cn('h-4 w-4', currentValue === ep.id ? 'opacity-100' : 'opacity-0')} />
+                  <span className="truncate">⚡ #{ep.number} {ep.title}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}

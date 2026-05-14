@@ -1,6 +1,6 @@
-import { Archive, Rows3 } from 'lucide-react'
+import { Archive, Rows3, ChevronsUpDown, FoldVertical } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
-import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters } from '@/shared/ui/FilterBar'
+import { AssigneeAvatars, LabelChips, ComponentChips, EpicChips, EpicOwnerAvatars, FilterDivider, ClearFiltersButton, SearchInput, DropdownFilters } from '@/shared/ui/FilterBar'
 import { cn } from '@/shared/lib/utils'
 import type { FilterState } from '@/shared/ui/filterState'
 interface BoardToolbarProps {
@@ -11,15 +11,19 @@ interface BoardToolbarProps {
   toggleLabel: (id: string) => void
   toggleComponent: (id: string) => void
   setEpicId: (id: string | null) => void
+  toggleEpicOwner: (id: string) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
   boardLabels: { id: string; name: string; color: string }[]
   boardComponents: { id: string; name: string }[]
   boardEpics: Issue[]
+  epicOwners: { id: string; name: string; avatar: string | null }[]
   hasFilters: boolean
   showArchived: boolean
   setShowArchived: (value: boolean) => void
   groupByEpic: boolean
   setGroupByEpic: (value: boolean) => void
+  onExpandAll: () => void
+  onCollapseAll: () => void
 }
 
 export default function BoardToolbar({
@@ -30,15 +34,19 @@ export default function BoardToolbar({
   toggleLabel,
   toggleComponent,
   setEpicId,
+  toggleEpicOwner,
   assignedMembers,
   boardLabels,
   boardComponents,
   boardEpics,
+  epicOwners,
   hasFilters,
   showArchived,
   setShowArchived,
   groupByEpic,
   setGroupByEpic,
+  onExpandAll,
+  onCollapseAll,
 }: BoardToolbarProps) {
   return (
     <div className="flex items-center gap-3">
@@ -56,6 +64,9 @@ export default function BoardToolbar({
       <LabelChips labels={boardLabels} selected={filters.labels} onToggle={toggleLabel} />
       <ComponentChips components={boardComponents} selected={filters.components} onToggle={toggleComponent} />
       <EpicChips epics={boardEpics} selectedId={filters.epicId} onSelect={setEpicId} />
+      {groupByEpic && (
+        <EpicOwnerAvatars owners={epicOwners} selected={filters.epicOwners} onToggle={toggleEpicOwner} />
+      )}
       {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
       <FilterDivider />
       <ToggleButton
@@ -72,6 +83,28 @@ export default function BoardToolbar({
         label="Group: Epic"
         activeColor="primary"
       />
+      {groupByEpic && (
+        <>
+          <button
+            type="button"
+            onClick={onExpandAll}
+            title="Expand all swimlanes"
+            className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <ChevronsUpDown className="h-3.5 w-3.5" />
+            Expand all
+          </button>
+          <button
+            type="button"
+            onClick={onCollapseAll}
+            title="Collapse all swimlanes"
+            className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <FoldVertical className="h-3.5 w-3.5" />
+            Collapse all
+          </button>
+        </>
+      )}
     </div>
   )
 }

@@ -9,6 +9,8 @@ export interface FilterState {
   labels: Set<string>
   components: Set<string>
   epicId: string | null
+  /** Owners (assignees) of the Epics — only meaningful in swimlane mode. */
+  epicOwners: Set<string>
   status: Set<string>
   priority: Set<string>
   type: Set<string>
@@ -20,6 +22,7 @@ export const INITIAL_FILTER: FilterState = {
   labels: new Set(),
   components: new Set(),
   epicId: null,
+  epicOwners: new Set(),
   status: new Set(),
   priority: new Set(),
   type: new Set(),
@@ -32,6 +35,7 @@ export function hasActiveFilters(f: FilterState): boolean {
     f.labels.size > 0 ||
     f.components.size > 0 ||
     !!f.epicId ||
+    f.epicOwners.size > 0 ||
     f.status.size > 0 ||
     f.priority.size > 0 ||
     f.type.size > 0 ||

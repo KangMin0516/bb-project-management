@@ -3,6 +3,7 @@ import { Droppable, Draggable } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
+import UserAvatar from '@/entities/user/UserAvatar'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/shared/config/constants'
 import { ChevronRight, ChevronDown, Plus } from 'lucide-react'
@@ -14,12 +15,16 @@ interface SwimlaneRowProps {
   isCollapsed: boolean
   onToggleCollapse: () => void
   onIssueClick: (issue: Issue) => void
+  /** Click the Epic title/ID to open its detail panel. */
+  onEpicClick?: (epic: Issue) => void
   onAddClick?: (status: string) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void
   onChildClick: (child: ChildIssue) => void
   onChildStatusToggle: (child: ChildIssue) => void
+  epics?: Issue[]
+  onEpicChange?: (issueId: string, newParentId: string | null) => void
 }
 
 export default memo(function SwimlaneRow({
@@ -29,12 +34,15 @@ export default memo(function SwimlaneRow({
   isCollapsed,
   onToggleCollapse,
   onIssueClick,
+  onEpicClick,
   onAddClick,
   childrenMap,
   expandedIssues,
   onToggleExpand,
   onChildClick,
   onChildStatusToggle,
+  epics,
+  onEpicChange,
 }: SwimlaneRowProps) {
   const totalCount = useMemo(() => {
     let count = 0
@@ -51,20 +59,29 @@ export default memo(function SwimlaneRow({
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Swimlane Header */}
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
-      >
-        {isCollapsed
-          ? <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
-          : <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
-        }
+      <div className="flex w-full items-center gap-2 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={isCollapsed ? 'Expand swimlane' : 'Collapse swimlane'}
+          className="rounded p-0.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+        >
+          {isCollapsed
+            ? <ChevronRight className="h-4 w-4 shrink-0" />
+            : <ChevronDown className="h-4 w-4 shrink-0" />
+          }
+        </button>
         {epic ? (
-          <>
+          <button
+            type="button"
+            onClick={() => onEpicClick?.(epic)}
+            disabled={!onEpicClick}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded text-left transition disabled:cursor-default enabled:hover:opacity-80"
+          >
             <span className="text-sm">⚡</span>
             <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{projectKey}-{epic.number}</span>
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{epic.title}</span>
+            <UserAvatar user={epic.assignee} size="sm" />
             <span className="text-xs text-gray-400 dark:text-gray-500">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
             <span className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium',
@@ -72,12 +89,12 @@ export default memo(function SwimlaneRow({
             )}>
               {STATUS_LABELS[epic.status] || epic.status}
             </span>
-          </>
+          </button>
         ) : (
-          <>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="text-sm font-semibold text-gray-400 dark:text-gray-500">No Epic</span>
             <span className="text-xs text-gray-400 dark:text-gray-500">({totalCount} work item{totalCount !== 1 ? 's' : ''})</span>
-          </>
+          </div>
         )}
         {/* Mini progress bar */}
         {totalCount > 0 && (
@@ -91,7 +108,7 @@ export default memo(function SwimlaneRow({
             </div>
           </div>
         )}
-      </button>
+      </div>
 
       {/* Swimlane Columns */}
       {!isCollapsed && (
@@ -150,6 +167,8 @@ export default memo(function SwimlaneRow({
                                 onChildClick={onChildClick}
                                 onChildStatusToggle={onChildStatusToggle}
                                 compact
+                                epics={epics}
+                                onEpicChange={onEpicChange}
                               />
                             </div>
                           )}
