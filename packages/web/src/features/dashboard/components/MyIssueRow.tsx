@@ -25,7 +25,7 @@ export default function MyIssueRow({ issue, projectKey, focused, onToggleFocus, 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2',
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-150',
         focused ? 'bg-gray-50 dark:bg-gray-900' : 'hover:bg-gray-50 dark:hover:bg-gray-700',
         overdue && 'bg-red-50/50',
       )}
@@ -42,7 +42,7 @@ export default function MyIssueRow({ issue, projectKey, focused, onToggleFocus, 
       <span
         onClick={onClick}
         className={cn(
-          'flex-1 cursor-pointer truncate text-sm font-medium hover:text-primary-700',
+          'flex-1 cursor-pointer truncate text-sm font-medium transition-colors duration-150 hover:text-primary-600 dark:hover:text-primary-400',
           overdue ? 'text-red-700' : 'text-gray-900 dark:text-gray-100',
         )}
       >

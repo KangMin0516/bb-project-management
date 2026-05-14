@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Link2, ChevronsLeft, ChevronsRight, GitBranch } from 'lucide-react'
+import { Trash2, Link2, ChevronsLeft, ChevronsRight, GitBranch, X } from 'lucide-react'
 import type { IssueDetail, Issue } from '@/features/issue/api'
 import { issueRepository } from '@/features/issue/repository'
 import { TYPE_ICONS } from '@/shared/config/constants'
@@ -94,7 +94,9 @@ export default function IssueDetailHeader({
           <IconButton onClick={handleConfirmDelete} title="Delete issue" ariaLabel="Delete issue" danger>
             <Trash2 className="h-4 w-4" />
           </IconButton>
-          <IconButton onClick={onClose} title="Close" ariaLabel="Close">✕</IconButton>
+          <IconButton onClick={onClose} title="Close" ariaLabel="Close">
+            <X className="h-4 w-4" />
+          </IconButton>
         </div>
       </div>
 

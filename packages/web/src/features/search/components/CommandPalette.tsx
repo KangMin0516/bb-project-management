@@ -49,9 +49,11 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
     enabled: debouncedQuery.length > 0,
   })
 
-  // Reset query when the palette opens.
+  // Reset query when the palette opens — `open` is owned by the parent
+  // so this is the right boundary for re-syncing local state.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('')
       setDebouncedQuery('')
     }

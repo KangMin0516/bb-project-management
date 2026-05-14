@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { FolderKanban } from 'lucide-react'
 import { isOverdue, todayDateString, isFocusToday } from '@/shared/lib/time'
 import { PRIORITY_ORDER } from '@/shared/config/constants'
@@ -9,7 +8,12 @@ import GlobalFocusPanel from '@/features/dashboard/components/GlobalFocusPanel'
 import GlobalOverduePanel from '@/features/dashboard/components/GlobalOverduePanel'
 import GlobalIssueRow from '@/features/dashboard/components/GlobalIssueRow'
 import ProjectSummaryCards from '@/features/dashboard/components/ProjectSummaryCards'
-import type { GlobalIssue } from '@/features/dashboard/api'
+import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
+import { issueRepository } from '@/features/issue/repository'
+import { useToastStore } from '@/shared/lib/toast'
+import { getErrorMessage } from '@/shared/lib/error'
+import type { GlobalIssue, GlobalOverdueIssue } from '@/features/dashboard/api'
+import type { Issue } from '@/features/issue/api'
 
 type SortMode = 'dueDate' | 'priority'
 
@@ -19,9 +23,9 @@ type SortMode = 'dueDate' | 'priority'
  * useGlobalDashboard.
  */
 export default function GlobalDashboardPage() {
-  const navigate = useNavigate()
   const [sortMode, setSortMode] = useState<SortMode>('dueDate')
   const [projectFilter, setProjectFilter] = useState<string>('all')
+  const [selectedIssue, setSelectedIssue] = useState<{ issue: Issue; projectKey: string; projectId: string } | null>(null)
 
   const { data, isLoading, toggleFocus } = useGlobalDashboard()
 
@@ -56,8 +60,17 @@ export default function GlobalDashboardPage() {
     [focusIssues, myIssues],
   )
 
-  const openIssue = (issue: { id: string; project: { key: string } }) =>
-    navigate(`/projects/${issue.project.key}/board?open=${issue.id}`)
+  const openIssue = (issue: GlobalIssue) =>
+    setSelectedIssue({ issue, projectKey: issue.project.key, projectId: issue.projectId })
+
+  // Overdue rows ship a slim payload — fetch the full Issue before
+  // handing it to the detail panel.
+  const openOverdueIssue = (overdue: GlobalOverdueIssue) => {
+    issueRepository.findOne(overdue.project.id, overdue.id).then(
+      (full) => setSelectedIssue({ issue: full, projectKey: overdue.project.key, projectId: overdue.project.id }),
+      (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue'), 'error'),
+    )
+  }
 
   const handleToggleFocus = (issue: GlobalIssue) => {
     const focused = isFocusToday(issue.focusDate)
@@ -86,7 +99,7 @@ export default function GlobalDashboardPage() {
         <GlobalOverduePanel
           issues={overdueIssues}
           totalOverdueCount={overdueCount}
-          onIssueClick={openIssue}
+          onIssueClick={openOverdueIssue}
         />
       </div>
 
@@ -134,6 +147,16 @@ export default function GlobalDashboardPage() {
       </div>
 
       <ProjectSummaryCards projects={projects} />
+
+      {selectedIssue && (
+        <IssueDetailPanel
+          projectId={selectedIssue.projectId}
+          projectKey={selectedIssue.projectKey}
+          issue={selectedIssue.issue}
+          onClose={() => setSelectedIssue(null)}
+          onNavigate={(issue) => setSelectedIssue({ issue, projectKey: selectedIssue.projectKey, projectId: selectedIssue.projectId })}
+        />
+      )}
     </div>
   )
 }

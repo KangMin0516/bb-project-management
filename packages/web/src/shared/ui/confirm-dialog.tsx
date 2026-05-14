@@ -44,6 +44,7 @@ let listener: ((pending: PendingConfirm) => void) | null = null
  *     mutation.mutate(id)
  *   }
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     if (!listener) {

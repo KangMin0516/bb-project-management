@@ -38,6 +38,12 @@ export const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
 }
 
+export const PRIORITY_DOT_COLORS: Record<string, string> = {
+  HIGH: 'bg-red-500',
+  MEDIUM: 'bg-yellow-500',
+  LOW: 'bg-green-500',
+}
+
 export const TYPE_ICONS: Record<string, string> = {
   EPIC: '⚡',
   TASK: '✅',

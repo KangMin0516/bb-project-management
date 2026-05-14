@@ -1,6 +1,6 @@
 import type { IssueDetail, Issue, UpdateIssuePayload } from '@/features/issue/api'
 import type { ProjectMember, Label } from '@/features/project/api'
-import { STATUSES, STATUS_LABELS, PRIORITY_COLORS, TYPE_ICONS } from '@/shared/config/constants'
+import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, STATUS_COLORS, PRIORITY_COLORS, PRIORITY_DOT_COLORS, TYPE_ICONS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import InlineField from '@/shared/ui/atoms/InlineField'
 import {
@@ -54,7 +54,11 @@ export default function IssueMetadata({
         fieldId="status"
         display={
           <div className="flex items-center gap-2">
-            <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium">
+            <span className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+              STATUS_BADGE_COLORS[d.status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+            )}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[d.status] || 'bg-gray-400')} />
               {STATUS_LABELS[d.status] || d.status}
             </span>
             {d.status === 'IN_PROGRESS' && (
@@ -81,11 +85,24 @@ export default function IssueMetadata({
             onValueChange={(v) => { onUpdate({ status: v }); close() }}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
+              <SelectValue>
+                <span className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+                  STATUS_BADGE_COLORS[d.status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+                )}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[d.status] || 'bg-gray-400')} />
+                  {STATUS_LABELS[d.status] || d.status}
+                </span>
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_LABELS[s] || s}</SelectItem>
+                <SelectItem key={s} value={s}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[s] || 'bg-gray-400')} />
+                    <span>{STATUS_LABELS[s] || s}</span>
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -96,7 +113,11 @@ export default function IssueMetadata({
         label="Priority"
         fieldId="priority"
         display={
-          <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[d.priority] || ''}`}>
+          <span className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+            PRIORITY_COLORS[d.priority] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+          )}>
+            <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_COLORS[d.priority] || 'bg-gray-400')} />
             {d.priority}
           </span>
         }
@@ -108,11 +129,24 @@ export default function IssueMetadata({
             onValueChange={(v) => { onUpdate({ priority: v }); close() }}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
+              <SelectValue>
+                <span className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+                  PRIORITY_COLORS[d.priority] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+                )}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_COLORS[d.priority] || 'bg-gray-400')} />
+                  {d.priority}
+                </span>
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
+                <SelectItem key={p} value={p}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_DOT_COLORS[p] || 'bg-gray-400')} />
+                    <span>{p}</span>
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
