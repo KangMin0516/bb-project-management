@@ -1,19 +1,17 @@
 import {
-  Injectable,
   BadRequestException,
-  NotFoundException,
   ForbiddenException,
+  Inject,
+  Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
+import {
+  FILE_STORAGE_PORT,
+  type FileStoragePort,
+} from '../common/ports/file-storage.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AVATAR_MAX_SIZE, ATTACHMENT_MAX_SIZE } from '../common/constants.js';
 
@@ -58,28 +56,15 @@ const BLOCKED_ATTACHMENT_MIMES = [
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
-  private s3: S3Client;
-  private bucket: string;
-  private region: string;
 
   constructor(
     private prisma: PrismaService,
-    private config: ConfigService,
-  ) {
-    this.region = this.config.get<string>('AWS_S3_REGION', 'ap-northeast-2');
-    this.bucket = this.config.get<string>('AWS_S3_BUCKET', '');
-    this.s3 = new S3Client({
-      region: this.region,
-      credentials: {
-        accessKeyId: this.config.get<string>('AWS_ACCESS_KEY_ID', ''),
-        secretAccessKey: this.config.get<string>('AWS_SECRET_ACCESS_KEY', ''),
-      },
-    });
-  }
+    @Inject(FILE_STORAGE_PORT) private storage: FileStoragePort,
+  ) {}
 
   async uploadAvatar(file: Express.Multer.File, userId: string) {
-    if (!this.bucket) {
-      throw new BadRequestException('S3 bucket not configured');
+    if (!this.storage.isConfigured()) {
+      throw new BadRequestException('File storage not configured');
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
@@ -95,18 +80,16 @@ export class UploadService {
       throw new BadRequestException('Only jpg, png, webp images are allowed');
     }
 
-    // Delete old avatar from S3 if exists
+    // Best-effort: delete the previous avatar object so we don't leak
+    // orphans. The DB write below replaces the reference regardless.
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { avatar: true },
     });
     if (user?.avatar) {
       try {
-        const oldUrl = new URL(user.avatar);
-        const oldKey = oldUrl.pathname.slice(1);
-        await this.s3.send(
-          new DeleteObjectCommand({ Bucket: this.bucket, Key: oldKey }),
-        );
+        const oldKey = this.resolveAvatarKey(user.avatar);
+        if (oldKey) await this.storage.delete(oldKey);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.warn(`Failed to delete old avatar: ${message}`);
@@ -114,19 +97,17 @@ export class UploadService {
     }
 
     const key = `avatars/${userId}${ext}`;
+    await this.storage.upload({
+      key,
+      body: file.buffer,
+      contentType: file.mimetype,
+    });
 
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      }),
-    );
-
+    // We store a proxy URL (resolved server-side by getAvatar), not the
+    // storage adapter's direct URL. This keeps avatars routed through
+    // the API for auth / cache-busting / future signed-URL support.
     const proxyUrl = `/api/upload/avatar/${userId}`;
 
-    // Update user avatar in DB
     await this.prisma.user.update({
       where: { id: userId },
       data: { avatar: proxyUrl },
@@ -143,46 +124,27 @@ export class UploadService {
 
     if (!user?.avatar) return null;
 
-    // Resolve S3 key from avatar field
-    let s3Key: string;
+    // Legacy rows may hold a full storage URL (pre-proxy); newer rows
+    // store the proxy path. In both cases we look up the actual
+    // object by guessing likely extensions for the proxy path, or by
+    // translating the URL to a key for legacy URLs.
     if (user.avatar.startsWith('http')) {
-      // Legacy: full S3 URL stored in DB
-      const urlObj = new URL(user.avatar);
-      s3Key = urlObj.pathname.slice(1);
-    } else {
-      // New proxy URL format — need to find the actual S3 key
-      // List isn't needed; we stored the key as avatars/{userId}{ext}
-      // Try common extensions
-      for (const ext of ['.jpeg', '.jpg', '.png', '.webp']) {
-        const tryKey = `avatars/${userId}${ext}`;
-        try {
-          const result = await this.s3.send(
-            new GetObjectCommand({ Bucket: this.bucket, Key: tryKey }),
-          );
-          return {
-            stream: result.Body,
-            contentType: result.ContentType || 'image/jpeg',
-          };
-        } catch {
-          continue;
-        }
+      try {
+        const key = this.storage.urlToKey(user.avatar);
+        return await this.storage.download(key);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Failed to read legacy avatar: ${message}`);
+        return null;
       }
-      return null;
     }
 
-    try {
-      const result = await this.s3.send(
-        new GetObjectCommand({ Bucket: this.bucket, Key: s3Key }),
-      );
-      return {
-        stream: result.Body,
-        contentType: result.ContentType || 'image/jpeg',
-      };
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Failed to get avatar from S3: ${message}`);
-      return null;
+    for (const ext of ['.jpeg', '.jpg', '.png', '.webp']) {
+      const tryKey = `avatars/${userId}${ext}`;
+      const result = await this.storage.download(tryKey);
+      if (result) return result;
     }
+    return null;
   }
 
   async upload(
@@ -190,8 +152,8 @@ export class UploadService {
     uploaderId: string,
     opts: { issueId?: string; commentId?: string },
   ) {
-    if (!this.bucket) {
-      throw new BadRequestException('S3 bucket not configured');
+    if (!this.storage.isConfigured()) {
+      throw new BadRequestException('File storage not configured');
     }
 
     if (file.size > MAX_FILE_SIZE) {
@@ -209,17 +171,11 @@ export class UploadService {
     }
 
     const key = `attachments/${randomUUID()}${ext}`;
-
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      }),
-    );
-
-    const url = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+    const { url } = await this.storage.upload({
+      key,
+      body: file.buffer,
+      contentType: file.mimetype,
+    });
 
     return this.prisma.attachment.create({
       data: {
@@ -244,20 +200,32 @@ export class UploadService {
       throw new ForbiddenException('Only uploader can delete attachment');
     }
 
-    // Delete from S3 if bucket is configured
-    if (this.bucket) {
-      const urlObj = new URL(attachment.url);
-      const s3Key = urlObj.pathname.slice(1); // remove leading /
-
-      await this.s3
-        .send(new DeleteObjectCommand({ Bucket: this.bucket, Key: s3Key }))
-        .catch((err: unknown) => {
-          const message = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to delete S3 object ${s3Key}: ${message}`);
-        });
+    if (this.storage.isConfigured()) {
+      try {
+        const key = this.storage.urlToKey(attachment.url);
+        await this.storage.delete(key);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Failed to delete storage object: ${message}`);
+      }
     }
 
     await this.prisma.attachment.delete({ where: { id } });
     return { deleted: true };
+  }
+
+  // ─── helpers ─────────────────────────────────────────────────
+
+  /**
+   * Given the value persisted in `user.avatar`, return the storage key
+   * to delete — or null if the URL is a proxy path (we don't know the
+   * extension without listing, so leave the old object as a tolerable
+   * orphan when the user re-uploads with a different extension).
+   */
+  private resolveAvatarKey(avatarField: string): string | null {
+    if (avatarField.startsWith('http')) {
+      return this.storage.urlToKey(avatarField);
+    }
+    return null;
   }
 }
