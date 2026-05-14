@@ -178,3 +178,21 @@
 .markdown-body del {
   color: var(--editor-del);
 }
+
+/* Mention chip rendered inside comment HTML. */
+.markdown-body .mention {
+  display: inline-block;
+  padding: 0 0.4rem;
+  margin: 0 0.05rem;
+  border-radius: 0.375rem;
+  background-color: rgb(219 234 254);
+  color: rgb(29 78 216);
+  font-weight: 500;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.dark .markdown-body .mention {
+  background-color: rgb(30 58 138 / 0.55);
+  color: rgb(191 219 254);
+}

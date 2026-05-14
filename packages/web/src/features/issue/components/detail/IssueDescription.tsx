@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
+import MentionableEditor from '@/shared/ui/editor/MentionableEditor'
+import type { ProjectMember } from '@/features/project/api'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 interface IssueDescriptionProps {
@@ -9,6 +11,8 @@ interface IssueDescriptionProps {
   onSave: (next: string) => void
   /** Tells parent to react to edit mode (e.g., disable Escape close). */
   onEditingChange?: (editing: boolean) => void
+  /** When provided, the editor offers @-mentions for these members. */
+  members?: ProjectMember[]
 }
 
 /**
@@ -16,7 +20,7 @@ interface IssueDescriptionProps {
  * open the global lightbox; editing mode mounts a full TipTap editor with
  * explicit Save/Cancel — Esc cancels without saving.
  */
-export default function IssueDescription({ description, onSave, onEditingChange }: IssueDescriptionProps) {
+export default function IssueDescription({ description, onSave, onEditingChange, members }: IssueDescriptionProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
 
@@ -45,7 +49,17 @@ export default function IssueDescription({ description, onSave, onEditingChange 
       <span className="block text-xs font-medium text-gray-500 mb-1">Description</span>
       {editing ? (
         <div>
-          <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" />
+          {members && members.length > 0 ? (
+            <MentionableEditor
+              content={draft}
+              onChange={setDraft}
+              members={members}
+              placeholder="Add description... (@ to mention)"
+              minHeight="150px"
+            />
+          ) : (
+            <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" />
+          )}
           <div className="mt-2 flex gap-2">
             <button
               type="button"

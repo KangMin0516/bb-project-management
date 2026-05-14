@@ -77,33 +77,47 @@ export class CommentService {
           .catch(() => {});
       }
 
-      // Parse @mentions and notify mentioned users
-      const mentionPattern = /@([a-zA-Z0-9._-]{2,30})/g;
-      const mentions = [...dto.content.matchAll(mentionPattern)]
-        .map((m) => m[1])
-        .slice(0, MAX_MENTIONS);
-      if (mentions.length > 0) {
-        const mentionedUsers = await this.prisma.user.findMany({
-          where: { name: { in: mentions } },
-          select: { id: true },
-        });
-        for (const mentionedUser of mentionedUsers) {
-          if (
-            mentionedUser.id !== userId &&
-            mentionedUser.id !== issue.assigneeId
-          ) {
-            this.notificationService
-              .create({
-                type: 'MENTIONED',
-                message: `${actorName} mentioned you in ${issueKey} "${issue.title}"`,
-                userId: mentionedUser.id,
-                issueId,
-                projectId: issue.projectId,
-                actorId: userId,
-              })
-              .catch(() => {});
-          }
+      // Resolve mentioned users. Prefer the explicit list the client
+      // sent from the @-picker; fall back to regex over content for
+      // older clients (and to catch plain-text "@name" without picker).
+      const explicitIds = (dto.mentionedUserIds ?? []).slice(0, MAX_MENTIONS);
+      let mentionedUserIds: string[] = explicitIds;
+      if (mentionedUserIds.length === 0) {
+        const mentionPattern = /@([a-zA-Z0-9._-]{2,30})/g;
+        const mentionNames = [...dto.content.matchAll(mentionPattern)]
+          .map((m) => m[1])
+          .slice(0, MAX_MENTIONS);
+        if (mentionNames.length > 0) {
+          const found = await this.prisma.user.findMany({
+            where: { name: { in: mentionNames } },
+            select: { id: true },
+          });
+          mentionedUserIds = found.map((u) => u.id);
         }
+      }
+
+      for (const mentionedUserId of mentionedUserIds) {
+        if (mentionedUserId === userId) continue;
+        // Skip if this user is already getting the COMMENTED notification
+        // — the MENTIONED one would be redundant in their inbox.
+        if (mentionedUserId === issue.assigneeId) continue;
+        this.notificationService
+          .create({
+            type: 'MENTIONED',
+            message: `${actorName} mentioned you in ${issueKey} "${issue.title}"`,
+            userId: mentionedUserId,
+            issueId,
+            projectId: issue.projectId,
+            actorId: userId,
+            meta: {
+              projectKey: issue.project.key,
+              issueNumber: issue.number,
+              issueTitle: issue.title,
+              actorName,
+              commentSnippet: stripHtml(dto.content).slice(0, 200),
+            },
+          })
+          .catch(() => {});
       }
     }
 
@@ -165,6 +179,9 @@ export class CommentService {
     });
   }
 
+  // Strip HTML tags for plain-text Slack snippet. Comments are stored as
+  // sanitized HTML by the TipTap editor.
+  // Kept local — only used here.
   async remove(issueId: string, commentId: string, userId: string) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
@@ -185,4 +202,17 @@ export class CommentService {
     await this.prisma.comment.delete({ where: { id: commentId } });
     return { deleted: true };
   }
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

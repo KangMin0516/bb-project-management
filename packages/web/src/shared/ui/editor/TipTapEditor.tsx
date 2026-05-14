@@ -1,11 +1,12 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Mention from '@tiptap/extension-mention'
 import { common, createLowlight } from 'lowlight'
 import TipTapToolbar from './TipTapToolbar'
 
@@ -23,6 +24,9 @@ interface TipTapEditorProps {
   editable?: boolean
   minHeight?: string
   onSubmit?: () => void
+  /** Fires once the editor instance is ready. Use to drive imperative
+   *  insertions (e.g. mention picker replacing the partial @-token). */
+  onReady?: (editor: Editor) => void
 }
 
 /**
@@ -106,6 +110,7 @@ export default function TipTapEditor({
   editable = true,
   minHeight = '150px',
   onSubmit,
+  onReady,
 }: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,6 +144,22 @@ export default function TipTapEditor({
       TableHeader,
       CodeBlockLowlight.configure({
         lowlight,
+      }),
+      // Mention node — we keep the suggestion popup logic in the
+      // consumer (CommentInput) and only use this extension for the
+      // styled chip when a mention is committed. `renderHTML` outputs
+      // a span with data attrs the backend can parse if needed.
+      Mention.configure({
+        HTMLAttributes: { class: 'mention' },
+        renderHTML({ options, node }) {
+          const id = node.attrs.id ?? ''
+          const label = node.attrs.label ?? node.attrs.id ?? ''
+          return [
+            'span',
+            { ...options.HTMLAttributes, 'data-id': id, 'data-label': label },
+            `@${label}`,
+          ]
+        },
       }),
     ],
     content: initialContent,
@@ -210,6 +231,12 @@ export default function TipTapEditor({
       editor.setEditable(editable)
     }
   }, [editable, editor])
+
+  // Notify parent once the editor instance is ready so it can drive
+  // imperative inserts (mention picker etc.).
+  useEffect(() => {
+    if (editor && onReady) onReady(editor)
+  }, [editor, onReady])
 
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return

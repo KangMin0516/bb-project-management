@@ -38,6 +38,8 @@ export interface CreateNotificationInput {
     issueNumber?: number;
     issueTitle?: string;
     actorName?: string;
+    /** Plain-text snippet of the comment that triggered the mention. */
+    commentSnippet?: string;
   };
 }
 
@@ -134,6 +136,15 @@ export class NotificationService {
       this.deliverSlackAssignedDm(data).catch((err) =>
         this.logger.warn(
           `Slack ${data.type === 'ASSIGNED' ? 'assignment' : 'reviewer'} DM failed`,
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
+    }
+
+    if (data.type === 'MENTIONED') {
+      this.deliverSlackMentionDm(data).catch((err) =>
+        this.logger.warn(
+          'Slack mention DM failed',
           err instanceof Error ? err.message : String(err),
         ),
       );
@@ -357,6 +368,68 @@ export class NotificationService {
     if (!result.delivered) {
       this.logger.debug(
         `Slack DM not delivered for ${data.type} → ${recipient.slackUserId}: ${result.reason}`,
+      );
+    }
+  }
+
+  private async deliverSlackMentionDm(data: CreateNotificationInput) {
+    const recipient = await this.prisma.user.findUnique({
+      where: { id: data.userId },
+      select: { slackUserId: true },
+    });
+    if (!recipient?.slackUserId) return;
+
+    const meta = data.meta ?? {};
+    const projectKey = meta.projectKey ?? '';
+    const issueNumber = meta.issueNumber;
+    const issueTitle = meta.issueTitle ?? '';
+    const actorName = meta.actorName ?? 'Someone';
+    const issueKey = issueNumber != null ? `${projectKey}-${issueNumber}` : '';
+    const snippet = meta.commentSnippet ?? '';
+
+    const fallbackText =
+      issueKey && issueTitle
+        ? `${actorName} mentioned you in ${issueKey} "${issueTitle}"`
+        : data.message;
+
+    const blocks: MessageBlock[] = [
+      {
+        type: 'section',
+        text: ':speech_balloon: *You were mentioned in a comment*',
+      },
+      {
+        type: 'fields',
+        fields: [
+          issueKey
+            ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
+            : `*${escapeSlack(issueTitle || data.message)}*`,
+          `*By*\n${escapeSlack(actorName)}`,
+        ],
+      },
+    ];
+
+    if (snippet) {
+      blocks.push({ type: 'section', text: `> ${escapeSlack(snippet)}` });
+    }
+
+    const url = this.buildIssueUrl(projectKey, data.issueId);
+    if (url) {
+      blocks.push({
+        type: 'button_link',
+        text: 'View in BB-PM',
+        url,
+        style: 'primary',
+      });
+    }
+
+    const result = await this.messaging.sendDirectMessage(
+      recipient.slackUserId,
+      fallbackText,
+      blocks,
+    );
+    if (!result.delivered) {
+      this.logger.debug(
+        `Slack DM not delivered for MENTIONED → ${recipient.slackUserId}: ${result.reason}`,
       );
     }
   }

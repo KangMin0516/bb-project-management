@@ -182,7 +182,7 @@ export const issueApi = {
 
   comments: (projectId: string, issueId: string) =>
     api.get<{ data: { items: Comment[]; total: number } }>(`/projects/${projectId}/issues/${issueId}/comments`).then((r) => r.data.data),
-  createComment: (projectId: string, issueId: string, data: { content: string }) =>
+  createComment: (projectId: string, issueId: string, data: { content: string; mentionedUserIds?: string[] }) =>
     api.post<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments`, data).then((r) => r.data.data),
   updateComment: (projectId: string, issueId: string, commentId: string, data: { content: string }) =>
     api.patch<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments/${commentId}`, data).then((r) => r.data.data),

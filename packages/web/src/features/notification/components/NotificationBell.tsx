@@ -8,8 +8,11 @@ import { timeAgo } from '@/shared/lib/time'
 
 const NOTIFICATION_ICONS: Record<string, string> = {
   ASSIGNED: '👤',
+  REVIEWER_ASSIGNED: '🔍',
   COMMENTED: '💬',
-  MENTIONED: '@',
+  MENTIONED: '📣',
+  JOIN_APPROVED: '✅',
+  JOIN_REJECTED: '❌',
 }
 
 export default function NotificationBell() {

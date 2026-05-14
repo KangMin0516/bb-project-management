@@ -100,6 +100,37 @@ function PriorityPanel({ stats }: { stats: DashboardStats }) {
   )
 }
 
+const FIELD_LABEL: Record<string, string> = {
+  status: 'status',
+  priority: 'priority',
+  type: 'type',
+  assigneeId: 'assignee',
+  reviewerAssigneeId: 'reviewer',
+  parentId: 'parent issue',
+  dueDate: 'due date',
+  startDate: 'start date',
+  focusDate: 'focus date',
+  isRecheck: 'recheck flag',
+  title: 'title',
+  description: 'description',
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function summarize(value: string | null): string {
+  if (!value) return ''
+  const plain = stripHtml(value)
+  return plain.length > 40 ? plain.slice(0, 40) + '…' : plain
+}
+
 function ActivityPanel({ stats }: { stats: DashboardStats }) {
   return (
     <Card title="Recent Activity">
@@ -107,14 +138,29 @@ function ActivityPanel({ stats }: { stats: DashboardStats }) {
         {stats.recentActivities.length === 0 && (
           <p className="text-sm text-gray-400 dark:text-gray-500">No recent activity</p>
         )}
-        {stats.recentActivities.slice(0, 8).map((a) => (
-          <div key={a.id} className="text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-medium text-gray-700 dark:text-gray-300">{a.user?.name}</span>{' '}
-            changed <span className="font-medium">{a.field}</span>{' '}
-            {a.oldValue && <><span className="line-through">{a.oldValue}</span> → </>}
-            <span className="font-medium text-gray-700 dark:text-gray-300">{a.newValue}</span>
-          </div>
-        ))}
+        {stats.recentActivities.slice(0, 8).map((a) => {
+          // Description diffs are HTML — skip the before/after to avoid
+          // dumping `<span data-type="mention" ...>` blobs into the feed.
+          if (a.field === 'description') {
+            return (
+              <div key={a.id} className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-medium text-gray-700 dark:text-gray-300">{a.user?.name}</span>{' '}
+                updated description
+              </div>
+            )
+          }
+          const fieldLabel = FIELD_LABEL[a.field] ?? a.field
+          const oldText = summarize(a.oldValue)
+          const newText = summarize(a.newValue)
+          return (
+            <div key={a.id} className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-300">{a.user?.name}</span>{' '}
+              changed <span className="font-medium">{fieldLabel}</span>{' '}
+              {oldText && <><span className="line-through">{oldText}</span> → </>}
+              <span className="font-medium text-gray-700 dark:text-gray-300">{newText}</span>
+            </div>
+          )
+        })}
       </div>
     </Card>
   )

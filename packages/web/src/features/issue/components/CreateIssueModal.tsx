@@ -5,6 +5,7 @@ import { templateApi } from '@/features/template/api'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
+import MentionableEditor from '@/shared/ui/editor/MentionableEditor'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { issueRepository } from '@/features/issue/repository'
@@ -143,12 +144,22 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
             required
           />
 
-          <TipTapEditor
-            content={description}
-            onChange={(v) => { setDescription(v); setDescriptionTouched(true) }}
-            placeholder="Description (optional)"
-            minHeight="100px"
-          />
+          {members && members.length > 0 ? (
+            <MentionableEditor
+              content={description}
+              onChange={(v) => { setDescription(v); setDescriptionTouched(true) }}
+              members={members}
+              placeholder="Description (optional, @ to mention)"
+              minHeight="100px"
+            />
+          ) : (
+            <TipTapEditor
+              content={description}
+              onChange={(v) => { setDescription(v); setDescriptionTouched(true) }}
+              placeholder="Description (optional)"
+              minHeight="100px"
+            />
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -224,25 +235,28 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">Labels</label>
             <div className="flex flex-wrap gap-1.5">
-              {labels?.map((label) => (
-                <button
-                  key={label.id}
-                  type="button"
-                  onClick={() =>
-                    setLabelIds((ids) =>
-                      ids.includes(label.id) ? ids.filter((id) => id !== label.id) : [...ids, label.id],
-                    )
-                  }
-                  className="rounded-full px-2.5 py-1 text-xs font-medium transition"
-                  style={{
-                    backgroundColor: labelIds.includes(label.id) ? label.color + '30' : '#f3f4f6',
-                    color: labelIds.includes(label.id) ? label.color : '#6b7280',
-                    border: labelIds.includes(label.id) ? `1px solid ${label.color}` : '1px solid transparent',
-                  }}
-                >
-                  {label.name}
-                </button>
-              ))}
+              {labels?.map((label) => {
+                const selected = labelIds.includes(label.id)
+                return (
+                  <button
+                    key={label.id}
+                    type="button"
+                    onClick={() =>
+                      setLabelIds((ids) =>
+                        ids.includes(label.id) ? ids.filter((id) => id !== label.id) : [...ids, label.id],
+                      )
+                    }
+                    className={selected
+                      ? 'rounded-full border px-2.5 py-1 text-xs font-medium transition'
+                      : 'rounded-full border border-transparent bg-gray-100 dark:bg-gray-700 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 transition hover:bg-gray-200 dark:hover:bg-gray-600'}
+                    style={selected
+                      ? { backgroundColor: label.color + '30', color: label.color, borderColor: label.color }
+                      : undefined}
+                  >
+                    {label.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

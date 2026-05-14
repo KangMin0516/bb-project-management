@@ -230,7 +230,7 @@ export default function BoardPage() {
           />
         ) : (
           <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex gap-4">
+            <div className="flex min-w-max gap-4">
               {STATUSES.map((status) => (
                 <BoardColumn
                   key={status}

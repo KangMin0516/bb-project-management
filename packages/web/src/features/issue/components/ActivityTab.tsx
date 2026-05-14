@@ -34,7 +34,8 @@ export default function ActivityTab({
   })
 
   const createCommentMutation = useMutation({
-    mutationFn: (content: string) => issueRepository.createComment(projectId, issueId, { content }),
+    mutationFn: ({ content, mentionedUserIds }: { content: string; mentionedUserIds: string[] }) =>
+      issueRepository.createComment(projectId, issueId, { content, mentionedUserIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
@@ -85,7 +86,7 @@ export default function ActivityTab({
     <div className="p-6 space-y-6">
       <CommentInput
         members={members}
-        onSubmit={(content) => createCommentMutation.mutate(content)}
+        onSubmit={(content, mentionedUserIds) => createCommentMutation.mutate({ content, mentionedUserIds })}
         isSubmitting={createCommentMutation.isPending}
       />
 

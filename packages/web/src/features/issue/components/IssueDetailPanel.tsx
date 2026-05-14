@@ -147,6 +147,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
                 description={d.description}
                 onSave={(description) => update.mutate({ description })}
                 onEditingChange={setDescriptionEditing}
+                members={members ?? []}
               />
 
               <IssueAttachments

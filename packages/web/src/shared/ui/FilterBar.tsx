@@ -80,12 +80,7 @@ export function AssigneeAvatars({
           key={member.id}
           className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <input
-            type="checkbox"
-            checked={selected.has(member.id)}
-            onChange={() => onToggle(member.id)}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
+          <Checkbox checked={selected.has(member.id)} onCheckedChange={() => onToggle(member.id)} />
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden">
             {member.avatar ? (
               <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
@@ -118,12 +113,7 @@ export function LabelChips({
           key={label.id}
           className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <input
-            type="checkbox"
-            checked={selected.has(label.id)}
-            onChange={() => onToggle(label.id)}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
+          <Checkbox checked={selected.has(label.id)} onCheckedChange={() => onToggle(label.id)} />
           <div
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: label.color }}
@@ -153,12 +143,7 @@ export function ComponentChips({
           key={comp.id}
           className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <input
-            type="checkbox"
-            checked={selected.has(comp.id)}
-            onChange={() => onToggle(comp.id)}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
+          <Checkbox checked={selected.has(comp.id)} onCheckedChange={() => onToggle(comp.id)} />
           <span className="truncate text-xs text-gray-700 dark:text-gray-300">{comp.name}</span>
         </label>
       ))}
@@ -184,12 +169,7 @@ export function EpicOwnerAvatars({
           key={owner.id}
           className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <input
-            type="checkbox"
-            checked={selected.has(owner.id)}
-            onChange={() => onToggle(owner.id)}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
+          <Checkbox checked={selected.has(owner.id)} onCheckedChange={() => onToggle(owner.id)} />
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700 overflow-hidden">
             {owner.avatar ? (
               <img src={owner.avatar} alt={owner.name} className="h-full w-full object-cover" />
@@ -222,12 +202,7 @@ export function EpicChips({
           key={epic.id}
           className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <input
-            type="checkbox"
-            checked={selectedId === epic.id}
-            onChange={() => onSelect(selectedId === epic.id ? null : epic.id)}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
+          <Checkbox checked={selectedId === epic.id} onCheckedChange={() => onSelect(selectedId === epic.id ? null : epic.id)} />
           <span className="truncate text-xs text-gray-700 dark:text-gray-300">{epic.title}</span>
         </label>
       ))}
@@ -521,12 +496,7 @@ export function DropdownFilters({
             key={s}
             className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <input
-              type="checkbox"
-              checked={status.has(s)}
-              onChange={() => onStatusChange(toggleSet(status, s))}
-              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-            />
+            <Checkbox checked={status.has(s)} onCheckedChange={() => onStatusChange(toggleSet(status, s))} />
             <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[s])} />
             <span className="truncate text-xs text-gray-700 dark:text-gray-300">{s.replace(/_/g, ' ')}</span>
           </label>
@@ -538,12 +508,7 @@ export function DropdownFilters({
             key={p}
             className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <input
-              type="checkbox"
-              checked={priority.has(p)}
-              onChange={() => onPriorityChange(toggleSet(priority, p))}
-              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-            />
+            <Checkbox checked={priority.has(p)} onCheckedChange={() => onPriorityChange(toggleSet(priority, p))} />
             <div className={cn('h-2.5 w-2.5 rounded-full', PRIORITY_DOT_COLORS[p])} />
             <span className="truncate text-xs text-gray-700 dark:text-gray-300">{p}</span>
           </label>
@@ -555,12 +520,7 @@ export function DropdownFilters({
             key={t}
             className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <input
-              type="checkbox"
-              checked={type.has(t)}
-              onChange={() => onTypeChange(toggleSet(type, t))}
-              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-            />
+            <Checkbox checked={type.has(t)} onCheckedChange={() => onTypeChange(toggleSet(type, t))} />
             <span className="text-xs">{TYPE_EMOJI[t] || ''}</span>
             <span className="truncate text-xs text-gray-700 dark:text-gray-300">{t.replace(/_/g, ' ')}</span>
           </label>

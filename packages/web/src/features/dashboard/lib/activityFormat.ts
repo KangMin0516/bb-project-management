@@ -29,6 +29,9 @@ function formatValue(field: string, value: string | null): string | null {
 export function formatFieldChange(field: string, oldValue: string | null, newValue: string | null): string {
   const label = FIELD_LABELS[field] ?? field
   if (field === 'created') return 'Issue created'
+  // Description values are sanitized HTML — never dump them into a one-
+  // line summary. Just say "updated Description".
+  if (field === 'description') return 'Description updated'
   const fmtOld = formatValue(field, oldValue)
   const fmtNew = formatValue(field, newValue)
   if (fmtOld && fmtNew) return `${label}: ${fmtOld} → ${fmtNew}`
