@@ -3,6 +3,7 @@ import type { Issue } from '@/features/issue/api'
 import type { SortField, SortOrder } from '@/features/issue/hooks/useIssueListUrlState'
 import IssueRow from './IssueRow'
 import SortableHeader from './SortableHeader'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 interface IssuesTableProps {
   items: Issue[]
@@ -40,12 +41,7 @@ export default function IssuesTable({
       <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
         <tr>
           <th className="w-8 px-3 py-2">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={onToggleSelectAll}
-              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-            />
+            <Checkbox checked={allSelected} onCheckedChange={onToggleSelectAll} />
           </th>
           <SortableHeader label="ID" field="number" sortBy={sortBy} sortOrder={sortOrder} onToggle={onToggleSort} />
           <th className="px-3 py-2">Title</th>

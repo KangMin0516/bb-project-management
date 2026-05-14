@@ -209,7 +209,7 @@ export default function IssueTreeView({
                                 {...dragProvided.dragHandleProps}
                                 onClick={() => onIssueClick(issue)}
                                 className={cn(
-                                  'grid cursor-pointer items-center gap-x-2 py-2.5 pr-6 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 transition-colors',
+                                  'grid cursor-pointer items-center gap-x-2 py-2.5 pr-6 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
                                   dragSnapshot.isDragging && 'bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-900/50 rounded ring-1 ring-primary-300 border-transparent',
                                   isEpicSelf && 'opacity-50',
                                 )}

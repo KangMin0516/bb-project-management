@@ -97,7 +97,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
+                className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>

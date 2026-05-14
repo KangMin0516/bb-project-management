@@ -38,8 +38,11 @@ const FIELD_ICONS: Record<string, React.ElementType> = {
   status: CircleDot,
   priority: Signal,
   assigneeId: UserCircle,
+  reviewerAssigneeId: UserCircle,
   type: Tag,
   dueDate: Calendar,
+  startDate: Calendar,
+  focusDate: Calendar,
   title: Type,
   description: FileText,
   parentId: GitBranch,
@@ -112,7 +115,8 @@ function formatFieldValue(
           {TYPE_LABELS[value] || value.replace(/_/g, ' ')}
         </span>
       )
-    case 'assigneeId': {
+    case 'assigneeId':
+    case 'reviewerAssigneeId': {
       const name = resolveUserName(value, members)
       if (name) {
         return (
@@ -131,6 +135,8 @@ function formatFieldValue(
         </span>
       )
     case 'dueDate':
+    case 'startDate':
+    case 'focusDate':
       return (
         <span className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">
           {formatDate(value)}
@@ -155,8 +161,12 @@ function getFieldLabel(field: string): string {
     case 'priority': return 'priority'
     case 'type': return 'type'
     case 'assigneeId': return 'assignee'
+    case 'reviewerAssigneeId': return 'reviewer'
     case 'parentId': return 'parent issue'
     case 'dueDate': return 'due date'
+    case 'startDate': return 'start date'
+    case 'focusDate': return 'focus date'
+    case 'isRecheck': return 'recheck flag'
     case 'title': return 'title'
     case 'description': return 'description'
     default: return field
@@ -232,7 +242,7 @@ function ActivityItem({
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {oldValue !== null && oldValue !== undefined ? (
               <span className="inline-flex items-center opacity-60">
-                {field === 'assigneeId' && !resolveUserName(oldValue, members) ? (
+                {(field === 'assigneeId' || field === 'reviewerAssigneeId') && !resolveUserName(oldValue, members) ? (
                   <span className="text-xs text-gray-400 dark:text-gray-500 line-through">Unassigned</span>
                 ) : field === 'title' ? (
                   <span className="max-w-[180px] truncate text-xs text-gray-400 dark:text-gray-500 line-through" title={oldValue}>
@@ -248,7 +258,7 @@ function ActivityItem({
             <ArrowRight className="h-3 w-3 flex-shrink-0 text-gray-300" />
             {newValue !== null && newValue !== undefined ? (
               <span className="inline-flex items-center">
-                {field === 'assigneeId' && !resolveUserName(newValue, members) ? (
+                {(field === 'assigneeId' || field === 'reviewerAssigneeId') && !resolveUserName(newValue, members) ? (
                   <span className="text-xs text-gray-500 dark:text-gray-400">Unassigned</span>
                 ) : (
                   formatFieldValue(field, newValue, members)

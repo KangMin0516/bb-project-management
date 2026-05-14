@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Checkbox } from '@/shared/ui/checkbox'
 import type { Label } from '@/features/project/api'
 import { useOutsideClick } from '@/shared/lib/useOutsideClick'
 
@@ -76,12 +77,7 @@ function LabelPill({ label, onRemove }: { label: { id: string; name: string; col
 function LabelOption({ label, selected, onToggle }: { label: Label; selected: boolean; onToggle: () => void }) {
   return (
     <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700">
-      <input
-        type="checkbox"
-        checked={selected}
-        onChange={onToggle}
-        className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-      />
+      <Checkbox checked={selected} onCheckedChange={onToggle} />
       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: label.color }} />
       <span className="truncate text-xs text-gray-700 dark:text-gray-200">{label.name}</span>
     </label>

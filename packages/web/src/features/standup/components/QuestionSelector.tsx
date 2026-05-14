@@ -1,4 +1,5 @@
 import type { StandupQuestion } from '@/features/standup/api'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 interface QuestionSelectorProps {
   questions: StandupQuestion[]
@@ -17,11 +18,9 @@ export default function QuestionSelector({ questions, selectedIds, onChange }: Q
       <div className="space-y-1">
         {questions.map((q) => (
           <label key={q.id} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={selectedIds.includes(q.id)}
-              onChange={(e) => toggle(q.id, e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
+              onCheckedChange={(checked) => toggle(q.id, checked === true)}
             />
             {q.text}
           </label>

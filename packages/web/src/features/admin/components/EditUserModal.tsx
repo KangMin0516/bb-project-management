@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Checkbox } from '@/shared/ui/checkbox'
 import { ShieldCheck, ShieldOff } from 'lucide-react'
 import type { AdminUser } from '@/entities/user/api'
 import ModalDialog from '@/features/admin/components/ModalDialog'
@@ -35,11 +36,9 @@ export default function EditUserModal({ user, isPending, onSave, onClose }: Edit
           />
         </Field>
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={isSuperuser}
-            onChange={(e) => setIsSuperuser(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600"
+            onCheckedChange={(checked) => setIsSuperuser(checked === true)}
           />
           Superuser
           {isSuperuser ? <ShieldCheck className="h-4 w-4 text-indigo-500" /> : <ShieldOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />}

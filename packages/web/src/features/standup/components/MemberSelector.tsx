@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Checkbox } from '@/shared/ui/checkbox'
 import type { SlackUser } from '@/features/integrations/slack/api'
 
 interface MemberSelectorProps {
@@ -59,11 +60,9 @@ export default function MemberSelector({ slackUsers, selectedIds, onChange }: Me
         ) : (
           filtered.map((u) => (
             <label key={u.id} className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-gray-50 dark:hover:bg-gray-900">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selectedIds.includes(u.id)}
-                onChange={(e) => toggle(u.id, e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
+                onCheckedChange={(checked) => toggle(u.id, checked === true)}
               />
               {u.avatar && <img src={u.avatar} alt="" className="h-5 w-5 rounded-full" />}
               <span>{u.realName}</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Checkbox } from '@/shared/ui/checkbox'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reportApi, type UpdateReportConfigPayload } from '@/features/report/api'
 import { slackApi, type SlackChannel } from '@/features/integrations/slack/api'
@@ -149,11 +150,9 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
           </div>
         </div>
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={form.enabled}
-            onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+            onCheckedChange={(checked) => setForm({ ...form, enabled: checked === true })}
           />
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Enabled</span>
         </label>
@@ -177,11 +176,9 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
           </div>
           <label className="flex items-center gap-2 pt-5">
             <Calendar className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-            <input
-              type="checkbox"
+            <Checkbox
               checked={form.skipWeekends}
-              onChange={(e) => setForm({ ...form, skipWeekends: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+              onCheckedChange={(checked) => setForm({ ...form, skipWeekends: checked === true })}
             />
             <span className="text-xs text-gray-600 dark:text-gray-500">Skip weekends</span>
           </label>

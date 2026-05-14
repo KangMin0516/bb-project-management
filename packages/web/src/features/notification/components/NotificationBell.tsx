@@ -106,7 +106,7 @@ export default function NotificationBell() {
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   className={cn(
-                    'flex w-full items-start gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 dark:bg-gray-900',
+                    'flex w-full items-start gap-2.5 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700',
                     !n.isRead && 'bg-primary-50/50',
                   )}
                 >

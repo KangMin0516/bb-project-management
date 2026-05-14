@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/utils'
 import UserAvatar from '@/entities/user/UserAvatar'
 import IssueActionMenu from '@/features/issue/components/IssueActionMenu'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 interface IssueRowProps {
   issue: Issue
@@ -32,12 +33,7 @@ export default function IssueRow({ issue, projectKey, isSelected, isFocused, onO
       )}
     >
       <td className="w-8 px-3 py-2" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(issue.id)}
-          className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-        />
+        <Checkbox checked={isSelected} onCheckedChange={() => onToggleSelect(issue.id)} />
       </td>
       <td className="px-6 py-2 font-mono text-xs text-gray-400 dark:text-gray-500">
         {projectKey}-{issue.number}

@@ -108,7 +108,7 @@ export default function CommentInput({ members, onSubmit, isSubmitting }: Commen
               type="button"
               onClick={() => insertMention(m)}
               className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
-                i === mentionIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900'
+                i === mentionIndex ? 'bg-primary-50 text-primary-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-medium">

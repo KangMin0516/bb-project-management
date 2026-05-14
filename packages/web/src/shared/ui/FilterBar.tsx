@@ -41,7 +41,7 @@ function FilterDropdown({
           'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
           selectedCount > 0
             ? 'border-primary-300 bg-primary-50 text-primary-700'
-            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-900',
+            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700',
         )}
       >
         <Icon className="h-3.5 w-3.5" />
@@ -78,7 +78,7 @@ export function AssigneeAvatars({
       {members.map((member) => (
         <label
           key={member.id}
-          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <input
             type="checkbox"
@@ -116,7 +116,7 @@ export function LabelChips({
       {labels.map((label) => (
         <label
           key={label.id}
-          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <input
             type="checkbox"
@@ -151,7 +151,7 @@ export function ComponentChips({
       {components.map((comp) => (
         <label
           key={comp.id}
-          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <input
             type="checkbox"
@@ -182,7 +182,7 @@ export function EpicOwnerAvatars({
       {owners.map((owner) => (
         <label
           key={owner.id}
-          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <input
             type="checkbox"
@@ -220,7 +220,7 @@ export function EpicChips({
       {epics.map((epic) => (
         <label
           key={epic.id}
-          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+          className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <input
             type="checkbox"
@@ -473,7 +473,7 @@ export function ClearFiltersButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-900"
+      className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
       title="Clear all filters"
     >
       <X className="h-3 w-3" />
@@ -519,7 +519,7 @@ export function DropdownFilters({
         {STATUSES.map((s) => (
           <label
             key={s}
-            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <input
               type="checkbox"
@@ -536,7 +536,7 @@ export function DropdownFilters({
         {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
           <label
             key={p}
-            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <input
               type="checkbox"
@@ -553,7 +553,7 @@ export function DropdownFilters({
         {['EPIC', 'TASK', 'BUG', 'SUB_TASK'].map((t) => (
           <label
             key={t}
-            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:bg-gray-900"
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <input
               type="checkbox"

@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, Play, Trash2 } from 'lucide-react'
 import type { StandupConfig, StandupQuestion } from '@/features/standup/api'
 import type { SlackChannel, SlackUser } from '@/features/integrations/slack/api'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import { Checkbox } from '@/shared/ui/checkbox'
 import ConfigForm from './ConfigForm'
 
 interface ConfigRowProps {
@@ -54,12 +55,7 @@ export default function ConfigRow({
           </div>
         </div>
         <label className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <input
-            type="checkbox"
-            checked={config.enabled}
-            onChange={onToggleEnabled}
-            className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-600"
-          />
+          <Checkbox checked={config.enabled} onCheckedChange={onToggleEnabled} />
           <span className="text-xs text-gray-500 dark:text-gray-400">On</span>
         </label>
         <button
