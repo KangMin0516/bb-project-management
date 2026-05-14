@@ -11,6 +11,8 @@ interface CommentItemProps {
   onUpdate: (commentId: string, content: string) => void
   onDelete: (commentId: string) => void
   isUpdating?: boolean
+  /** Hide Edit/Delete affordances (used by the Details-tab preview). */
+  readOnly?: boolean
 }
 
 function renderMentions(content: string): string {
@@ -18,7 +20,7 @@ function renderMentions(content: string): string {
   return content.replace(/(?<!\S)@([a-zA-Z가-힣\d][a-zA-Z가-힣\d\s]*?[a-zA-Z가-힣\d])(?=\s|[.,!?)]|$)/g, '**@$1**')
 }
 
-export default function CommentItem({ comment, currentUserId, onUpdate, onDelete, isUpdating }: CommentItemProps) {
+export default function CommentItem({ comment, currentUserId, onUpdate, onDelete, isUpdating, readOnly }: CommentItemProps) {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
   const isOwner = comment.user.id === currentUserId
@@ -47,7 +49,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
           {comment.createdAt !== comment.updatedAt && (
             <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>
           )}
-          {isOwner && !editing && (
+          {isOwner && !editing && !readOnly && (
             <div className="ml-auto flex gap-1">
               <button
                 type="button"

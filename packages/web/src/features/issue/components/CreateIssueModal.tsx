@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
+import Combobox from '@/shared/ui/combobox'
 
 interface CreateIssueModalProps {
   projectId: string
@@ -202,22 +203,21 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
               <label className="mb-1 block text-xs font-medium text-gray-500">
                 Parent Issue{type === 'SUB_TASK' ? ' *' : ''}
               </label>
-              <Select
+              <Combobox
                 value={parentId || NO_PARENT}
-                onValueChange={(v) => setParentId(v === NO_PARENT ? '' : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_PARENT}>None</SelectItem>
-                  {parentOptions.map((issue) => (
-                    <SelectItem key={issue.id} value={issue.id}>
-                      #{issue.number} {issue.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => setParentId(v === NO_PARENT ? '' : v)}
+                options={[
+                  { value: NO_PARENT, label: 'None' },
+                  ...parentOptions.map((issue) => ({
+                    value: issue.id,
+                    label: `#${issue.number} ${issue.title}`,
+                    searchValue: `${issue.number} ${issue.title}`,
+                  })),
+                ]}
+                placeholder="Select parent..."
+                searchPlaceholder={type === 'SUB_TASK' ? 'Search issue...' : 'Search epic...'}
+                emptyMessage="No matches"
+              />
             </div>
           )}
 

@@ -11,6 +11,7 @@ export const ISSUE_STATUSES = [
   'TODO',
   'IN_PROGRESS',
   'REVIEW_QA',
+  'RECHECK',
   'DONE',
   'CANCELED',
 ] as const;

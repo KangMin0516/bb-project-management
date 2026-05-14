@@ -96,6 +96,7 @@ export class IssueQueryService {
       'TODO',
       'IN_PROGRESS',
       'REVIEW_QA',
+      'RECHECK',
       'DONE',
       'CANCELED',
     ];

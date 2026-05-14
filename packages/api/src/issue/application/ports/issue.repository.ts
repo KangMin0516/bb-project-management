@@ -16,6 +16,7 @@ export type IssueStatusLiteral =
   | 'TODO'
   | 'IN_PROGRESS'
   | 'REVIEW_QA'
+  | 'RECHECK'
   | 'DONE'
   | 'CANCELED';
 export type IssuePriorityLiteral = 'HIGH' | 'MEDIUM' | 'LOW';

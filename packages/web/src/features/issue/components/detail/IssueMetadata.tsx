@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
+import Combobox from '@/shared/ui/combobox'
 import UserAvatar from '@/entities/user/UserAvatar'
 import UserPicker from '@/entities/user/UserPicker'
 import IssueLabelsPicker from './IssueLabelsPicker'
@@ -203,26 +204,27 @@ export default function IssueMetadata({
           }
         >
           {(close) => (
-            <Select
+            <Combobox
               defaultOpen
               value={d.parentId || NO_PARENT}
-              onValueChange={(v) => {
+              onChange={(v) => {
                 onUpdate({ parentId: v === NO_PARENT ? null : v })
                 close()
               }}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_PARENT}>
-                  {d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}
-                </SelectItem>
-                {(epics || []).filter((ep) => ep.id !== d.id).map((ep) => (
-                  <SelectItem key={ep.id} value={ep.id}>⚡ #{ep.number} {ep.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onOpenChange={(open) => { if (!open) close() }}
+              options={[
+                { value: NO_PARENT, label: d.type === 'SUB_TASK' ? 'No parent' : 'No epic' },
+                ...(epics || []).filter((ep) => ep.id !== d.id).map((ep) => ({
+                  value: ep.id,
+                  label: `⚡ #${ep.number} ${ep.title}`,
+                  searchValue: `${ep.number} ${ep.title}`,
+                })),
+              ]}
+              placeholder="Select epic..."
+              searchPlaceholder="Search epic..."
+              emptyMessage="No matches"
+              className="h-8"
+            />
           )}
         </InlineField>
       )}

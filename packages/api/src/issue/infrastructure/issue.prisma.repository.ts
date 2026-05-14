@@ -441,6 +441,7 @@ type IssueStatusLiteralPrismaInput =
   | 'TODO'
   | 'IN_PROGRESS'
   | 'REVIEW_QA'
+  | 'RECHECK'
   | 'DONE'
   | 'CANCELED';
 type IssuePriorityLiteralPrismaInput = 'HIGH' | 'MEDIUM' | 'LOW';
