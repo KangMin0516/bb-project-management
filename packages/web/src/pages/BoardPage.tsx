@@ -118,11 +118,14 @@ export default function BoardPage() {
     [parentOnlyBoard, hasFilters, filters, childrenMap],
   )
 
+  // Use parentOnlyBoard (sub-tasks excluded) so they stop double-rendering
+  // as standalone cards in the "No Epic" lane while still appearing nested
+  // under their parent Task via childrenMap.
   const filteredBoardForSwimlane = useMemo(() => {
     if (!groupByEpic) return null
-    if (!hasFilters) return board
-    return filterBoard(board, filters, { keepEpics: true, childrenMap })
-  }, [groupByEpic, board, hasFilters, filters, childrenMap])
+    if (!hasFilters) return parentOnlyBoard
+    return filterBoard(parentOnlyBoard, filters, { keepEpics: true, childrenMap })
+  }, [groupByEpic, parentOnlyBoard, hasFilters, filters, childrenMap])
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
