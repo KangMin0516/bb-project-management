@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useEffect, useRef } from 'react'
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
@@ -31,6 +31,10 @@ interface SwimlaneRowProps {
   /** Move this swimlane up/down by one position. Undefined when at the edge. */
   onMoveUp?: () => void
   onMoveDown?: () => void
+  /** Hook into parent's horizontal scroll-sync. */
+  registerScrollContainer?: (el: HTMLDivElement | null) => void
+  unregisterScrollContainer?: (el: HTMLDivElement) => void
+  onColumnsScroll?: (source: HTMLDivElement) => void
 }
 
 export default memo(function SwimlaneRow({
@@ -53,7 +57,19 @@ export default memo(function SwimlaneRow({
   dragHandleProps,
   onMoveUp,
   onMoveDown,
+  registerScrollContainer,
+  unregisterScrollContainer,
+  onColumnsScroll,
 }: SwimlaneRowProps) {
+  const columnsRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = columnsRef.current
+    if (!el || !registerScrollContainer) return
+    registerScrollContainer(el)
+    return () => {
+      unregisterScrollContainer?.(el)
+    }
+  }, [registerScrollContainer, unregisterScrollContainer, isCollapsed])
   const totalCount = useMemo(() => {
     let count = 0
     for (const arr of Object.values(issues)) count += arr.length
@@ -155,7 +171,10 @@ export default memo(function SwimlaneRow({
 
       {/* Swimlane Columns */}
       {!isCollapsed && (
-        <div className="flex gap-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div
+          ref={columnsRef}
+          onScroll={(e) => onColumnsScroll?.(e.currentTarget)}
+          className="flex gap-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
           {STATUSES.map((status) => {
             const columnIssues = issues[status] || []
             const droppableId = `${droppablePrefix}:${status}`

@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useRef } from 'react'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
@@ -56,6 +56,31 @@ export default function SwimlaneBoardView({
   onCollapseToggle,
   onSwimlaneReorder,
 }: SwimlaneBoardViewProps) {
+  // Horizontal scroll sync — each SwimlaneRow registers its columns
+  // container here so scrolling one mirrors to the others. RAF + a
+  // syncing flag prevent feedback loops.
+  const scrollContainersRef = useRef<Set<HTMLDivElement>>(new Set())
+  const isSyncingRef = useRef(false)
+
+  const onColumnsScroll = useCallback((source: HTMLDivElement) => {
+    if (isSyncingRef.current) return
+    isSyncingRef.current = true
+    const left = source.scrollLeft
+    for (const el of scrollContainersRef.current) {
+      if (el !== source && el.scrollLeft !== left) el.scrollLeft = left
+    }
+    requestAnimationFrame(() => {
+      isSyncingRef.current = false
+    })
+  }, [])
+
+  const registerScrollContainer = useCallback((el: HTMLDivElement | null) => {
+    if (el) scrollContainersRef.current.add(el)
+  }, [])
+
+  const unregisterScrollContainer = useCallback((el: HTMLDivElement) => {
+    scrollContainersRef.current.delete(el)
+  }, [])
   const { swimlanes } = useMemo(() => {
     const epicMap = new Map<string, Issue>()
     const epicChildren = new Map<string, Record<string, Issue[]>>()
@@ -230,6 +255,9 @@ export default function SwimlaneBoardView({
                         dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                         onMoveUp={isFirst ? undefined : () => moveLane('up')}
                         onMoveDown={isLast ? undefined : () => moveLane('down')}
+                        registerScrollContainer={registerScrollContainer}
+                        unregisterScrollContainer={unregisterScrollContainer}
+                        onColumnsScroll={onColumnsScroll}
                       />
                     </div>
                   )}
@@ -255,6 +283,9 @@ export default function SwimlaneBoardView({
                 onChildStatusToggle={onChildStatusToggle}
                 epics={epics}
                 onEpicChange={onEpicChange}
+                registerScrollContainer={registerScrollContainer}
+                unregisterScrollContainer={unregisterScrollContainer}
+                onColumnsScroll={onColumnsScroll}
               />
             )}
             {swimlanes.length === 0 && (
