@@ -75,7 +75,7 @@ export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssu
         </div>
       </Field>
 
-      <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
+      <div className="max-h-60 w-full overflow-y-auto overflow-x-hidden border border-gray-200 dark:border-gray-700 rounded">
         {filteredIssues.length > 0 ? (
           filteredIssues.map((issue: Issue) => (
             <IssueOption
@@ -109,11 +109,11 @@ function IssueOption({ issue, disabled, onClick }: { issue: Issue; disabled: boo
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-900 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors disabled:opacity-50"
+      className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-900 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors disabled:opacity-50"
     >
       <div className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[issue.status])} />
       <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 shrink-0">#{issue.number}</span>
-      <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{issue.title}</span>
+      <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{issue.title}</span>
       <PriorityBadge priority={issue.priority} className="text-[9px] shrink-0" />
     </button>
   )

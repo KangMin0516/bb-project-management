@@ -5,6 +5,7 @@ import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 import type { FilterState } from '@/shared/ui/filterState'
 import { toggleSet } from '@/shared/ui/filterState'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 
 // Generic filter dropdown with checkboxes
@@ -447,12 +448,7 @@ function CheckboxRow({
 }) {
   return (
     <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-3.5 w-3.5 shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-      />
+      <Checkbox checked={checked} onCheckedChange={onChange} />
       {children}
     </label>
   )
