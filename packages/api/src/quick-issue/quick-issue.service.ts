@@ -1,7 +1,10 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { IssueService } from '../issue/issue.service.js';
+import {
+  AI_COMPLETION_PORT,
+  type AiCompletionPort,
+} from '../common/ports/ai-completion.port.js';
 import { parseText } from './parsers/rule-parser.js';
 import { enrichWithLlm } from './parsers/llm-enricher.js';
 import type { LlmEnrichResult } from './parsers/llm-enricher.js';
@@ -37,7 +40,7 @@ export class QuickIssueService {
   constructor(
     private prisma: PrismaService,
     private issueService: IssueService,
-    private config: ConfigService,
+    @Inject(AI_COMPLETION_PORT) private ai: AiCompletionPort,
   ) {}
 
   async parse(
@@ -93,20 +96,18 @@ export class QuickIssueService {
       name: m.user.name,
     }));
 
-    // LLM enrichment
-    const apiKey = this.config.get<string>('ANTHROPIC_API_KEY');
     let enriched: LlmEnrichResult;
 
-    if (apiKey) {
+    if (this.ai.isConfigured()) {
       enriched = await enrichWithLlm(
-        apiKey,
+        this.ai,
         text,
         parsed,
         selectedProject,
         memberList,
       );
     } else {
-      this.logger.warn('ANTHROPIC_API_KEY not set, using rule-based only');
+      this.logger.warn('AI completion not configured, using rule-based only');
       enriched = {
         title: parsed.cleanedText,
         description: '',

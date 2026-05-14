@@ -1,9 +1,8 @@
-import { Logger } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
+import type { AiCompletionPort } from '../../common/ports/ai-completion.port.js';
 import {
   IssuePriority,
-  IssueType,
   IssueStatus,
+  IssueType,
 } from '../../../generated/prisma/enums.js';
 import type { RuleParseResult } from './rule-parser.js';
 
@@ -27,26 +26,21 @@ interface MemberContext {
   name: string;
 }
 
-const logger = new Logger('LlmEnricher');
-
-let cachedClient: Anthropic | null = null;
-let cachedKey: string | null = null;
-
-function getClient(apiKey: string): Anthropic {
-  if (cachedClient && cachedKey === apiKey) return cachedClient;
-  cachedClient = new Anthropic({ apiKey });
-  cachedKey = apiKey;
-  return cachedClient;
-}
-
+/**
+ * Enrich a rule-parsed quick-issue draft via an LLM call routed through
+ * AiCompletionPort. When the port returns `null` (no API key, error,
+ * unexpected shape), this function silently degrades to a rule-based
+ * result — matching the legacy try/catch fallback behavior.
+ */
 export async function enrichWithLlm(
-  apiKey: string,
+  ai: AiCompletionPort,
   rawText: string,
   parsed: RuleParseResult,
   project: ProjectContext,
   members: MemberContext[],
 ): Promise<LlmEnrichResult> {
-  const client = getClient(apiKey);
+  const ruleFallback = buildRuleFallback(parsed);
+  if (!ai.isConfigured()) return ruleFallback;
 
   const memberList = members.map((m) => `- ${m.name} (ID: ${m.id})`).join('\n');
 
@@ -83,57 +77,49 @@ ${hintsDesc.length > 0 ? `Rule-based hints: ${hintsDesc.join(', ')}` : ''}
 
 Extract issue fields as JSON: { "title": string, "description": string, "type": string, "priority": string, "status": string, "assigneeId": string | null }`;
 
+  const text = await ai.complete({ systemPrompt, userMessage, maxTokens: 300 });
+  if (!text) return ruleFallback;
+
+  let parsedJson: {
+    title: string;
+    description: string;
+    type: string;
+    priority: string;
+    status: string;
+    assigneeId: string | null;
+  };
   try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: userMessage }],
-      system: systemPrompt,
-    });
-
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    const result = JSON.parse(content.text) as {
-      title: string;
-      description: string;
-      type: string;
-      priority: string;
-      status: string;
-      assigneeId: string | null;
-    };
-
-    return {
-      title: result.title || parsed.cleanedText,
-      description: result.description || '',
-      type: (Object.values(IssueType).includes(result.type as IssueType)
-        ? result.type
-        : (parsed.hints.type ?? IssueType.TASK)) as IssueType,
-      priority: (Object.values(IssuePriority).includes(
-        result.priority as IssuePriority,
-      )
-        ? result.priority
-        : (parsed.hints.priority ?? IssuePriority.MEDIUM)) as IssuePriority,
-      status: (Object.values(IssueStatus).includes(result.status as IssueStatus)
-        ? result.status
-        : IssueStatus.BACKLOG) as IssueStatus,
-      assigneeId: result.assigneeId ?? undefined,
-    };
-  } catch (err) {
-    logger.warn(
-      'LLM enrichment failed, falling back to rule-based',
-      err instanceof Error ? err.message : String(err),
-    );
-
-    // Fallback to rule-based only
-    return {
-      title: parsed.cleanedText,
-      description: '',
-      type: parsed.hints.type ?? IssueType.TASK,
-      priority: parsed.hints.priority ?? IssuePriority.MEDIUM,
-      status: IssueStatus.BACKLOG,
-    };
+    parsedJson = JSON.parse(text) as typeof parsedJson;
+  } catch {
+    return ruleFallback;
   }
+
+  return {
+    title: parsedJson.title || parsed.cleanedText,
+    description: parsedJson.description || '',
+    type: (Object.values(IssueType).includes(parsedJson.type as IssueType)
+      ? parsedJson.type
+      : (parsed.hints.type ?? IssueType.TASK)) as IssueType,
+    priority: (Object.values(IssuePriority).includes(
+      parsedJson.priority as IssuePriority,
+    )
+      ? parsedJson.priority
+      : (parsed.hints.priority ?? IssuePriority.MEDIUM)) as IssuePriority,
+    status: (Object.values(IssueStatus).includes(
+      parsedJson.status as IssueStatus,
+    )
+      ? parsedJson.status
+      : IssueStatus.BACKLOG) as IssueStatus,
+    assigneeId: parsedJson.assigneeId ?? undefined,
+  };
+}
+
+function buildRuleFallback(parsed: RuleParseResult): LlmEnrichResult {
+  return {
+    title: parsed.cleanedText,
+    description: '',
+    type: parsed.hints.type ?? IssueType.TASK,
+    priority: parsed.hints.priority ?? IssuePriority.MEDIUM,
+    status: IssueStatus.BACKLOG,
+  };
 }
