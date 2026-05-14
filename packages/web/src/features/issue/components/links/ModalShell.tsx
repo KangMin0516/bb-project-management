@@ -32,11 +32,11 @@ export default function ModalShell({ title, subtitle, onBack, onClose, children 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
       <DialogContent
-        className="z-[60] max-w-md gap-0 rounded-lg p-0"
+        className="z-[60] w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-lg p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 pr-10">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 pr-10">
+          <div className="flex min-w-0 items-center gap-2">
             {onBack && (
               <button
                 onClick={onBack}
@@ -46,17 +46,17 @@ export default function ModalShell({ title, subtitle, onBack, onClose, children 
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
-            <DialogTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <DialogTitle className="min-w-0 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
               {title}
             </DialogTitle>
           </div>
           <DialogDescription
-            className={subtitle ? 'mt-1 text-xs text-gray-500 dark:text-gray-400 truncate' : 'sr-only'}
+            className={subtitle ? 'mt-1 truncate text-xs text-gray-500 dark:text-gray-400' : 'sr-only'}
           >
             {subtitle || title}
           </DialogDescription>
         </div>
-        <div className="p-4 space-y-3">{children}</div>
+        <div className="min-w-0 space-y-3 p-4">{children}</div>
       </DialogContent>
     </Dialog>
   )

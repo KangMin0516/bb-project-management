@@ -197,13 +197,13 @@ function Breadcrumb({
   }
 
   return (
-    <p className="mt-1 text-xs text-gray-400 flex items-center gap-x-1 min-w-0">
+    <p className="mt-1 flex w-full min-w-0 items-center gap-x-1 text-xs text-gray-400">
       {ancestors.map((ancestor, idx) => (
-        <span key={ancestor.id} className="flex items-center gap-x-1 min-w-0">
+        <span key={ancestor.id} className="flex min-w-0 items-center gap-x-1">
           <button
             onClick={() => navigate(ancestor.id)}
             title={ancestor.title}
-            className="flex items-center gap-x-1 min-w-0 max-w-[200px] hover:text-primary-600 hover:underline"
+            className="flex min-w-0 items-center gap-x-1 hover:text-primary-600 hover:underline"
           >
             <span className="shrink-0">{TYPE_ICONS[ancestor.type] || ''} #{ancestor.number}</span>
             <span className="truncate">{ancestor.title}</span>
@@ -212,7 +212,7 @@ function Breadcrumb({
         </span>
       ))}
       <span className="text-gray-300 shrink-0">/</span>
-      <span title={current.title} className="flex items-center gap-x-1 min-w-0 max-w-[200px]">
+      <span title={current.title} className="flex min-w-0 flex-1 items-center gap-x-1">
         <span className="shrink-0">{TYPE_ICONS[current.type] || ''} #{current.number}</span>
         <span className="truncate">{current.title}</span>
       </span>
