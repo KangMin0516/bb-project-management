@@ -15,6 +15,7 @@ import { IssueService } from './issue.service.js';
 import { IssueLinkService } from '../issue-link/issue-link.service.js';
 import { CreateIssueUseCase } from './application/create-issue.use-case.js';
 import { IssueQueryService } from './application/issue-query.service.js';
+import { UpdateIssueUseCase } from './application/update-issue.use-case.js';
 import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
@@ -38,6 +39,7 @@ import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 export class IssueController {
   constructor(
     private readonly createIssue: CreateIssueUseCase,
+    private readonly updateIssue: UpdateIssueUseCase,
     private readonly query: IssueQueryService,
     private readonly issueService: IssueService,
     private readonly issueLinkService: IssueLinkService,
@@ -122,7 +124,14 @@ export class IssueController {
     @Body() dto: UpdateIssueDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.issueService.update(projectId, issueId, dto, user.sub);
+    const { silent, labelIds, componentIds, ...rest } = dto;
+    return this.updateIssue.execute({
+      projectId,
+      issueId,
+      actorId: user.sub,
+      silent,
+      changes: { ...rest, labelIds, componentIds },
+    });
   }
 
   @Patch(':issueId/reorder')

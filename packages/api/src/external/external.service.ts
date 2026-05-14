@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { IssueService } from '../issue/issue.service.js';
 import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.js';
+import { UpdateIssueUseCase } from '../issue/application/update-issue.use-case.js';
 import { SpecificationService } from '../specification/specification.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
@@ -22,8 +22,8 @@ const TERMINAL_STATUSES = new Set<string>(['DONE', 'CANCELED']);
 export class ExternalService {
   constructor(
     private prisma: PrismaService,
-    private issueService: IssueService,
     private createIssueUC: CreateIssueUseCase,
+    private updateIssueUC: UpdateIssueUseCase,
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
   ) {}
@@ -137,10 +137,11 @@ export class ExternalService {
       }
     }
 
-    return this.issueService.update(
-      project.id,
-      issue.id,
-      {
+    return this.updateIssueUC.execute({
+      projectId: project.id,
+      issueId: issue.id,
+      actorId: userId,
+      changes: {
         title: dto.title,
         description: dto.description,
         status: dto.status,
@@ -150,8 +151,7 @@ export class ExternalService {
         startDate: dto.startDate,
         dueDate: dto.dueDate,
       },
-      userId,
-    );
+    });
   }
 
   async getIssue(projectKey: string, issueNumber: number) {

@@ -4,6 +4,7 @@ import { IssueLinkModule } from '../issue-link/issue-link.module.js';
 import { CreateIssueUseCase } from './application/create-issue.use-case.js';
 import { IssueQueryService } from './application/issue-query.service.js';
 import { ISSUE_REPOSITORY } from './application/ports/issue.repository.js';
+import { UpdateIssueUseCase } from './application/update-issue.use-case.js';
 import { IssuePrismaRepository } from './infrastructure/issue.prisma.repository.js';
 import { ArchiveScheduler } from './archive.scheduler.js';
 import { IssueController } from './issue.controller.js';
@@ -27,7 +28,8 @@ import { IssueService } from './issue.service.js';
     IssuePrismaRepository,
     { provide: ISSUE_REPOSITORY, useExisting: IssuePrismaRepository },
     CreateIssueUseCase,
+    UpdateIssueUseCase,
   ],
-  exports: [IssueService, CreateIssueUseCase],
+  exports: [IssueService, CreateIssueUseCase, UpdateIssueUseCase],
 })
 export class IssueModule {}
