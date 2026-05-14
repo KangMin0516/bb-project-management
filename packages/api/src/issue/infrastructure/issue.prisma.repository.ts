@@ -2,8 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ISSUE_INCLUDE } from '../application/issue-query.service.js';
 import type {
+  ChildIssue,
   CreateIssuePayload,
   IssueRepository,
+  IssueRowForUpdate,
+  IssueTypeLiteral,
+  RecentActivityRow,
+  UpdateIssuePayload,
 } from '../application/ports/issue.repository.js';
 
 const ORDER_GAP = 1000;
@@ -108,4 +113,159 @@ export class IssuePrismaRepository implements IssueRepository {
       components.find((c) => c.defaultAssigneeId)?.defaultAssigneeId ?? null
     );
   }
+
+  // ─── Update flow ───────────────────────────────────────────
+
+  async findForUpdate(issueId: string): Promise<IssueRowForUpdate | null> {
+    const row = await this.prisma.issue.findUnique({
+      where: { id: issueId },
+      select: {
+        id: true,
+        projectId: true,
+        number: true,
+        title: true,
+        description: true,
+        type: true,
+        status: true,
+        priority: true,
+        parentId: true,
+        assigneeId: true,
+        reviewerAssigneeId: true,
+        startDate: true,
+        dueDate: true,
+        focusDate: true,
+        isRecheck: true,
+        archivedAt: true,
+      },
+    });
+    return row;
+  }
+
+  async parentChainContains(
+    fromParentId: string,
+    targetId: string,
+  ): Promise<boolean> {
+    // Bounded walk — single SELECT per step. Matches the legacy
+    // service's cycle-detection (no recursive CTE). Safe because
+    // hierarchy depth is small in practice.
+    let currentId: string | null = fromParentId;
+    while (currentId) {
+      if (currentId === targetId) return true;
+      const ancestor: { parentId: string | null } | null =
+        await this.prisma.issue.findUnique({
+          where: { id: currentId },
+          select: { parentId: true },
+        });
+      currentId = ancestor?.parentId ?? null;
+    }
+    return false;
+  }
+
+  async findRecentActivityForCoalesce(
+    issueId: string,
+    userId: string,
+    field: 'assigneeId' | 'reviewerAssigneeId',
+    sinceMs: number,
+  ): Promise<RecentActivityRow | null> {
+    return this.prisma.activity.findFirst({
+      where: {
+        issueId,
+        userId,
+        field,
+        createdAt: { gt: new Date(Date.now() - sinceMs) },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, oldValue: true },
+    });
+  }
+
+  async deleteActivity(activityId: string): Promise<void> {
+    await this.prisma.activity.delete({ where: { id: activityId } });
+  }
+
+  async updateWithLinksAndActivities(
+    payload: UpdateIssuePayload,
+  ): Promise<unknown> {
+    return this.prisma.issue.update({
+      where: { id: payload.issueId },
+      data: {
+        ...payload.fieldUpdates,
+        ...(payload.labelIds !== undefined && {
+          labels: {
+            deleteMany: {},
+            create: payload.labelIds.map((labelId) => ({ labelId })),
+          },
+        }),
+        ...(payload.componentIds !== undefined && {
+          components: {
+            deleteMany: {},
+            create: payload.componentIds.map((componentId) => ({
+              componentId,
+            })),
+          },
+        }),
+        ...(payload.activities.length > 0 && {
+          activities: {
+            create: payload.activities.map((a) => ({
+              ...a,
+              userId: payload.actorId,
+            })),
+          },
+        }),
+      },
+      include: ISSUE_INCLUDE,
+    });
+  }
+
+  async fetchProjectKey(projectId: string): Promise<string | null> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { key: true },
+    });
+    return project?.key ?? null;
+  }
+
+  async fetchUserName(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    return user?.name ?? null;
+  }
+
+  async findUnassignedChildren(parentId: string): Promise<ChildIssue[]> {
+    return this.prisma.issue.findMany({
+      where: { parentId, assigneeId: null },
+      select: { id: true, number: true, title: true },
+    });
+  }
+
+  async bulkAssignChildren(
+    childIds: string[],
+    assigneeId: string,
+    actorId: string,
+  ): Promise<void> {
+    if (childIds.length === 0) return;
+    await this.prisma.$transaction([
+      this.prisma.issue.updateMany({
+        where: { id: { in: childIds } },
+        data: { assigneeId },
+      }),
+      this.prisma.activity.createMany({
+        data: childIds.map((id) => ({
+          issueId: id,
+          userId: actorId,
+          field: 'assigneeId',
+          oldValue: null,
+          newValue: assigneeId,
+        })),
+      }),
+    ]);
+  }
 }
+
+// Silence unused-import warnings for the typed-but-not-instantiated
+// helper types — they appear only in method signatures via
+// `IssueRepository`. Keeping these imports explicit lets editor jump-
+// to-definition work without the inferred-from-interface dance.
+void ({} as IssueTypeLiteral | undefined);
