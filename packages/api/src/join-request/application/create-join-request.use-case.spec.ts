@@ -9,6 +9,7 @@ import type {
   MessagingPort,
   SendResult,
 } from '../../common/ports/messaging.port.js';
+import type { OutboxEventBus } from '../../outbox/outbox-event-bus.js';
 import type { JoinRequestRepository } from './ports/join-request.repository.js';
 import { JoinRequest } from '../domain/join-request.entity.js';
 import { CreateJoinRequestUseCase } from './create-join-request.use-case.js';
@@ -52,10 +53,20 @@ function makeMessaging(): MessagingPort {
   };
 }
 
-function makeConfig(): ConfigService {
+function makeConfig(envOverrides: Record<string, string> = {}): ConfigService {
+  const defaults: Record<string, string> = {
+    FRONTEND_URL: 'https://pm.example.com',
+    ...envOverrides,
+  };
   return {
-    get: jest.fn(() => 'https://pm.example.com'),
+    get: jest.fn((key: string) => defaults[key]),
   } as unknown as ConfigService;
+}
+
+function makeOutboxBus(): OutboxEventBus {
+  return {
+    publish: jest.fn(async () => undefined),
+  } as unknown as OutboxEventBus;
 }
 
 describe('CreateJoinRequestUseCase', () => {
@@ -65,6 +76,7 @@ describe('CreateJoinRequestUseCase', () => {
       repo,
       makeMessaging(),
       makeConfig(),
+      makeOutboxBus(),
     );
 
     await expect(
@@ -80,6 +92,7 @@ describe('CreateJoinRequestUseCase', () => {
       repo,
       makeMessaging(),
       makeConfig(),
+      makeOutboxBus(),
     );
 
     await expect(
@@ -100,6 +113,7 @@ describe('CreateJoinRequestUseCase', () => {
       repo,
       makeMessaging(),
       makeConfig(),
+      makeOutboxBus(),
     );
 
     await expect(
@@ -126,6 +140,7 @@ describe('CreateJoinRequestUseCase', () => {
       repo,
       makeMessaging(),
       makeConfig(),
+      makeOutboxBus(),
     );
 
     await uc.execute({ projectIdOrKey: 'p-1', requesterId: REQUESTER.id });
@@ -139,6 +154,7 @@ describe('CreateJoinRequestUseCase', () => {
       makeRepo(),
       makeMessaging(),
       makeConfig(),
+      makeOutboxBus(),
     );
 
     const result = await uc.execute({
@@ -151,5 +167,78 @@ describe('CreateJoinRequestUseCase', () => {
     expect(result.request.message).toBe('Please');
     expect(result.project).toEqual(PROJECT);
     expect(result.requester).toEqual(REQUESTER);
+  });
+});
+
+describe('CreateJoinRequestUseCase — admin DM via outbox (USE_OUTBOX_FOR_JOIN_REQUEST_ADMIN_DM)', () => {
+  /**
+   * The fire-and-forget notify happens AFTER the use case returns
+   * (it's wrapped in `void this.notifyAdmins(...).catch(...)`). The
+   * test awaits a microtask so the outbox publish has actually been
+   * invoked before asserting.
+   */
+  const flushMicrotasks = () => new Promise((r) => setImmediate(r));
+
+  it('enqueues one outbox row per admin when flag is on', async () => {
+    const messaging = makeMessaging();
+    (messaging.getWorkspaceStatus as jest.Mock).mockResolvedValue({
+      connected: true,
+      integrationId: 'INT1',
+      teamName: 'Acme',
+    });
+    const repo = makeRepo({
+      listAdminsAndPms: jest.fn(async () => [
+        { userId: 'u-a', slackUserId: 'SU_A' },
+        { userId: 'u-b', slackUserId: 'SU_B' },
+        { userId: 'u-c', slackUserId: null }, // skipped (no Slack)
+      ]),
+    });
+    const outbox = makeOutboxBus();
+    const uc = new CreateJoinRequestUseCase(
+      repo,
+      messaging,
+      makeConfig({ USE_OUTBOX_FOR_JOIN_REQUEST_ADMIN_DM: 'true' }),
+      outbox,
+    );
+
+    await uc.execute({
+      projectIdOrKey: 'p-1',
+      requesterId: REQUESTER.id,
+      message: 'pls',
+    });
+    await flushMicrotasks();
+
+    expect(outbox.publish).toHaveBeenCalledTimes(2);
+    expect(messaging.sendDirectMessage).not.toHaveBeenCalled();
+  });
+
+  it('falls through to the legacy loop when flag is off', async () => {
+    const messaging = makeMessaging();
+    (messaging.getWorkspaceStatus as jest.Mock).mockResolvedValue({
+      connected: true,
+      integrationId: 'INT1',
+      teamName: 'Acme',
+    });
+    const repo = makeRepo({
+      listAdminsAndPms: jest.fn(async () => [
+        { userId: 'u-a', slackUserId: 'SU_A' },
+      ]),
+    });
+    const outbox = makeOutboxBus();
+    const uc = new CreateJoinRequestUseCase(
+      repo,
+      messaging,
+      makeConfig(), // flag NOT set
+      outbox,
+    );
+
+    await uc.execute({
+      projectIdOrKey: 'p-1',
+      requesterId: REQUESTER.id,
+    });
+    await flushMicrotasks();
+
+    expect(outbox.publish).not.toHaveBeenCalled();
+    expect(messaging.sendDirectMessage).toHaveBeenCalledTimes(1);
   });
 });

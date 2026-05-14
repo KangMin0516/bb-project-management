@@ -59,9 +59,7 @@ export interface JoinRequestRepository {
   ): Promise<{ id: string; name: string; key: string } | null>;
 
   /** Requester info for response payloads + notifications. */
-  loadRequesterMeta(
-    userId: string,
-  ): Promise<{
+  loadRequesterMeta(userId: string): Promise<{
     id: string;
     name: string;
     email: string;

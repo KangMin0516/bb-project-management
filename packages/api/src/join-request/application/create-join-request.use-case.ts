@@ -12,6 +12,11 @@ import {
   type MessageBlock,
   type MessagingPort,
 } from '../../common/ports/messaging.port.js';
+import { OutboxEventBus } from '../../outbox/outbox-event-bus.js';
+import {
+  JOIN_REQUEST_ADMIN_DM_DELIVERY,
+  type JoinRequestAdminDmPayload,
+} from './handlers/join-request-admin-dm.handler.js';
 import {
   JOIN_REQUEST_REPOSITORY,
   type JoinRequestRepository,
@@ -49,7 +54,20 @@ export class CreateJoinRequestUseCase {
     private readonly repo: JoinRequestRepository,
     @Inject(MESSAGING_PORT) private readonly messaging: MessagingPort,
     private readonly config: ConfigService,
+    private readonly outboxBus: OutboxEventBus,
   ) {}
+
+  /**
+   * Feature flag — when true, per-admin Slack DMs go through the
+   * transactional outbox (one row per admin, retries per recipient,
+   * crash-safe). Default false to preserve the legacy fire-and-forget
+   * loop until the outbox path is observed stable in production.
+   */
+  private useOutboxForAdminDm(): boolean {
+    return (
+      this.config.get<string>('USE_OUTBOX_FOR_JOIN_REQUEST_ADMIN_DM') === 'true'
+    );
+  }
 
   async execute(
     cmd: CreateJoinRequestCommand,
@@ -116,6 +134,31 @@ export class CreateJoinRequestUseCase {
       this.config.get<string>('FRONTEND_URL') ?? 'https://pm.burningbros.kr';
     const settingsUrl = `${frontendUrl}/projects/${input.project.key}/settings?tab=requests`;
 
+    if (this.useOutboxForAdminDm()) {
+      // Outbox path — one row per admin so each delivery gets its own
+      // retry budget. Crash-safe; surface dead-letters at MAX_ATTEMPTS.
+      for (const admin of admins) {
+        if (!admin.slackUserId) continue;
+        const payload: JoinRequestAdminDmPayload = {
+          adminSlackUserId: admin.slackUserId,
+          projectName: input.project.name,
+          projectKey: input.project.key,
+          requesterName: input.requester.name,
+          message: input.request.message,
+          settingsUrl,
+        };
+        await this.outboxBus.publish({
+          type: JOIN_REQUEST_ADMIN_DM_DELIVERY,
+          aggregateType: 'JoinRequest',
+          aggregateId: input.request.id,
+          payload,
+        });
+      }
+      return;
+    }
+
+    // Legacy fire-and-forget path (DEFAULT). Kept verbatim until the
+    // outbox path is observed stable in production.
     const blocks: MessageBlock[] = [
       { type: 'header', text: '📋 Project join request' },
       {
