@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle } from 'lucide-react'
+import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
+import type { FilterState } from '@/shared/ui/filterState'
 import { toggleSet } from '@/shared/ui/filterState'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
 
 // Generic filter dropdown with checkboxes
@@ -229,6 +231,238 @@ export function EpicChips({
         </label>
       ))}
     </FilterDropdown>
+  )
+}
+
+// Unified filters popover — consolidates all 7 facets behind one button
+// so the toolbar doesn't sprawl across two rows. Inner sections render
+// their checkbox lists inline (no nested dropdowns).
+interface FiltersPopoverProps {
+  filters: FilterState
+  setStatus: (v: Set<string>) => void
+  setPriority: (v: Set<string>) => void
+  setType: (v: Set<string>) => void
+  toggleAssignee: (id: string) => void
+  toggleLabel: (id: string) => void
+  toggleComponent: (id: string) => void
+  setEpicId: (id: string | null) => void
+  toggleEpicOwner?: (id: string) => void
+  assignedMembers: { id: string; name: string; avatar: string | null }[]
+  boardLabels: { id: string; name: string; color: string }[]
+  boardComponents: { id: string; name: string }[]
+  boardEpics: { id: string; title: string }[]
+  epicOwners?: { id: string; name: string; avatar: string | null }[]
+  /** When true, hides the Epic Owner section. */
+  hideEpicOwner?: boolean
+}
+
+export function FiltersPopover({
+  filters,
+  setStatus,
+  setPriority,
+  setType,
+  toggleAssignee,
+  toggleLabel,
+  toggleComponent,
+  setEpicId,
+  toggleEpicOwner,
+  assignedMembers,
+  boardLabels,
+  boardComponents,
+  boardEpics,
+  epicOwners,
+  hideEpicOwner,
+}: FiltersPopoverProps) {
+  const [open, setOpen] = useState(false)
+  const totalCount =
+    filters.status.size +
+    filters.priority.size +
+    filters.type.size +
+    filters.assignees.size +
+    filters.labels.size +
+    filters.components.size +
+    (filters.epicId ? 1 : 0) +
+    (filters.epicOwners?.size ?? 0)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+            totalCount > 0
+              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+              : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700',
+          )}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filters
+          {totalCount > 0 && (
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
+              {totalCount}
+            </span>
+          )}
+          <ChevronDown className={cn('h-3 w-3 transition', open && 'rotate-180')} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <div className="max-h-[70vh] overflow-y-auto py-1">
+          <FilterSection title="Status">
+            {STATUSES.map((s) => (
+              <CheckboxRow
+                key={s}
+                checked={filters.status.has(s)}
+                onChange={() => setStatus(toggleSet(filters.status, s))}
+              >
+                <span className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[s])} />
+                <span>{s.replace(/_/g, ' ')}</span>
+              </CheckboxRow>
+            ))}
+          </FilterSection>
+
+          <FilterSection title="Priority">
+            {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
+              <CheckboxRow
+                key={p}
+                checked={filters.priority.has(p)}
+                onChange={() => setPriority(toggleSet(filters.priority, p))}
+              >
+                <span className={cn('h-2.5 w-2.5 rounded-full', PRIORITY_DOT_COLORS[p])} />
+                <span>{p}</span>
+              </CheckboxRow>
+            ))}
+          </FilterSection>
+
+          <FilterSection title="Type">
+            {['EPIC', 'TASK', 'BUG', 'SUB_TASK'].map((t) => (
+              <CheckboxRow
+                key={t}
+                checked={filters.type.has(t)}
+                onChange={() => setType(toggleSet(filters.type, t))}
+              >
+                <span className="text-xs">{TYPE_EMOJI[t] || ''}</span>
+                <span>{t.replace(/_/g, ' ')}</span>
+              </CheckboxRow>
+            ))}
+          </FilterSection>
+
+          {assignedMembers.length > 0 && (
+            <FilterSection title="Assignee">
+              {assignedMembers.map((m) => (
+                <CheckboxRow
+                  key={m.id}
+                  checked={filters.assignees.has(m.id)}
+                  onChange={() => toggleAssignee(m.id)}
+                >
+                  <Avatar32 name={m.name} avatar={m.avatar} />
+                  <span className="truncate">{m.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardLabels.length > 0 && (
+            <FilterSection title="Label">
+              {boardLabels.map((l) => (
+                <CheckboxRow
+                  key={l.id}
+                  checked={filters.labels.has(l.id)}
+                  onChange={() => toggleLabel(l.id)}
+                >
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
+                  <span className="truncate">{l.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardComponents.length > 0 && (
+            <FilterSection title="Component">
+              {boardComponents.map((c) => (
+                <CheckboxRow
+                  key={c.id}
+                  checked={filters.components.has(c.id)}
+                  onChange={() => toggleComponent(c.id)}
+                >
+                  <span className="truncate">{c.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardEpics.length > 0 && (
+            <FilterSection title="Epic">
+              {boardEpics.map((ep) => (
+                <CheckboxRow
+                  key={ep.id}
+                  checked={filters.epicId === ep.id}
+                  onChange={() => setEpicId(filters.epicId === ep.id ? null : ep.id)}
+                >
+                  <span className="truncate">{ep.title}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {!hideEpicOwner && epicOwners && epicOwners.length > 0 && toggleEpicOwner && (
+            <FilterSection title="Epic Owner">
+              {epicOwners.map((o) => (
+                <CheckboxRow
+                  key={o.id}
+                  checked={filters.epicOwners?.has(o.id) ?? false}
+                  onChange={() => toggleEpicOwner(o.id)}
+                >
+                  <Avatar32 name={o.name} avatar={o.avatar} />
+                  <span className="truncate">{o.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border-b border-gray-100 dark:border-gray-700 last:border-b-0 py-1">
+      <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function CheckboxRow({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean
+  onChange: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="h-3.5 w-3.5 shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+      />
+      {children}
+    </label>
+  )
+}
+
+function Avatar32({ name, avatar }: { name: string; avatar: string | null }) {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
+      {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+    </span>
   )
 }
 
