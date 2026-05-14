@@ -165,6 +165,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
                   isCreating={createSubtask.isPending}
                   onCreate={(data) => createSubtask.mutate(data)}
                   onNavigate={onNavigate}
+                  members={members ?? []}
                 />
               )}
 

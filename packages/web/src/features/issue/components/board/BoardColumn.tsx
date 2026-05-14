@@ -10,6 +10,7 @@ interface BoardColumnProps {
   status: string
   issues: Issue[]
   projectKey: string
+  projectId: string
   onIssueClick: (issue: Issue) => void
   onAddClick: (status: string) => void
   childrenMap?: Map<string, ChildIssue[]>
@@ -26,6 +27,7 @@ export default memo(function BoardColumn({
   status,
   issues,
   projectKey,
+  projectId,
   onIssueClick,
   onAddClick,
   childrenMap,
@@ -70,6 +72,7 @@ export default memo(function BoardColumn({
                     <IssueCard
                       issue={issue}
                       projectKey={projectKey}
+                      projectId={projectId}
                       onClick={() => onIssueClick(issue)}
                       childIssues={childrenMap?.get(issue.id)}
                       isExpanded={expandedIssues?.has(issue.id)}
