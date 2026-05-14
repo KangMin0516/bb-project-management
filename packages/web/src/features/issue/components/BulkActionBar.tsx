@@ -1,10 +1,16 @@
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
 import { STATUSES, STATUS_LABELS, PRIORITIES, PRIORITY_LABELS } from '@/shared/config/constants'
 import { X, Trash2 } from 'lucide-react'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 
 interface BulkActionBarProps {
   projectId: string
@@ -28,7 +34,7 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
       issueRepository.bulkUpdate(projectId, { issueIds: [...selectedIds], ...data }),
     onSuccess: () => invalidate(),
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Bulk update failed'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Bulk update failed'), 'error')
     },
   })
 
@@ -36,7 +42,7 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
     mutationFn: () => issueRepository.bulkDelete(projectId, [...selectedIds]),
     onSuccess: () => invalidate(),
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Bulk delete failed'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Bulk delete failed'), 'error')
     },
   })
 
@@ -73,8 +79,12 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
       />
 
       <button
-        onClick={() => {
-          if (confirm(`Delete ${count} issue${count > 1 ? 's' : ''}?`)) {
+        onClick={async () => {
+          if (await confirmDialog({
+            title: `Delete ${count} issue${count > 1 ? 's' : ''}?`,
+            confirmLabel: 'Delete',
+            destructive: true,
+          })) {
             bulkDeleteMutation.mutate()
           }
         }}
@@ -105,36 +115,25 @@ function BulkDropdown({
   onSelect: (value: string) => void
   disabled?: boolean
 }) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
+    <DropdownMenu>
+      <DropdownMenuTrigger
         disabled={disabled}
-        className="rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900 disabled:opacity-50"
+        className="rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
       >
         {label} ▾
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => {
-                  onSelect(opt.value)
-                  setOpen(false)
-                }}
-                className="flex w-full px-3 py-1.5 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[140px]">
+        {options.map((opt) => (
+          <DropdownMenuItem
+            key={opt.value}
+            onSelect={() => onSelect(opt.value)}
+            className="text-xs"
+          >
+            {opt.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

@@ -53,7 +53,7 @@ export function useSpecReorder(projectId: string, specs: SpecListItem[] | undefi
     Promise.all(
       reordered.map((spec, idx) => (spec.order === idx ? null : specRepository.update(projectId, spec.id, { order: idx }))),
     )
-      .catch((err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder')))
+      .catch((err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to reorder'), 'error'))
       .finally(() => queryClient.invalidateQueries({ queryKey: ['specifications', projectId] }))
   }, [projectId, specs, queryClient])
 }

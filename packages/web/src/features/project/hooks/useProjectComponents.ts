@@ -16,20 +16,20 @@ export function useProjectComponents(projectId: string) {
   const create = useMutation({
     mutationFn: (data: CreateComponentPayload) => componentApi.create(projectId, data),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create component')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create component'), 'error'),
   })
 
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateComponentPayload }) =>
       componentApi.update(projectId, id, data),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update component')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update component'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => componentApi.delete(projectId, id),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete component')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete component'), 'error'),
   })
 
   return { components: componentsQuery.data, create, update, remove }

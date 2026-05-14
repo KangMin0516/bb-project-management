@@ -143,9 +143,9 @@ export default function AppLayout() {
     if (!file) return
     try {
       await uploadAvatar(file)
-      useToastStore.getState().addToast('Avatar updated successfully')
+      useToastStore.getState().addToast('Avatar updated successfully', 'success')
     } catch (err) {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload avatar'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload avatar'), 'error')
     }
     e.target.value = ''
   }

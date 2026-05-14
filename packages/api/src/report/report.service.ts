@@ -1,12 +1,17 @@
 import {
+  ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SlackService } from '../slack/slack.service.js';
+import {
+  MESSAGING_PORT,
+  type MessageBlock,
+  type MessagingPort,
+} from '../common/ports/messaging.port.js';
 import type { UpdateReportConfigDto } from './dto/update-report-config.dto.js';
 import { formatMorningReport } from './formatters/morning.formatter.js';
 import { formatLunchReport } from './formatters/lunch.formatter.js';
@@ -18,7 +23,7 @@ export class ReportService {
 
   constructor(
     private prisma: PrismaService,
-    private slackService: SlackService,
+    @Inject(MESSAGING_PORT) private messaging: MessagingPort,
     private config: ConfigService,
   ) {}
 
@@ -275,7 +280,7 @@ export class ReportService {
       return;
     }
 
-    let report: { blocks: unknown[]; text: string };
+    let report: { blocks: MessageBlock[]; text: string };
     if (type === 'morning') {
       report = await this.generateMorningReport(projectId);
     } else if (type === 'lunch') {
@@ -284,11 +289,11 @@ export class ReportService {
       report = await this.generateEveningReport(projectId);
     }
 
-    await this.slackService.sendMessage(
+    await this.messaging.sendChannelMessage(
       config.slackIntegrationId,
       channelId,
-      report.blocks,
       report.text,
+      report.blocks,
     );
   }
 }

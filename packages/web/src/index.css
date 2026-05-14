@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-primary-50: #eff6ff;
@@ -13,10 +16,72 @@
   --color-primary-900: #1e3a8a;
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* shadcn/ui design tokens — mapped onto the project's existing
+ * Tailwind palette (see :root / .dark blocks below). `@theme inline`
+ * exposes each token as a Tailwind utility (bg-background,
+ * text-muted-foreground, border-input, …) and preserves CSS-var
+ * indirection so the dark-mode class toggle reroutes colors without
+ * a rebuild.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
 
-/* Editor / Markdown CSS custom properties */
+/* Editor / Markdown + shadcn theme CSS custom properties */
 :root {
+  /* shadcn tokens — light. Mapped to the project's existing palette:
+   *   --background / --popover / --card     white     (vs body bg-gray-50 — gives dialogs a lift)
+   *   --foreground                          gray-900  (= existing dark text)
+   *   --primary                             blue-600  (matches --color-primary-600)
+   *   --secondary / --muted / --accent      gray-100  (Tailwind neutral fills)
+   *   --muted-foreground                    gray-500
+   *   --destructive                         red-600   (Tailwind danger)
+   *   --border / --input                    gray-200
+   *   --ring                                blue-500  (focus ring)
+   */
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #3b82f6;
+  --radius: 0.5rem;
+
+  /* Editor / Markdown tokens (pre-existing) */
   --editor-text: #374151;
   --editor-heading: #111827;
   --editor-link: #2563eb;
@@ -35,6 +100,31 @@
 }
 
 .dark {
+  /* shadcn tokens — dark. Background tier is gray-800 (elevated above
+   * body bg-gray-900) so dialogs / popovers visually lift; rest of
+   * the palette mirrors the lighter-weight Tailwind tiers used
+   * throughout the project's dark mode. */
+  --background: #1f2937;
+  --foreground: #f3f4f6;
+  --card: #1f2937;
+  --card-foreground: #f3f4f6;
+  --popover: #1f2937;
+  --popover-foreground: #f3f4f6;
+  --primary: #3b82f6;
+  --primary-foreground: #111827;
+  --secondary: #1f2937;
+  --secondary-foreground: #f3f4f6;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --accent: #374151;
+  --accent-foreground: #f3f4f6;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #374151;
+  --input: #374151;
+  --ring: #60a5fa;
+
+  /* Editor / Markdown tokens (pre-existing) */
   --editor-text: #d1d5db;
   --editor-heading: #f3f4f6;
   --editor-link: #60a5fa;

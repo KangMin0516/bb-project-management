@@ -6,6 +6,7 @@ import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { MessageSquare, Check, Reply, Trash2, X } from 'lucide-react'
 import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import { specRepository } from '@/features/specification/repository'
 
 interface SpecCommentPanelProps {
@@ -36,20 +37,20 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
     mutationFn: (data: { content: string; sectionId?: string; parentId?: string }) =>
       specRepository.createComment(projectId, specId, data),
     onSuccess: () => { invalidate(); setNewContent(''); setReplyContent(''); setReplyTo(null) },
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment'), 'error'),
   })
 
   const toggleResolveMutation = useMutation({
     mutationFn: ({ commentId, resolved }: { commentId: string; resolved: boolean }) =>
       specRepository.updateComment(projectId, specId, commentId, { resolved }),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment'), 'error'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (commentId: string) => specRepository.deleteComment(projectId, specId, commentId),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment'), 'error'),
   })
 
   const unresolvedCount = filtered.filter((c) => !c.resolved).length
@@ -114,7 +115,13 @@ export default function SpecCommentPanel({ projectId, specId, comments, filterSe
             onSetReplyContent={setReplyContent}
             onReply={(parentId) => createMutation.mutate({ content: replyContent, parentId })}
             onToggleResolve={(id, resolved) => toggleResolveMutation.mutate({ commentId: id, resolved })}
-            onDelete={(id) => { if (confirm('Delete this comment?')) deleteMutation.mutate(id) }}
+            onDelete={async (id) => {
+              if (await confirmDialog({
+                title: 'Delete this comment?',
+                confirmLabel: 'Delete',
+                destructive: true,
+              })) deleteMutation.mutate(id)
+            }}
             isReplying={createMutation.isPending}
             onSectionClick={onSectionClick}
             onScrollToSection={onScrollToSection}

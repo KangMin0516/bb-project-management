@@ -1,11 +1,17 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Issue } from '@/features/issue/api'
 import type { ShareContext } from '@/shared/types'
-import { useEscapeKey } from '@/shared/lib/useEscapeKey'
+import { useDeferredClose } from '@/shared/lib/useDeferredClose'
 import { useIssueDetailData } from '@/features/issue/hooks/useIssueDetailData'
 import { useIssueMutations } from '@/features/issue/hooks/useIssueMutations'
 import { useAssignmentWithUndo } from '@/features/issue/hooks/useAssignmentWithUndo'
 import { useIssueDetailShortcuts } from '@/features/issue/hooks/useIssueDetailShortcuts'
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from '@/shared/ui/sheet'
 import IssueDetailHeader from '@/features/issue/components/detail/IssueDetailHeader'
 import IssueMetadata from '@/features/issue/components/detail/IssueMetadata'
 import IssueDetailTabs, { type IssueDetailTab } from '@/features/issue/components/detail/IssueDetailTabs'
@@ -30,12 +36,20 @@ interface IssueDetailPanelProps {
  * mutations, and undo-toast assignment flow to hooks; layout to a handful
  * of sub-components in `./detail/`. No business logic lives here directly.
  */
+/** Must match the Sheet exit-animation duration (sheetVariants → duration-300). */
+const SHEET_EXIT_MS = 300
+
 export default function IssueDetailPanel({ projectId, projectKey, issue, context, onClose, onNavigate }: IssueDetailPanelProps) {
   const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
   const [activeTab, setActiveTab] = useState<IssueDetailTab>('details')
   const [descriptionEditing, setDescriptionEditing] = useState(false)
 
   const panelRef = useRef<HTMLDivElement>(null)
+  const { open, requestClose, reopen } = useDeferredClose(onClose, SHEET_EXIT_MS)
+
+  // If the parent swaps in a different issue while we're mid-close, snap
+  // back to open instead of waiting for the pending unmount.
+  useEffect(() => { reopen() }, [issue.id, reopen])
 
   const { detail, members, projectLabels, projectComponents, epics } = useIssueDetailData(
     projectId,
@@ -46,7 +60,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
   const { update, deleteIssue, uploadAttachment, deleteAttachment, createSubtask, invalidateAll } = useIssueMutations(
     projectId,
     issue.id,
-    onClose,
+    requestClose,
   )
 
   const changeAssignment = useAssignmentWithUndo({
@@ -58,11 +72,6 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
 
   const d = detail ?? issue
   const linkCount = (detail?.sourceLinks?.length ?? 0) + (detail?.specLinks?.length ?? 0)
-
-  useEscapeKey(() => {
-    // Description handles its own Escape (cancels edit) when in edit mode.
-    if (!descriptionEditing) onClose()
-  })
 
   useIssueDetailShortcuts({ panelRef, disabled: descriptionEditing })
 
@@ -85,12 +94,19 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
+    <Sheet open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
+      <SheetContent
+        side="right"
         ref={panelRef}
-        className={`flex h-full w-full flex-col bg-white dark:bg-gray-800 shadow-xl transition-[max-width] duration-200 ${expanded ? 'max-w-4xl' : 'max-w-lg'}`}
-        onClick={(e) => e.stopPropagation()}
+        className={`flex h-full w-full flex-col gap-0 bg-white dark:bg-gray-800 p-0 transition-[max-width] duration-200 ${expanded ? 'max-w-4xl sm:max-w-4xl' : 'max-w-lg sm:max-w-lg'}`}
+        onEscapeKeyDown={(e) => {
+          // Description handles its own Escape (cancels edit) when in edit mode.
+          if (descriptionEditing) e.preventDefault()
+        }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
+        <SheetTitle className="sr-only">{`#${d.number} ${d.title}`}</SheetTitle>
+        <SheetDescription className="sr-only">Issue detail panel</SheetDescription>
         <IssueDetailHeader
           projectId={projectId}
           projectKey={projectKey}
@@ -99,7 +115,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
           context={context}
           expanded={expanded}
           onToggleExpand={togglePanelExpand}
-          onClose={onClose}
+          onClose={requestClose}
           onDelete={() => deleteIssue.mutate()}
           onNavigate={onNavigate}
           onTitleChange={(title) => update.mutate({ title })}
@@ -178,7 +194,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
             />
           )}
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }

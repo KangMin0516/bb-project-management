@@ -7,6 +7,18 @@ import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { deriveBranchName } from '@/shared/lib/branch-name'
 import { copyToClipboard } from '@/shared/lib/copyToClipboard'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog'
+import { buttonVariants } from '@/shared/ui/button'
+import { cn } from '@/shared/lib/utils'
 import { copyIssueLink } from '@/features/issue/lib/copyIssueLink'
 import type { ShareContext } from '@/shared/types'
 
@@ -43,6 +55,7 @@ export default function IssueDetailHeader({
 }: IssueDetailHeaderProps) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const labels = d.labels ?? []
 
@@ -57,11 +70,7 @@ export default function IssueDetailHeader({
     copyToClipboard(branch)
   }
 
-  const handleConfirmDelete = () => {
-    if (confirm('Are you sure you want to delete this issue? This cannot be undone.')) {
-      onDelete()
-    }
-  }
+  const handleConfirmDelete = () => setConfirmDeleteOpen(true)
 
   const commitTitle = () => {
     const trimmed = draftTitle.trim()
@@ -80,7 +89,7 @@ export default function IssueDetailHeader({
             <Link2 className="h-4 w-4" />
           </IconButton>
           <IconButton onClick={onToggleExpand} title={expanded ? 'Collapse' : 'Expand'} ariaLabel={expanded ? 'Collapse panel' : 'Expand panel'}>
-            {expanded ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+            {expanded ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
           </IconButton>
           <IconButton onClick={handleConfirmDelete} title="Delete issue" ariaLabel="Delete issue" danger>
             <Trash2 className="h-4 w-4" />
@@ -88,6 +97,27 @@ export default function IssueDetailHeader({
           <IconButton onClick={onClose} title="Close" ariaLabel="Close">✕</IconButton>
         </div>
       </div>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this issue?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone. Comments, attachments, and activity history
+              will be removed along with the issue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDelete}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {detail?.parent && (
         <Breadcrumb parent={detail.parent} current={d} projectId={projectId} onNavigate={onNavigate} />
@@ -160,7 +190,7 @@ function Breadcrumb({
   const navigate = (id: string) => {
     issueRepository.findOne(projectId, id).then(
       (fullIssue) => onNavigate(fullIssue),
-      (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+      (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue'), 'error'),
     )
   }
 

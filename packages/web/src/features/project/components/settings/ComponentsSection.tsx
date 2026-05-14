@@ -3,6 +3,17 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { Component, CreateComponentPayload, UpdateComponentPayload } from '@/features/project/component-api'
 import type { ProjectMember } from '@/features/project/api'
 import SettingsSection from './SettingsSection'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+
+/** Sentinel — Radix Select rejects empty string item values. */
+const NO_MEMBER = '__none__'
 
 interface ComponentsSectionProps {
   components: Component[] | undefined
@@ -37,8 +48,12 @@ export default function ComponentsSection({ components, members, onCreate, onUpd
                 key={comp.id}
                 component={comp}
                 onEdit={() => setEditingId(comp.id)}
-                onDelete={() => {
-                  if (confirm(`Delete component "${comp.name}"?`)) onDelete(comp.id)
+                onDelete={async () => {
+                  if (await confirmDialog({
+                    title: `Delete component "${comp.name}"?`,
+                    confirmLabel: 'Delete',
+                    destructive: true,
+                  })) onDelete(comp.id)
                 }}
               />
             ),
@@ -94,16 +109,20 @@ function useComponentFormState(initial: Partial<ComponentFormFields> = {}) {
 
 function MemberSelect({ value, onChange, members, placeholder }: { value: string; onChange: (v: string) => void; members: ProjectMember[] | undefined; placeholder: string }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm focus:outline-none"
+    <Select
+      value={value || NO_MEMBER}
+      onValueChange={(v) => onChange(v === NO_MEMBER ? '' : v)}
     >
-      <option value="">{placeholder}</option>
-      {members?.map((m) => (
-        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-      ))}
-    </select>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_MEMBER}>{placeholder}</SelectItem>
+        {members?.map((m) => (
+          <SelectItem key={m.user.id} value={m.user.id}>{m.user.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 

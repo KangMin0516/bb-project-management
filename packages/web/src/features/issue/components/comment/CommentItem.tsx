@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Comment } from '@/features/issue/api'
 import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
 import MarkdownEditor from '@/shared/ui/markdown/MarkdownEditor'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import { timeAgo } from '@/shared/lib/time'
 
 interface CommentItemProps {
@@ -60,7 +61,13 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
               </button>
               <button
                 type="button"
-                onClick={() => { if (window.confirm('Delete this comment?')) onDelete(comment.id) }}
+                onClick={async () => {
+                  if (await confirmDialog({
+                    title: 'Delete this comment?',
+                    confirmLabel: 'Delete',
+                    destructive: true,
+                  })) onDelete(comment.id)
+                }}
                 className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500"
               >
                 Delete

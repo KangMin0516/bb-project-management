@@ -3,10 +3,20 @@ import type { ProjectMember, Label } from '@/features/project/api'
 import { STATUSES, STATUS_LABELS, PRIORITY_COLORS, TYPE_ICONS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import InlineField from '@/shared/ui/atoms/InlineField'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import UserAvatar from '@/entities/user/UserAvatar'
 import UserPicker from '@/entities/user/UserPicker'
 import IssueLabelsPicker from './IssueLabelsPicker'
 import IssueComponentsPicker from './IssueComponentsPicker'
+
+/** Sentinel for the Parent/Epic Select since Radix Select disallows empty value. */
+const NO_PARENT = '__none__'
 
 interface IssueMetadataProps {
   issue: IssueDetail | Issue
@@ -64,14 +74,22 @@ export default function IssueMetadata({
           </div>
         }
       >
-        <select
-          value={d.status}
-          onChange={(e) => onUpdate({ status: e.target.value })}
-          className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-          autoFocus
-        >
-          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
-        </select>
+        {(close) => (
+          <Select
+            defaultOpen
+            value={d.status}
+            onValueChange={(v) => { onUpdate({ status: v }); close() }}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_LABELS[s] || s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </InlineField>
 
       <InlineField
@@ -83,14 +101,22 @@ export default function IssueMetadata({
           </span>
         }
       >
-        <select
-          value={d.priority}
-          onChange={(e) => onUpdate({ priority: e.target.value })}
-          className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-          autoFocus
-        >
-          {['HIGH', 'MEDIUM', 'LOW'].map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
+        {(close) => (
+          <Select
+            defaultOpen
+            value={d.priority}
+            onValueChange={(v) => { onUpdate({ priority: v }); close() }}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </InlineField>
 
       <InlineField
@@ -142,17 +168,28 @@ export default function IssueMetadata({
               : <span className="text-gray-400 italic">{d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}</span>
           }
         >
-          <select
-            value={d.parentId || ''}
-            onChange={(e) => onUpdate({ parentId: e.target.value || null })}
-            className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-            autoFocus
-          >
-            <option value="">{d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}</option>
-            {(epics || []).filter((ep) => ep.id !== d.id).map((ep) => (
-              <option key={ep.id} value={ep.id}>⚡ #{ep.number} {ep.title}</option>
-            ))}
-          </select>
+          {(close) => (
+            <Select
+              defaultOpen
+              value={d.parentId || NO_PARENT}
+              onValueChange={(v) => {
+                onUpdate({ parentId: v === NO_PARENT ? null : v })
+                close()
+              }}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PARENT}>
+                  {d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}
+                </SelectItem>
+                {(epics || []).filter((ep) => ep.id !== d.id).map((ep) => (
+                  <SelectItem key={ep.id} value={ep.id}>⚡ #{ep.number} {ep.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </InlineField>
       )}
 

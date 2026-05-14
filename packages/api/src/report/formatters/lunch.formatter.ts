@@ -3,7 +3,8 @@ import type {
   Issue,
   User,
 } from '../../../generated/prisma/client.js';
-import { pushMrkdwnBlocks } from './utils.js';
+import type { MessageBlock } from '../../common/ports/messaging.port.js';
+import { pushMrkdwnSections } from './utils.js';
 
 type ActivityWithRelations = Activity & {
   issue: Issue & { project: { key: string } };
@@ -14,7 +15,7 @@ export function formatLunchReport(
   projectName: string,
   activities: ActivityWithRelations[],
   baseUrl: string,
-): { blocks: unknown[]; text: string } {
+): { blocks: MessageBlock[]; text: string } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -22,32 +23,18 @@ export function formatLunchReport(
     year: 'numeric',
   });
 
-  const blocks: unknown[] = [];
-
-  // Header
-  blocks.push({
-    type: 'header',
-    text: {
-      type: 'plain_text',
-      text: `[${projectName}] Midday Update -- ${dateStr}`,
-      emoji: true,
-    },
-  });
+  const headerText = `[${projectName}] Midday Update -- ${dateStr}`;
+  const blocks: MessageBlock[] = [{ type: 'header', text: headerText }];
 
   if (activities.length === 0) {
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: 'No changes today so far.' },
-    });
-    return { blocks, text: `[${projectName}] Midday Update -- ${dateStr}` };
+    blocks.push({ type: 'section', text: 'No changes today so far.' });
+    return { blocks, text: headerText };
   }
 
-  // Filter to only status transitions and issue creation
   const relevant = activities.filter(
     (a) => a.field === 'status' || a.field === 'created',
   );
 
-  // Format activities
   const lines: string[] = [];
   let started = 0;
   let completed = 0;
@@ -71,23 +58,17 @@ export function formatLunchReport(
     }
   }
 
-  pushMrkdwnBlocks(
+  pushMrkdwnSections(
     blocks,
     `:arrows_counterclockwise: *Changes Today (${relevant.length})*`,
     lines,
   );
 
-  // Summary line
   blocks.push({ type: 'divider' });
   blocks.push({
     type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: `:chart_with_upwards_trend: Today: ${started} started · ${completed} completed · ${created} created`,
-      },
-    ],
+    text: `:chart_with_upwards_trend: Today: ${started} started · ${completed} completed · ${created} created`,
   });
 
-  return { blocks, text: `[${projectName}] Midday Update -- ${dateStr}` };
+  return { blocks, text: headerText };
 }

@@ -9,6 +9,13 @@ import { LINK_TYPES, getLinkTypeLabel } from '@/features/issue/lib/linkType'
 import { useIssueLinkMutations } from '@/features/issue/hooks/useIssueLinkMutations'
 import ModalShell from './ModalShell'
 import { issueRepository } from '@/features/issue/repository'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 interface LinkIssueModalProps {
   projectId: string
@@ -42,15 +49,16 @@ export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssu
   return (
     <ModalShell title="Link Issue" onClose={onClose}>
       <Field label="Link Type">
-        <select
-          value={linkType}
-          onChange={(e) => setLinkType(e.target.value as IssueLinkType)}
-          className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
-        >
-          {LINK_TYPES.map((t) => (
-            <option key={t} value={t}>{getLinkTypeLabel(t)}</option>
-          ))}
-        </select>
+        <Select value={linkType} onValueChange={(v) => setLinkType(v as IssueLinkType)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LINK_TYPES.map((t) => (
+              <SelectItem key={t} value={t}>{getLinkTypeLabel(t)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
 
       <Field label="Search Issues">

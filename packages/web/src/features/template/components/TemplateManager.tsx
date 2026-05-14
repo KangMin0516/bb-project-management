@@ -6,6 +6,14 @@ import { TYPE_ICONS } from '@/shared/config/constants'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 const TYPES = ['TASK', 'BUG', 'EPIC', 'SUB_TASK'] as const
 
@@ -29,7 +37,7 @@ export default function TemplateManager() {
       resetForm()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create template'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create template'), 'error')
     },
   })
 
@@ -41,7 +49,7 @@ export default function TemplateManager() {
       resetForm()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update template'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update template'), 'error')
     },
   })
 
@@ -51,7 +59,7 @@ export default function TemplateManager() {
       queryClient.invalidateQueries({ queryKey: ['templates'] })
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete template'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete template'), 'error')
     },
   })
 
@@ -123,15 +131,16 @@ export default function TemplateManager() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:outline-none"
-              >
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>{TYPE_ICONS[t]} {t.replace('_', ' ')}</option>
-                ))}
-              </select>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{TYPE_ICONS[t]} {t.replace('_', ' ')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -192,8 +201,12 @@ export default function TemplateManager() {
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Delete this template?')) deleteMutation.mutate(t.id)
+                  onClick={async () => {
+                    if (await confirmDialog({
+                      title: 'Delete this template?',
+                      confirmLabel: 'Delete',
+                      destructive: true,
+                    })) deleteMutation.mutate(t.id)
                   }}
                   className="rounded p-1.5 text-gray-400 dark:text-gray-500 hover:bg-red-50 hover:text-red-600"
                   title="Delete"

@@ -1,8 +1,17 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SlackService } from '../slack/slack.service.js';
+import {
+  MESSAGING_PORT,
+  type MessageBlock,
+  type MessagingPort,
+} from '../common/ports/messaging.port.js';
+import { OutboxEventBus } from '../outbox/outbox-event-bus.js';
+import { OutboxRepository } from '../outbox/outbox.repository.js';
 import { NOTIFICATION_LIMIT } from '../common/constants.js';
+
+/** Routing key for the deferred assignment delivery event. */
+const ISSUE_ASSIGNED_DELIVERY = 'IssueAssignedDelivery';
 
 type NotificationType =
   | 'ASSIGNED'
@@ -61,9 +70,21 @@ export class NotificationService {
 
   constructor(
     private prisma: PrismaService,
-    private slackService: SlackService,
+    @Inject(MESSAGING_PORT) private messaging: MessagingPort,
     private config: ConfigService,
+    private outboxBus: OutboxEventBus,
+    private outboxRepo: OutboxRepository,
   ) {}
+
+  /**
+   * Feature flag — when true, assignment notifications go through the
+   * transactional outbox (crash-safe; lost on restart no longer
+   * possible). Default false so production behaviour is unchanged
+   * until we explicitly toggle.
+   */
+  private useOutboxForAssignment(): boolean {
+    return this.config.get<string>('USE_OUTBOX_FOR_ISSUE_ASSIGNED') === 'true';
+  }
 
   async findByUser(userId: string) {
     return this.prisma.notification.findMany({
@@ -142,6 +163,17 @@ export class NotificationService {
     // Don't schedule a DM the actor would send to themselves; matches create().
     if (data.actorId === data.userId) return;
 
+    if (this.useOutboxForAssignment()) {
+      // Outbox path — durable. Replace any prior pending row for the
+      // same (type, issue) slot so rapid clicks coalesce (same
+      // semantics as the in-memory timer's overwrite behaviour).
+      void this.scheduleViaOutbox(data);
+      return;
+    }
+
+    // Legacy in-memory path (DEFAULT). Lost on restart; kept until the
+    // outbox path is observed stable in production. See P5 +
+    // refactor-plan.md §7.5 M2.
     const key = this.pendingKey(data.type, data.issueId);
     this.cancelPendingAssignmentByKey(key);
 
@@ -160,14 +192,65 @@ export class NotificationService {
     this.pendingAssignmentTimers.set(key, timer);
   }
 
+  private async scheduleViaOutbox(data: CreateNotificationInput) {
+    if (!data.issueId) return;
+    try {
+      // Coalesce: drop any prior undelivered row for the same slot
+      // before appending the new one. Matches the legacy timer's
+      // "overwrite previous pending" semantics.
+      await this.outboxRepo.deleteUndelivered({
+        eventType: ISSUE_ASSIGNED_DELIVERY,
+        aggregateType: 'Issue',
+        aggregateId: data.issueId,
+      });
+      await this.outboxBus.publish({
+        type: ISSUE_ASSIGNED_DELIVERY,
+        aggregateType: 'Issue',
+        aggregateId: data.issueId,
+        payload: data,
+        deliverAfter: new Date(Date.now() + ASSIGNMENT_DELIVERY_DELAY_MS),
+      });
+    } catch (err) {
+      // Same swallow semantics as the legacy timer.create failure path —
+      // the in-app row is the source of truth, but here it's deferred
+      // too. Log loudly so an outbox outage is visible.
+      this.logger.error(
+        'Failed to enqueue outbox row for assignment notification',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
   /**
    * Cancel a pending assignment notification for an issue. `type` defaults to
    * `'ASSIGNED'` for backward-compatibility with the original undo flow.
+   * Returns true if a pending delivery was found and removed.
    */
   cancelPendingAssignment(
     issueId: string,
     type: 'ASSIGNED' | 'REVIEWER_ASSIGNED' = 'ASSIGNED',
   ): boolean {
+    if (this.useOutboxForAssignment()) {
+      // Best-effort delete; return value reflects whether the legacy
+      // map had a timer (kept for callers checking the boolean). Fire
+      // the DB delete without blocking — undo UX shouldn't wait on it.
+      void this.outboxRepo
+        .deleteUndelivered({
+          eventType: ISSUE_ASSIGNED_DELIVERY,
+          aggregateType: 'Issue',
+          aggregateId: issueId,
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.warn(
+            `Failed to cancel outbox row for ${issueId}: ${msg}`,
+          );
+        });
+      // Suppress unused param warning when both type+legacy fall-through
+      // are skipped.
+      void type;
+      return true;
+    }
     return this.cancelPendingAssignmentByKey(this.pendingKey(type, issueId));
   }
 
@@ -177,6 +260,38 @@ export class NotificationService {
     clearTimeout(timer);
     this.pendingAssignmentTimers.delete(key);
     return true;
+  }
+
+  // ─── Outbox handler ──────────────────────────────────────────
+  //
+  // Registered via NotificationModule on init. The publisher calls this
+  // when an `IssueAssignedDelivery` row becomes due. Performs the
+  // state-check idempotency (skip if the issue's current assignee no
+  // longer matches the payload — handles A→B→A within the grace
+  // window without spamming the wrong user).
+
+  async handleIssueAssignedDelivery(payload: CreateNotificationInput) {
+    if (!payload.issueId) return;
+    if (payload.type !== 'ASSIGNED' && payload.type !== 'REVIEWER_ASSIGNED') {
+      return;
+    }
+
+    const issue = await this.prisma.issue.findUnique({
+      where: { id: payload.issueId },
+      select: { assigneeId: true, reviewerAssigneeId: true },
+    });
+    if (!issue) return; // issue deleted; skip silently
+
+    const currentTarget =
+      payload.type === 'ASSIGNED' ? issue.assigneeId : issue.reviewerAssigneeId;
+    if (currentTarget !== payload.userId) {
+      this.logger.debug(
+        `Skipping ${payload.type} delivery for issue ${payload.issueId} — current target ${currentTarget} ≠ payload ${payload.userId}`,
+      );
+      return;
+    }
+
+    await this.create(payload);
   }
 
   // ─── Slack delivery (best-effort) ──────────────────────────
@@ -208,27 +323,15 @@ export class NotificationService {
         ? `You've ${verbPast} ${issueKey} "${issueTitle}" by ${actorName}`
         : data.message;
 
-    const blocks: unknown[] = [
+    const blocks: MessageBlock[] = [
+      { type: 'section', text: `${headerEmoji} ${headerLabel}` },
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `${headerEmoji} ${headerLabel}`,
-        },
-      },
-      {
-        type: 'section',
+        type: 'fields',
         fields: [
-          {
-            type: 'mrkdwn',
-            text: issueKey
-              ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
-              : `*${escapeSlack(issueTitle || data.message)}*`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `${byFieldLabel}\n${escapeSlack(actorName)}`,
-          },
+          issueKey
+            ? `*${issueKey}*\n${escapeSlack(issueTitle)}`
+            : `*${escapeSlack(issueTitle || data.message)}*`,
+          `${byFieldLabel}\n${escapeSlack(actorName)}`,
         ],
       },
     ];
@@ -236,23 +339,26 @@ export class NotificationService {
     const url = this.buildIssueUrl(projectKey, data.issueId);
     if (url) {
       blocks.push({
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'View in BB-PM' },
-            url,
-            style: 'primary',
-          },
-        ],
+        type: 'button_link',
+        text: 'View in BB-PM',
+        url,
+        style: 'primary',
       });
     }
 
-    await this.slackService.sendDirectMessage(
+    const result = await this.messaging.sendDirectMessage(
       recipient.slackUserId,
       fallbackText,
       blocks,
     );
+    // Adapter swallows internally and logs; this branch is for the rare
+    // case we want to surface a delivery miss to per-notification metrics
+    // later — keeps the in-app row authoritative regardless.
+    if (!result.delivered) {
+      this.logger.debug(
+        `Slack DM not delivered for ${data.type} → ${recipient.slackUserId}: ${result.reason}`,
+      );
+    }
   }
 
   private buildIssueUrl(projectKey: string, issueId?: string): string | null {

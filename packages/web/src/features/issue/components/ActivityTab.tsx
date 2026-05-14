@@ -39,7 +39,7 @@ export default function ActivityTab({
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to post comment'), 'error')
     },
   })
 
@@ -50,7 +50,7 @@ export default function ActivityTab({
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update comment'), 'error')
     },
   })
 
@@ -60,7 +60,7 @@ export default function ActivityTab({
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, issueId] })
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete comment'), 'error')
     },
   })
 

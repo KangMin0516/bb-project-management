@@ -1,5 +1,6 @@
 import type { Issue, User } from '../../../generated/prisma/client.js';
-import { pushMrkdwnBlocks } from './utils.js';
+import type { MessageBlock } from '../../common/ports/messaging.port.js';
+import { pushMrkdwnSections } from './utils.js';
 
 type IssueWithAssignee = Issue & {
   assignee: User | null;
@@ -17,7 +18,7 @@ export function formatMorningReport(
   issues: IssueWithAssignee[],
   overdueIssues: IssueWithAssignee[],
   baseUrl: string,
-): { blocks: unknown[]; text: string } {
+): { blocks: MessageBlock[]; text: string } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -25,24 +26,14 @@ export function formatMorningReport(
     year: 'numeric',
   });
 
-  const blocks: unknown[] = [];
+  const blocks: MessageBlock[] = [];
+  const headerText = `[${projectName}] Morning Report -- ${dateStr}`;
 
-  // Header
-  blocks.push({
-    type: 'header',
-    text: {
-      type: 'plain_text',
-      text: `[${projectName}] Morning Report -- ${dateStr}`,
-      emoji: true,
-    },
-  });
+  blocks.push({ type: 'header', text: headerText });
 
   if (issues.length === 0 && overdueIssues.length === 0) {
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: 'No tasks for today. :tada:' },
-    });
-    return { blocks, text: `[${projectName}] Morning Report -- ${dateStr}` };
+    blocks.push({ type: 'section', text: 'No tasks for today. :tada:' });
+    return { blocks, text: headerText };
   }
 
   // Group by assignee
@@ -55,10 +46,7 @@ export function formatMorningReport(
 
   blocks.push({
     type: 'section',
-    text: {
-      type: 'mrkdwn',
-      text: `:dart: *Today's Tasks (${issues.length})*`,
-    },
+    text: `:dart: *Today's Tasks (${issues.length})*`,
   });
 
   for (const [assignee, assigneeIssues] of grouped) {
@@ -69,14 +57,13 @@ export function formatMorningReport(
       return `  ${link}  ${i.title}    ${i.status}  ${prio}`;
     });
 
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       `:bust_in_silhouette: *${assignee} (${assigneeIssues.length})*`,
       lines,
     );
   }
 
-  // Overdue
   if (overdueIssues.length > 0) {
     blocks.push({ type: 'divider' });
     const overdueLines = overdueIssues.map((i) => {
@@ -92,12 +79,12 @@ export function formatMorningReport(
       return `  ${link}  ${i.title}    :bust_in_silhouette: ${assignee}    :calendar: Due: ${dueStr}`;
     });
 
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       `:warning: *Overdue (${overdueIssues.length})*`,
       overdueLines,
     );
   }
 
-  return { blocks, text: `[${projectName}] Morning Report -- ${dateStr}` };
+  return { blocks, text: headerText };
 }

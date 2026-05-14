@@ -5,6 +5,16 @@ import { slackApi, type SlackChannel } from '@/features/integrations/slack/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { Clock, Send, Calendar } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+
+/** Sentinel — Radix Select rejects empty string item values. */
+const NO_CHANNEL = '__none__'
 
 const TIMEZONES = [
   'Asia/Seoul',
@@ -72,20 +82,20 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
     mutationFn: (data: UpdateReportConfigPayload) => reportApi.updateConfig(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['report-config', projectId] })
-      useToastStore.getState().addToast('Report settings saved')
+      useToastStore.getState().addToast('Report settings saved', 'success')
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to save'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to save'), 'error')
     },
   })
 
   const testMutation = useMutation({
     mutationFn: (type: 'morning' | 'lunch' | 'evening') => reportApi.testSend(projectId, type),
     onSuccess: () => {
-      useToastStore.getState().addToast('Test report sent!')
+      useToastStore.getState().addToast('Test report sent!', 'success')
     },
     onError: (err) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to send test'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to send test'), 'error')
     },
   })
 
@@ -154,15 +164,16 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Timezone</label>
-            <select
-              value={form.timezone}
-              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
+            <Select value={form.timezone} onValueChange={(v) => setForm({ ...form, timezone: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <label className="flex items-center gap-2 pt-5">
             <Calendar className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
@@ -190,16 +201,22 @@ export default function DailyReportSettings({ projectId, integrationId, slackCon
                 onChange={(e) => setForm({ ...form, [r.timeKey]: e.target.value })}
                 className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
-              <select
-                value={form[r.channelKey]}
-                onChange={(e) => setForm({ ...form, [r.channelKey]: e.target.value })}
-                className="flex-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="">Select channel...</option>
-                {channels?.map((ch: SlackChannel) => (
-                  <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <Select
+                  value={form[r.channelKey] || NO_CHANNEL}
+                  onValueChange={(v) => setForm({ ...form, [r.channelKey]: v === NO_CHANNEL ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CHANNEL}>Select channel...</SelectItem>
+                    {channels?.map((ch: SlackChannel) => (
+                      <SelectItem key={ch.id} value={ch.id}>#{ch.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <button
                 onClick={() => testMutation.mutate(r.key)}
                 disabled={!form[r.channelKey] || testMutation.isPending}

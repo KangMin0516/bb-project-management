@@ -1,6 +1,13 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import MarkdownEditor from '@/shared/ui/markdown/MarkdownEditor'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog'
+import { useDeferredClose } from '@/shared/lib/useDeferredClose'
 
 interface CreateSpecModalProps {
   isPending: boolean
@@ -9,6 +16,7 @@ interface CreateSpecModalProps {
 }
 
 export default function CreateSpecModal({ isPending, onCreate, onClose }: CreateSpecModalProps) {
+  const { open, requestClose } = useDeferredClose(onClose)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('')
@@ -16,14 +24,14 @@ export default function CreateSpecModal({ isPending, onCreate, onClose }: Create
   const canSubmit = !!title.trim() && !!content.trim() && !isPending
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-gray-800 p-6 shadow-xl dark:shadow-gray-900/50" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Specification</h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" aria-label="Close">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
+      <DialogContent className="max-w-2xl rounded-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            New Specification
+          </DialogTitle>
+          <DialogDescription className="sr-only">Create a new specification</DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div className="flex gap-3">
             <input
@@ -42,7 +50,7 @@ export default function CreateSpecModal({ isPending, onCreate, onClose }: Create
           <MarkdownEditor value={content} onChange={setContent} placeholder="Write your specification in Markdown..." minRows={12} />
           <div className="flex justify-end gap-2">
             <button
-              onClick={onClose}
+              onClick={requestClose}
               className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
@@ -56,7 +64,7 @@ export default function CreateSpecModal({ isPending, onCreate, onClose }: Create
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

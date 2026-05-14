@@ -1,6 +1,12 @@
 import { useShortcutsStore } from '@/shared/lib/shortcuts'
 import { useMemo } from 'react'
-import { X } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog'
 
 const CATEGORY_ORDER = ['Global', 'Navigation', 'Board', 'Issues', 'Issue Detail'] as const
 
@@ -17,11 +23,11 @@ function formatKeys(keys: string): React.ReactNode {
 
   return keys.split(' ').map((part, i, arr) => {
     const combo = part.split('+').map((k) => {
-      if (k === 'mod') return isMac ? '\u2318' : 'Ctrl'
-      if (k === 'shift') return '\u21E7'
-      if (k === 'alt') return isMac ? '\u2325' : 'Alt'
+      if (k === 'mod') return isMac ? '⌘' : 'Ctrl'
+      if (k === 'shift') return '⇧'
+      if (k === 'alt') return isMac ? '⌥' : 'Alt'
       if (k === 'escape') return 'Esc'
-      if (k === 'enter') return '\u21B5'
+      if (k === 'enter') return '↵'
       return k.toUpperCase()
     })
 
@@ -52,27 +58,13 @@ export default function ShortcutsHelpModal() {
     return groups
   }, [shortcuts])
 
-  if (!helpModalOpen) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={() => setHelpModalOpen(false)}
-    >
-      <div className="fixed inset-0 bg-black/40" />
-      <div
-        className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-bold text-gray-900">Keyboard Shortcuts</h2>
-          <button
-            onClick={() => setHelpModalOpen(false)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={helpModalOpen} onOpenChange={setHelpModalOpen}>
+      <DialogContent className="max-w-2xl rounded-xl p-0 gap-0 overflow-hidden">
+        <DialogHeader className="border-b border-gray-200 px-6 py-4">
+          <DialogTitle className="text-lg font-bold text-gray-900">Keyboard Shortcuts</DialogTitle>
+          <DialogDescription className="sr-only">List of available keyboard shortcuts grouped by category</DialogDescription>
+        </DialogHeader>
 
         <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
           <div className="grid grid-cols-2 gap-6">
@@ -106,7 +98,7 @@ export default function ShortcutsHelpModal() {
             Press <KbdKey>?</KbdKey> to toggle this dialog
           </p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

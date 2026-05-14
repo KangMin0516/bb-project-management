@@ -21,10 +21,25 @@ import {
   MessageSquare,
   Settings,
   ArrowLeft,
-  X,
 } from 'lucide-react'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { useDeferredClose } from '@/shared/lib/useDeferredClose'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 
 const SERVICE_TYPES = ['AWS', 'GCP', 'DB', 'SLACK', 'CUSTOM'] as const
 
@@ -75,29 +90,54 @@ export default function CredentialManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credentials', projectId] })
       setSelectedCredential(null)
-      useToastStore.getState().addToast('Credential deleted')
+      useToastStore.getState().addToast('Credential deleted', 'success')
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete credential'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete credential'), 'error')
     },
   })
 
+  // Rendered next to both Detail and List views because the modal is
+  // reachable from Edit (Detail view) and Add (List view).
+  const modal = showModal && (
+    <CredentialModal
+      projectId={projectId!}
+      credential={editingCredential}
+      onClose={() => {
+        setShowModal(false)
+        setEditingCredential(null)
+      }}
+      onSaved={(cred) => {
+        setShowModal(false)
+        setEditingCredential(null)
+        setSelectedCredential(cred)
+      }}
+    />
+  )
+
   if (selectedCredential) {
     return (
-      <CredentialDetail
-        credential={selectedCredential}
-        projectId={projectId!}
-        onBack={() => setSelectedCredential(null)}
-        onEdit={(cred) => {
-          setEditingCredential(cred)
-          setShowModal(true)
-        }}
-        onDelete={(id) => {
-          if (confirm('Are you sure you want to delete this credential?')) {
-            deleteMutation.mutate(id)
-          }
-        }}
-      />
+      <>
+        <CredentialDetail
+          credential={selectedCredential}
+          projectId={projectId!}
+          onBack={() => setSelectedCredential(null)}
+          onEdit={(cred) => {
+            setEditingCredential(cred)
+            setShowModal(true)
+          }}
+          onDelete={async (id) => {
+            if (await confirmDialog({
+              title: 'Are you sure you want to delete this credential?',
+              confirmLabel: 'Delete',
+              destructive: true,
+            })) {
+              deleteMutation.mutate(id)
+            }
+          }}
+        />
+        {modal}
+      </>
     )
   }
 
@@ -159,21 +199,7 @@ export default function CredentialManager() {
         </div>
       )}
 
-      {showModal && (
-        <CredentialModal
-          projectId={projectId!}
-          credential={editingCredential}
-          onClose={() => {
-            setShowModal(false)
-            setEditingCredential(null)
-          }}
-          onSaved={(cred) => {
-            setShowModal(false)
-            setEditingCredential(null)
-            setSelectedCredential(cred)
-          }}
-        />
-      )}
+      {modal}
     </div>
   )
 }
@@ -204,7 +230,7 @@ function CredentialDetail({
       const revealed = await credentialApi.reveal(projectId, credential.id)
       setRevealedEntries(revealed.entries)
     } catch {
-      useToastStore.getState().addToast('Failed to reveal credentials. You may not have permission.')
+      useToastStore.getState().addToast('Failed to reveal credentials. You may not have permission.', 'error')
     } finally {
       setRevealing(false)
     }
@@ -212,7 +238,7 @@ function CredentialDetail({
 
   const handleCopy = (value: string) => {
     navigator.clipboard.writeText(value)
-    useToastStore.getState().addToast('Copied to clipboard')
+    useToastStore.getState().addToast('Copied to clipboard', 'success')
   }
 
   const entries = revealedEntries || credential.entries
@@ -315,7 +341,7 @@ function CredentialDetail({
                     <button
                       onClick={() => {
                         if (entry.sensitive && !revealedEntries) {
-                          useToastStore.getState().addToast('Reveal values first to copy')
+                          useToastStore.getState().addToast('Reveal values first to copy', 'info')
                           return
                         }
                         handleCopy(entry.value)
@@ -354,6 +380,7 @@ function CredentialModal({
   onSaved: (cred: Credential) => void
 }) {
   const queryClient = useQueryClient()
+  const { open, requestClose } = useDeferredClose(onClose)
   const [name, setName] = useState(credential?.name || '')
   const [serviceType, setServiceType] = useState(credential?.serviceType || 'CUSTOM')
   const [description, setDescription] = useState(credential?.description || '')
@@ -371,7 +398,7 @@ function CredentialModal({
       onSaved(cred)
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create credential'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create credential'), 'error')
     },
   })
 
@@ -383,7 +410,7 @@ function CredentialModal({
       onSaved(cred)
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update credential'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update credential'), 'error')
     },
   })
 
@@ -420,31 +447,32 @@ function CredentialModal({
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-900/50">
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) requestClose() }}>
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="border-b border-gray-200 dark:border-gray-700 px-5 py-4">
+          <DialogTitle className="text-base">
             {credential ? 'Edit Credential' : 'Add Credential'}
-          </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {credential ? 'Edit credential details and entries' : 'Add a new credential with entries'}
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-5">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Service Type</label>
-                <select
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                >
-                  {SERVICE_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                <Select value={serviceType} onValueChange={setServiceType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICE_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
@@ -532,7 +560,7 @@ function CredentialModal({
           <div className="mt-6 flex justify-end gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900"
             >
               Cancel
@@ -546,7 +574,7 @@ function CredentialModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

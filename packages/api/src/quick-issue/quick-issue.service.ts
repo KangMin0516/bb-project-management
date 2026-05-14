@@ -1,7 +1,10 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { IssueService } from '../issue/issue.service.js';
+import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.js';
+import {
+  AI_COMPLETION_PORT,
+  type AiCompletionPort,
+} from '../common/ports/ai-completion.port.js';
 import { parseText } from './parsers/rule-parser.js';
 import { enrichWithLlm } from './parsers/llm-enricher.js';
 import type { LlmEnrichResult } from './parsers/llm-enricher.js';
@@ -36,8 +39,8 @@ export class QuickIssueService {
 
   constructor(
     private prisma: PrismaService,
-    private issueService: IssueService,
-    private config: ConfigService,
+    private createIssue: CreateIssueUseCase,
+    @Inject(AI_COMPLETION_PORT) private ai: AiCompletionPort,
   ) {}
 
   async parse(
@@ -93,20 +96,18 @@ export class QuickIssueService {
       name: m.user.name,
     }));
 
-    // LLM enrichment
-    const apiKey = this.config.get<string>('ANTHROPIC_API_KEY');
     let enriched: LlmEnrichResult;
 
-    if (apiKey) {
+    if (this.ai.isConfigured()) {
       enriched = await enrichWithLlm(
-        apiKey,
+        this.ai,
         text,
         parsed,
         selectedProject,
         memberList,
       );
     } else {
-      this.logger.warn('ANTHROPIC_API_KEY not set, using rule-based only');
+      this.logger.warn('AI completion not configured, using rule-based only');
       enriched = {
         title: parsed.cleanedText,
         description: '',
@@ -166,18 +167,16 @@ export class QuickIssueService {
       throw new ForbiddenException('You are not a member of this project');
     }
 
-    const issue = await this.issueService.create(
-      data.projectId,
-      {
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        priority: data.priority,
-        status: data.status,
-        assigneeId: data.assigneeId,
-      },
+    const issue = (await this.createIssue.execute({
+      projectId: data.projectId,
       creatorId,
-    );
+      title: data.title,
+      description: data.description,
+      type: data.type,
+      priority: data.priority,
+      status: data.status,
+      assigneeId: data.assigneeId,
+    })) as { id: string; number: number };
 
     // Get project key for issue URL
     const project = await this.prisma.project.findUnique({

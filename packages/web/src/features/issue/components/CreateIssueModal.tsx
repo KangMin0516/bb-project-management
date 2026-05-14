@@ -4,11 +4,25 @@ import { type CreateIssuePayload } from '@/features/issue/api'
 import { templateApi } from '@/features/template/api'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
-import { X } from 'lucide-react'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { issueRepository } from '@/features/issue/repository'
+import { useDeferredClose } from '@/shared/lib/useDeferredClose'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 interface CreateIssueModalProps {
   projectId: string
@@ -17,14 +31,12 @@ interface CreateIssueModalProps {
   onCreated?: (issueId: string) => void
 }
 
+/** Sentinel values — Radix Select rejects empty string item values. */
+const UNASSIGNED = '__unassigned__'
+const NO_PARENT = '__none__'
+
 export default function CreateIssueModal({ projectId, defaultStatus, onClose, onCreated }: CreateIssueModalProps) {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  const { open, requestClose } = useDeferredClose(onClose)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -61,9 +73,10 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
     queryFn: templateApi.list,
   })
 
-  // Auto-fill description from template when type changes. We sync local
-  // editor state to async-loaded template data — the effect is the correct
-  // boundary for that one-way "server → form" copy.
+  // Auto-fill description from template when type changes — but only as
+  // long as the user hasn't typed anything. Once the user edits the
+  // description the touched flag latches true and we never overwrite
+  // their input, even across subsequent type changes.
   const [descriptionTouched, setDescriptionTouched] = useState(false)
   useEffect(() => {
     if (descriptionTouched) return
@@ -89,10 +102,10 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
       onCreated?.(data.id)
-      onClose()
+      requestClose()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create issue'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create issue'), 'error')
     },
   })
 
@@ -112,17 +125,12 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white dark:bg-gray-800 p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create Issue</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create Issue</DialogTitle>
+          <DialogDescription className="sr-only">Form to create a new issue</DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
@@ -144,45 +152,49 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Type</label>
-              <select
-                value={type}
-                onChange={(e) => { setType(e.target.value); setParentId(''); setDescriptionTouched(false) }}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none"
-              >
-                <option value="TASK">Task</option>
-                <option value="BUG">Bug</option>
-                <option value="EPIC">Epic</option>
-                <option value="SUB_TASK">Sub-task</option>
-              </select>
+              <Select value={type} onValueChange={(v) => { setType(v); setParentId('') }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TASK">Task</SelectItem>
+                  <SelectItem value="BUG">Bug</SelectItem>
+                  <SelectItem value="EPIC">Epic</SelectItem>
+                  <SelectItem value="SUB_TASK">Sub-task</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none"
-              >
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
-              </select>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">Assignee</label>
-            <select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none"
+            <Select
+              value={assigneeId || UNASSIGNED}
+              onValueChange={(v) => setAssigneeId(v === UNASSIGNED ? '' : v)}
             >
-              <option value="">Unassigned</option>
-              {members?.map((m) => (
-                <option key={m.user.id} value={m.user.id}>
-                  {m.user.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {members?.map((m) => (
+                  <SelectItem key={m.user.id} value={m.user.id}>{m.user.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {type !== 'EPIC' && (
@@ -190,19 +202,22 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
               <label className="mb-1 block text-xs font-medium text-gray-500">
                 Parent Issue{type === 'SUB_TASK' ? ' *' : ''}
               </label>
-              <select
-                value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-                required={type === 'SUB_TASK'}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none"
+              <Select
+                value={parentId || NO_PARENT}
+                onValueChange={(v) => setParentId(v === NO_PARENT ? '' : v)}
               >
-                <option value="">None</option>
-                {parentOptions.map((issue) => (
-                  <option key={issue.id} value={issue.id}>
-                    #{issue.number} {issue.title}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PARENT}>None</SelectItem>
+                  {parentOptions.map((issue) => (
+                    <SelectItem key={issue.id} value={issue.id}>
+                      #{issue.number} {issue.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -260,7 +275,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
@@ -274,7 +289,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,6 +1,7 @@
 import type { AdminUser } from '@/entities/user/api'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 import { cn } from '@/shared/lib/utils'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import UserStatusBadge from './UserStatusBadge'
 import UserActions from './UserActions'
 
@@ -40,8 +41,13 @@ export default function AdminUserRow({ user, currentUserId, ...handlers }: Admin
         onActivate={() => handlers.onActivate(user.id)}
         onEdit={() => handlers.onEdit(user)}
         onResetPassword={() => handlers.onResetPassword(user)}
-        onDelete={() => {
-          if (confirm(`Delete user "${user.name}"? This is a soft delete.`)) handlers.onDelete(user.id)
+        onDelete={async () => {
+          if (await confirmDialog({
+            title: `Delete user "${user.name}"?`,
+            description: 'This is a soft delete.',
+            confirmLabel: 'Delete',
+            destructive: true,
+          })) handlers.onDelete(user.id)
         }}
       />
     </div>

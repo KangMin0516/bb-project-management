@@ -21,20 +21,20 @@ export function useProjectMembers(projectId: string) {
   const add = useMutation({
     mutationFn: (data: { userId: string; role: string }) => projectRepository.addMember(projectId, data),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to add member')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to add member'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (memberId: string) => projectRepository.removeMember(projectId, memberId),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove member')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to remove member'), 'error'),
   })
 
   const updateRole = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
       projectRepository.updateMember(projectId, memberId, { role }),
     onSuccess: invalidate,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update role'), 'error'),
   })
 
   return { members: membersQuery.data, add, remove, updateRole }

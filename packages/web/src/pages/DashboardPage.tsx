@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TrendingDown, Users, GitBranch } from 'lucide-react'
 import { isOverdue, todayDateString, isFocusToday } from '@/shared/lib/time'
@@ -11,6 +11,7 @@ import BurndownChart from '@/features/dashboard/components/BurndownChart'
 import WorkloadChart from '@/features/dashboard/components/WorkloadChart'
 import OverdueAlert from '@/features/dashboard/components/OverdueAlert'
 import DependencyGraph from '@/features/dashboard/components/DependencyGraph'
+import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import InfoTooltip from '@/shared/ui/atoms/InfoTooltip'
 import type { Issue } from '@/features/issue/api'
 
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const { stats, isLoading, toggleFocus } = useProjectDashboard(projectId ?? '')
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
 
   const allMyIssues = useMemo(
     () => [...(stats?.myFocusIssues ?? []), ...(stats?.myIssues ?? [])],
@@ -41,7 +43,19 @@ export default function DashboardPage() {
     [stats?.myFocusIssues],
   )
 
-  const openIssue = (issue: Issue) => navigate(`/projects/${projectId}/board?open=${issue.id}`)
+  const openIssue = (issue: Issue) => setSelectedIssue(issue)
+
+  /**
+   * Overdue rows carry a lighter shape (no `type`/`description`/etc.).
+   * If the overdue issue is also in the user's own assigned list, open
+   * with that full record; otherwise fall back to navigating to the
+   * board where the detail panel can fetch via the URL deep-link.
+   */
+  const openOverdueById = (id: string) => {
+    const match = allMyIssues.find((i) => i.id === id)
+    if (match) setSelectedIssue(match)
+    else navigate(`/projects/${projectId}/board?open=${id}`)
+  }
 
   const handleToggleFocus = (issue: Issue) => {
     const currentlyFocused = isFocusToday(issue.focusDate)
@@ -86,7 +100,7 @@ export default function DashboardPage() {
             issues={stats.overdueIssues}
             projectKey={stats.project.key}
             projectId={projectId!}
-            onIssueClick={(id) => navigate(`/projects/${projectId}/board?open=${id}`)}
+            onIssueClick={openOverdueById}
           />
         </div>
       )}
@@ -131,6 +145,16 @@ export default function DashboardPage() {
       </div>
 
       <DistributionPanels stats={stats} />
+
+      {selectedIssue && (
+        <IssueDetailPanel
+          projectId={projectId!}
+          projectKey={stats.project.key}
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          onNavigate={setSelectedIssue}
+        />
+      )}
     </div>
   )
 }

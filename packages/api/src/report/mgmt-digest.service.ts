@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SlackService } from '../slack/slack.service.js';
+import {
+  MESSAGING_PORT,
+  type MessagingPort,
+} from '../common/ports/messaging.port.js';
 import {
   formatMorningDigest,
   formatEveningDigest,
@@ -18,7 +21,7 @@ export class MgmtDigestService {
 
   constructor(
     private prisma: PrismaService,
-    private slackService: SlackService,
+    @Inject(MESSAGING_PORT) private messaging: MessagingPort,
     private config: ConfigService,
   ) {}
 
@@ -306,11 +309,11 @@ export class MgmtDigestService {
         ? formatMorningDigest(data, this.baseUrl)
         : formatEveningDigest(data, this.baseUrl);
 
-    await this.slackService.sendMessage(
+    await this.messaging.sendChannelMessage(
       integration.id,
       channel,
-      report.blocks,
       report.text,
+      report.blocks,
     );
 
     this.logger.log(`Sent ${type} management digest to ${channel}`);

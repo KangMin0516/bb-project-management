@@ -12,13 +12,13 @@ export function useStandupQuestions() {
   const create = useMutation({
     mutationFn: (data: { text: string; order: number }) => standupApi.createQuestion(data),
     onSuccess: invalidate,
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => standupApi.deleteQuestion(id),
     onSuccess: invalidate,
-    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed')),
+    onError: (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed'), 'error'),
   })
 
   return { questions: query.data ?? [], create, remove }

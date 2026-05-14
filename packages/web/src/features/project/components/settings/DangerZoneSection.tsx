@@ -1,10 +1,17 @@
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+
 interface DangerZoneSectionProps {
   onDelete: () => void
 }
 
 export default function DangerZoneSection({ onDelete }: DangerZoneSectionProps) {
-  const confirmDelete = () => {
-    if (confirm('Are you sure you want to delete this project? This cannot be undone.')) {
+  const confirmDelete = async () => {
+    if (await confirmDialog({
+      title: 'Are you sure you want to delete this project?',
+      description: 'This cannot be undone.',
+      confirmLabel: 'Delete Project',
+      destructive: true,
+    })) {
       onDelete()
     }
   }

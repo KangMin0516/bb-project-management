@@ -38,13 +38,13 @@ export function useIssueListData({ projectId, listParams }: UseIssueListDataOpti
     mutationFn: ({ issueId, parentId }: { issueId: string; parentId: string | null }) =>
       issueRepository.update(projectId, issueId, { parentId }),
     onSuccess: invalidateList,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change epic')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change epic'), 'error'),
   })
 
   const remove = useMutation({
     mutationFn: (issueId: string) => issueRepository.remove(projectId, issueId),
     onSuccess: invalidateList,
-    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue')),
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue'), 'error'),
   })
 
   return {

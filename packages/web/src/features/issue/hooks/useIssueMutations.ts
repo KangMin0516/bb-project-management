@@ -24,7 +24,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     mutationFn: (data: UpdateIssuePayload) => issueRepository.update(projectId, issueId, data),
     onSuccess: invalidateAll,
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to update issue'), 'error')
     },
   })
 
@@ -36,7 +36,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
       onDeleted?.()
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete issue'), 'error')
     },
   })
 
@@ -44,7 +44,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     mutationFn: (file: File) => issueRepository.uploadFile(file, { issueId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] }),
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'), 'error')
     },
   })
 
@@ -52,7 +52,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     mutationFn: (id: string) => issueRepository.removeFile(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] }),
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete file'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete file'), 'error')
     },
   })
 
@@ -60,7 +60,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     mutationFn: (data: CreateIssuePayload) => issueRepository.create(projectId, data),
     onSuccess: invalidateAll,
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create sub-task'))
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create sub-task'), 'error')
     },
   })
 

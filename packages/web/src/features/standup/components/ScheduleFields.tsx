@@ -1,5 +1,15 @@
 import type { SlackChannel } from '@/features/integrations/slack/api'
 import { DAYS, TIMEZONES } from '@/features/standup/lib'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+
+/** Sentinel — Radix Select rejects empty string item values. */
+const NO_CHANNEL = '__none__'
 
 interface ScheduleFieldsProps {
   channels: SlackChannel[]
@@ -29,23 +39,28 @@ export default function ScheduleFields({
     <>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Channel">
-          <select
-            value={channelId}
-            onChange={(e) => onChange({ channelId: e.target.value })}
-            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
+          <Select
+            value={channelId || NO_CHANNEL}
+            onValueChange={(v) => onChange({ channelId: v === NO_CHANNEL ? '' : v })}
           >
-            <option value="">Select...</option>
-            {channels.map((ch) => <option key={ch.id} value={ch.id}>#{ch.name}</option>)}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_CHANNEL}>Select...</SelectItem>
+              {channels.map((ch) => <SelectItem key={ch.id} value={ch.id}>#{ch.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Timezone">
-          <select
-            value={timezone}
-            onChange={(e) => onChange({ timezone: e.target.value })}
-            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
-          >
-            {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
-          </select>
+          <Select value={timezone} onValueChange={(v) => onChange({ timezone: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TIMEZONES.map((tz) => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </Field>
       </div>
       <div className="grid grid-cols-3 gap-3">
@@ -66,13 +81,14 @@ export default function ScheduleFields({
           />
         </Field>
         <Field label="Days">
-          <select
-            value={cronDayOfWeek}
-            onChange={(e) => onChange({ cronDayOfWeek: e.target.value })}
-            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm"
-          >
-            {DAYS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-          </select>
+          <Select value={cronDayOfWeek} onValueChange={(v) => onChange({ cronDayOfWeek: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DAYS.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </Field>
       </div>
     </>

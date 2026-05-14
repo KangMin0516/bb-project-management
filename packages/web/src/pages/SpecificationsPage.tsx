@@ -79,7 +79,7 @@ export default function SpecificationsPage() {
         queryClient.invalidateQueries({ queryKey: ['specification', projectId, selectedId] })
         useToastStore.getState().addToast('Issue created and linked to spec section', 'success')
       })
-      .catch((err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Issue created but failed to link to spec')))
+      .catch((err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Issue created but failed to link to spec'), 'error'))
   }, [selectedId, projectId, createIssueForSection, queryClient])
 
   const handleDownloadAll = useCallback(() => {

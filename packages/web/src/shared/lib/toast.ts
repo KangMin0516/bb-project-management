@@ -21,7 +21,7 @@ interface ShowActionToastInput {
 // can fire the previous toast's callback before overwriting it.
 const keyToOnExpire = new Map<string, () => void>()
 
-function addToast(message: string, type: ToastType = 'error') {
+function addToast(message: string, type: ToastType = 'info') {
   if (type === 'error') sonner.error(message, { duration: TOAST_DURATION })
   else if (type === 'success') sonner.success(message, { duration: TOAST_DURATION })
   else sonner(message, { duration: TOAST_DURATION })

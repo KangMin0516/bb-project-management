@@ -1,4 +1,5 @@
-import { pushMrkdwnBlocks } from './utils.js';
+import type { MessageBlock } from '../../common/ports/messaging.port.js';
+import { pushMrkdwnSections } from './utils.js';
 
 export interface ProjectStats {
   projectId: string;
@@ -42,7 +43,7 @@ export interface DigestData {
   overdueIssues: OverdueIssue[];
   stalledIssues: StalledIssue[];
   unassignedCount: number;
-  standupMissing: string[]; // member names who didn't submit standup
+  standupMissing: string[];
 }
 
 function dateStr(): string {
@@ -56,17 +57,10 @@ function dateStr(): string {
 export function formatMorningDigest(
   data: DigestData,
   baseUrl: string,
-): { blocks: unknown[]; text: string } {
-  const blocks: unknown[] = [];
+): { blocks: MessageBlock[]; text: string } {
   const title = `Management Digest (Morning) -- ${dateStr()}`;
+  const blocks: MessageBlock[] = [{ type: 'header', text: title }];
 
-  // Header
-  blocks.push({
-    type: 'header',
-    text: { type: 'plain_text', text: title, emoji: true },
-  });
-
-  // Section 1: Project Summary
   const activeProjects = data.projectStats.filter(
     (p) =>
       p.active > 0 ||
@@ -80,10 +74,9 @@ export function formatMorningDigest(
       const link = `<${baseUrl}/projects/${p.projectId}/issues|${p.projectKey}>`;
       return `  ${link}  Active: ${p.active}  |  In Progress: ${p.inProgress}  |  Created Today: ${p.createdToday}`;
     });
-    pushMrkdwnBlocks(blocks, ':clipboard: *Project Summary*', projectLines);
+    pushMrkdwnSections(blocks, ':clipboard: *Project Summary*', projectLines);
   }
 
-  // Section 2: Member Check
   blocks.push({ type: 'divider' });
   if (data.memberStats.length > 0) {
     const memberLines = data.memberStats.map((m) => {
@@ -93,14 +86,13 @@ export function formatMorningDigest(
       const flagStr = flags.length > 0 ? `  ${flags.join('  ')}` : '';
       return `  :bust_in_silhouette: *${m.name}*  Focus: ${m.focus}  |  In Progress: ${m.inProgress}${flagStr}`;
     });
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       ':busts_in_silhouette: *Member Status*',
       memberLines,
     );
   }
 
-  // Section 3: Alerts
   blocks.push({ type: 'divider' });
   const alertLines: string[] = [];
 
@@ -111,12 +103,12 @@ export function formatMorningDigest(
     for (const i of data.overdueIssues) {
       const key = `${i.projectKey}-${i.number}`;
       const link = `<${baseUrl}/projects/${i.projectId}/issues|${key}>`;
-      const dueStr = new Date(i.dueDate).toLocaleDateString('en-US', {
+      const due = new Date(i.dueDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
       });
       alertLines.push(
-        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${dueStr}`,
+        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
       );
     }
   }
@@ -128,14 +120,15 @@ export function formatMorningDigest(
   }
 
   if (alertLines.length > 0) {
-    pushMrkdwnBlocks(blocks, ':rotating_light: *Needs Attention*', alertLines);
+    pushMrkdwnSections(
+      blocks,
+      ':rotating_light: *Needs Attention*',
+      alertLines,
+    );
   } else {
     blocks.push({
       type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: ':white_check_mark: No alerts this morning.',
-      },
+      text: ':white_check_mark: No alerts this morning.',
     });
   }
 
@@ -145,17 +138,10 @@ export function formatMorningDigest(
 export function formatEveningDigest(
   data: DigestData,
   baseUrl: string,
-): { blocks: unknown[]; text: string } {
-  const blocks: unknown[] = [];
+): { blocks: MessageBlock[]; text: string } {
   const title = `Management Digest (Evening) -- ${dateStr()}`;
+  const blocks: MessageBlock[] = [{ type: 'header', text: title }];
 
-  // Header
-  blocks.push({
-    type: 'header',
-    text: { type: 'plain_text', text: title, emoji: true },
-  });
-
-  // Section 1: Project Summary
   const activeProjects = data.projectStats.filter(
     (p) =>
       p.active > 0 ||
@@ -169,10 +155,9 @@ export function formatEveningDigest(
       const link = `<${baseUrl}/projects/${p.projectId}/issues|${p.projectKey}>`;
       return `  ${link}  Completed: ${p.completedToday}  |  In Progress: ${p.inProgress}  |  Created: ${p.createdToday}`;
     });
-    pushMrkdwnBlocks(blocks, ':bar_chart: *Project Summary*', projectLines);
+    pushMrkdwnSections(blocks, ':bar_chart: *Project Summary*', projectLines);
   }
 
-  // Section 2: Member Performance
   blocks.push({ type: 'divider' });
   if (data.memberStats.length > 0) {
     const memberLines = data.memberStats.map((m) => {
@@ -182,14 +167,13 @@ export function formatEveningDigest(
       const flagStr = flags.length > 0 ? `  ${flags.join('  ')}` : '';
       return `  :bust_in_silhouette: *${m.name}*  Completed: ${m.completedToday}  |  In Progress: ${m.inProgress}${flagStr}`;
     });
-    pushMrkdwnBlocks(
+    pushMrkdwnSections(
       blocks,
       ':busts_in_silhouette: *Member Performance*',
       memberLines,
     );
   }
 
-  // Section 3: Alerts
   blocks.push({ type: 'divider' });
   const alertLines: string[] = [];
 
@@ -200,14 +184,14 @@ export function formatEveningDigest(
     for (const i of data.stalledIssues) {
       const key = `${i.projectKey}-${i.number}`;
       const link = `<${baseUrl}/projects/${i.projectId}/issues|${key}>`;
-      const lastStr = i.lastActivityAt
+      const last = i.lastActivityAt
         ? new Date(i.lastActivityAt).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
           })
         : 'never';
       alertLines.push(
-        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  Last: ${lastStr}`,
+        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  Last: ${last}`,
       );
     }
   }
@@ -219,12 +203,12 @@ export function formatEveningDigest(
     for (const i of data.overdueIssues) {
       const key = `${i.projectKey}-${i.number}`;
       const link = `<${baseUrl}/projects/${i.projectId}/issues|${key}>`;
-      const dueStr = new Date(i.dueDate).toLocaleDateString('en-US', {
+      const due = new Date(i.dueDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
       });
       alertLines.push(
-        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${dueStr}`,
+        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
       );
     }
   }
@@ -242,12 +226,13 @@ export function formatEveningDigest(
   }
 
   if (alertLines.length > 0) {
-    pushMrkdwnBlocks(blocks, ':rotating_light: *Needs Attention*', alertLines);
+    pushMrkdwnSections(
+      blocks,
+      ':rotating_light: *Needs Attention*',
+      alertLines,
+    );
   } else {
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: ':white_check_mark: All clear today!' },
-    });
+    blocks.push({ type: 'section', text: ':white_check_mark: All clear today!' });
   }
 
   return { blocks, text: title };

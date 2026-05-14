@@ -35,7 +35,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
   const openChild = (id: string) => {
     issueRepository.findOne(projectId, id).then(
       (fullIssue) => onNavigate(fullIssue),
-      (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue')),
+      (err) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to load issue'), 'error'),
     )
   }
 
