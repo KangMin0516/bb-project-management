@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { IssueService } from '../issue/issue.service.js';
+import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.js';
 import { SpecificationService } from '../specification/specification.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
@@ -22,6 +23,7 @@ export class ExternalService {
   constructor(
     private prisma: PrismaService,
     private issueService: IssueService,
+    private createIssueUC: CreateIssueUseCase,
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
   ) {}
@@ -80,22 +82,20 @@ export class ExternalService {
       labelIds = labels.map((l) => l.id);
     }
 
-    return this.issueService.create(
-      project.id,
-      {
-        title: dto.title,
-        description: dto.description,
-        status: dto.status,
-        priority: dto.priority,
-        type: dto.type,
-        assigneeId,
-        parentId: dto.parentId,
-        startDate: dto.startDate,
-        dueDate: dto.dueDate,
-        labelIds,
-      },
+    return this.createIssueUC.execute({
+      projectId: project.id,
       creatorId,
-    );
+      title: dto.title,
+      description: dto.description,
+      status: dto.status,
+      priority: dto.priority,
+      type: dto.type,
+      assigneeId: assigneeId ?? undefined,
+      parentId: dto.parentId,
+      startDate: dto.startDate,
+      dueDate: dto.dueDate,
+      labelIds,
+    });
   }
 
   async updateIssue(

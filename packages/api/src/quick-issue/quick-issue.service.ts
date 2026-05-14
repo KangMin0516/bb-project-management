@@ -1,6 +1,6 @@
 import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { IssueService } from '../issue/issue.service.js';
+import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.js';
 import {
   AI_COMPLETION_PORT,
   type AiCompletionPort,
@@ -39,7 +39,7 @@ export class QuickIssueService {
 
   constructor(
     private prisma: PrismaService,
-    private issueService: IssueService,
+    private createIssue: CreateIssueUseCase,
     @Inject(AI_COMPLETION_PORT) private ai: AiCompletionPort,
   ) {}
 
@@ -167,18 +167,16 @@ export class QuickIssueService {
       throw new ForbiddenException('You are not a member of this project');
     }
 
-    const issue = await this.issueService.create(
-      data.projectId,
-      {
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        priority: data.priority,
-        status: data.status,
-        assigneeId: data.assigneeId,
-      },
+    const issue = (await this.createIssue.execute({
+      projectId: data.projectId,
       creatorId,
-    );
+      title: data.title,
+      description: data.description,
+      type: data.type,
+      priority: data.priority,
+      status: data.status,
+      assigneeId: data.assigneeId,
+    })) as { id: string; number: number };
 
     // Get project key for issue URL
     const project = await this.prisma.project.findUnique({
