@@ -205,4 +205,34 @@ export class ExternalController {
   listLabels(@Param('projectKey') projectKey: string) {
     return this.externalService.listLabels(projectKey);
   }
+
+  @Get('issues/:projectKey/:issueNumber/comments')
+  listComments(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.externalService.listComments(
+      projectKey,
+      issueNumber,
+      page ? parseInt(page, 10) || 1 : 1,
+      limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
+    );
+  }
+
+  @Get('issues/:projectKey/:issueNumber/activities')
+  listActivities(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.externalService.listActivities(
+      projectKey,
+      issueNumber,
+      page ? parseInt(page, 10) || 1 : 1,
+      limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
+    );
+  }
 }

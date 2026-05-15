@@ -194,6 +194,24 @@ export class ExternalService {
             priority: true,
           },
         },
+        // Last 50 comments + activities included inline so LLM clients
+        // (bbpm-internal-mcp) get a usable summary in one round-trip.
+        // Pagination beyond that uses the dedicated /comments and
+        // /activities endpoints below.
+        comments: {
+          include: {
+            user: { select: { id: true, email: true, name: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+        activities: {
+          include: {
+            user: { select: { id: true, email: true, name: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
       },
     });
 
@@ -202,6 +220,60 @@ export class ExternalService {
         `Issue ${projectKey}-${issueNumber} not found`,
       );
     return issue;
+  }
+
+  async listComments(
+    projectKey: string,
+    issueNumber: number,
+    page = 1,
+    limit = 50,
+  ) {
+    const { issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const safePage = Math.max(page, 1);
+    const [items, total] = await Promise.all([
+      this.prisma.comment.findMany({
+        where: { issueId },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
+      }),
+      this.prisma.comment.count({ where: { issueId } }),
+    ]);
+    return { items, total, page: safePage, limit: safeLimit };
+  }
+
+  async listActivities(
+    projectKey: string,
+    issueNumber: number,
+    page = 1,
+    limit = 50,
+  ) {
+    const { issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const safePage = Math.max(page, 1);
+    const [items, total] = await Promise.all([
+      this.prisma.activity.findMany({
+        where: { issueId },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
+      }),
+      this.prisma.activity.count({ where: { issueId } }),
+    ]);
+    return { items, total, page: safePage, limit: safeLimit };
   }
 
   async getDigest(projectKey: string, days = 7) {
