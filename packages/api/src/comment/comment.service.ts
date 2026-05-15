@@ -1,17 +1,21 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { USER_SELECT, MAX_MENTIONS } from '../common/constants.js';
 import { stripHtml } from '../common/strip-html.js';
+import { hcmTimestamp } from '../common/hcm-time.js';
 import type { CreateCommentDto } from './dto/create-comment.dto.js';
 import type { UpdateCommentDto } from './dto/update-comment.dto.js';
 import { NotificationService } from '../notification/notification.service.js';
 
 @Injectable()
 export class CommentService {
+  private readonly logger = new Logger(CommentService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
@@ -83,6 +87,9 @@ export class CommentService {
       // older clients (and to catch plain-text "@name" without picker).
       const explicitIds = (dto.mentionedUserIds ?? []).slice(0, MAX_MENTIONS);
       let mentionedUserIds: string[] = explicitIds;
+      let resolutionSource: 'explicit' | 'regex' | 'none' = explicitIds.length
+        ? 'explicit'
+        : 'none';
       if (mentionedUserIds.length === 0) {
         const mentionPattern = /@([a-zA-Z0-9._-]{2,30})/g;
         const mentionNames = [...dto.content.matchAll(mentionPattern)]
@@ -94,14 +101,36 @@ export class CommentService {
             select: { id: true },
           });
           mentionedUserIds = found.map((u) => u.id);
+          resolutionSource = 'regex';
         }
       }
 
+      this.logger.log(
+        `[Mention] [${hcmTimestamp()}] comment on ${issueKey} by ${userId} ` +
+          `— source=${resolutionSource} ids=[${mentionedUserIds.join(',')}] ` +
+          `(explicit=${explicitIds.length})`,
+      );
+
       for (const mentionedUserId of mentionedUserIds) {
-        if (mentionedUserId === userId) continue;
+        if (mentionedUserId === userId) {
+          this.logger.log(
+            `[Mention] [${hcmTimestamp()}] skipping self-mention ${mentionedUserId}`,
+          );
+          continue;
+        }
         // Skip if this user is already getting the COMMENTED notification
         // — the MENTIONED one would be redundant in their inbox.
-        if (mentionedUserId === issue.assigneeId) continue;
+        if (mentionedUserId === issue.assigneeId) {
+          this.logger.log(
+            `[Mention] [${hcmTimestamp()}] skipping ${mentionedUserId} ` +
+              `— already getting COMMENTED notification (is assignee)`,
+          );
+          continue;
+        }
+        this.logger.log(
+          `[Mention] [${hcmTimestamp()}] firing MENTIONED → user=${mentionedUserId} ` +
+            `issue=${issueKey}`,
+        );
         this.notificationService
           .create({
             type: 'MENTIONED',
@@ -119,7 +148,12 @@ export class CommentService {
               mentionSource: 'comment',
             },
           })
-          .catch(() => {});
+          .catch((err: unknown) => {
+            this.logger.error(
+              `[Mention] [${hcmTimestamp()}] notification.create FAILED for ` +
+                `user=${mentionedUserId}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          });
       }
     }
 

@@ -9,6 +9,7 @@ import {
 import { OutboxEventBus } from '../outbox/outbox-event-bus.js';
 import { OutboxRepository } from '../outbox/outbox.repository.js';
 import { NOTIFICATION_LIMIT } from '../common/constants.js';
+import { hcmTimestamp } from '../common/hcm-time.js';
 
 /** Routing key for the deferred assignment delivery event. */
 const ISSUE_ASSIGNED_DELIVERY = 'IssueAssignedDelivery';
@@ -124,30 +125,41 @@ export class NotificationService {
 
   async create(data: CreateNotificationInput) {
     // Don't notify yourself
-    if (data.actorId === data.userId) return null;
+    if (data.actorId === data.userId) {
+      this.logger.log(
+        `[Notify] [${hcmTimestamp()}] skipping self-notification ` +
+          `type=${data.type} user=${data.userId}`,
+      );
+      return null;
+    }
 
     const { meta, ...persist } = data;
     void meta; // consumed by delivery side-effects below, not by the DB row
     const notification = await this.prisma.notification.create({
       data: persist,
     });
+    this.logger.log(
+      `[Notify] [${hcmTimestamp()}] created row id=${notification.id} ` +
+        `type=${data.type} user=${data.userId} actor=${data.actorId ?? '-'} ` +
+        `issue=${data.issueId ?? '-'}`,
+    );
 
     // Fire-and-forget Slack DM for assignment events. Failures are logged
     // but never bubble up — the in-app notification is authoritative.
     if (data.type === 'ASSIGNED' || data.type === 'REVIEWER_ASSIGNED') {
       this.deliverSlackAssignedDm(data).catch((err) =>
         this.logger.warn(
-          `Slack ${data.type === 'ASSIGNED' ? 'assignment' : 'reviewer'} DM failed`,
-          err instanceof Error ? err.message : String(err),
+          `[Notify] [${hcmTimestamp()}] Slack ${data.type === 'ASSIGNED' ? 'assignment' : 'reviewer'} DM failed: ` +
+            (err instanceof Error ? err.message : String(err)),
         ),
       );
     }
 
     if (data.type === 'MENTIONED') {
       this.deliverSlackMentionDm(data).catch((err) =>
-        this.logger.warn(
-          'Slack mention DM failed',
-          err instanceof Error ? err.message : String(err),
+        this.logger.error(
+          `[Notify] [${hcmTimestamp()}] Slack mention DM threw: ` +
+            (err instanceof Error ? err.stack ?? err.message : String(err)),
         ),
       );
     }
@@ -375,11 +387,24 @@ export class NotificationService {
   }
 
   private async deliverSlackMentionDm(data: CreateNotificationInput) {
+    this.logger.log(
+      `[Mention-DM] [${hcmTimestamp()}] entry user=${data.userId} ` +
+        `issue=${data.issueId ?? '-'}`,
+    );
     const recipient = await this.prisma.user.findUnique({
       where: { id: data.userId },
       select: { slackUserId: true },
     });
-    if (!recipient?.slackUserId) return;
+    if (!recipient?.slackUserId) {
+      this.logger.warn(
+        `[Mention-DM] [${hcmTimestamp()}] SKIP — user=${data.userId} has no ` +
+          `slackUserId (user hasn't linked Slack)`,
+      );
+      return;
+    }
+    this.logger.log(
+      `[Mention-DM] [${hcmTimestamp()}] recipient slackUserId=${recipient.slackUserId}`,
+    );
 
     const meta = data.meta ?? {};
     const projectKey = meta.projectKey ?? '';
@@ -426,14 +451,23 @@ export class NotificationService {
       });
     }
 
+    this.logger.log(
+      `[Mention-DM] [${hcmTimestamp()}] calling messaging.sendDirectMessage → ` +
+        `slackUserId=${recipient.slackUserId} fallback="${fallbackText}"`,
+    );
     const result = await this.messaging.sendDirectMessage(
       recipient.slackUserId,
       fallbackText,
       blocks,
     );
-    if (!result.delivered) {
-      this.logger.debug(
-        `Slack DM not delivered for MENTIONED → ${recipient.slackUserId}: ${result.reason}`,
+    if (result.delivered) {
+      this.logger.log(
+        `[Mention-DM] [${hcmTimestamp()}] DELIVERED → slackUserId=${recipient.slackUserId}`,
+      );
+    } else {
+      this.logger.warn(
+        `[Mention-DM] [${hcmTimestamp()}] NOT delivered → ` +
+          `slackUserId=${recipient.slackUserId} reason=${result.reason ?? 'unknown'}`,
       );
     }
   }
