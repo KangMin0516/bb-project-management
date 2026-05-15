@@ -37,6 +37,7 @@ export class CommentService {
     issueId: string,
     userId: string,
     dto: CreateCommentDto,
+    source?: string,
   ) {
     await this.verifyIssue(issueId, projectId);
 
@@ -45,6 +46,7 @@ export class CommentService {
         content: dto.content,
         issueId,
         userId,
+        source: source ?? 'WEB',
       },
       include: {
         user: { select: USER_SELECT },

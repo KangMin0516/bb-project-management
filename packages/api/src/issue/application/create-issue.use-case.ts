@@ -35,6 +35,8 @@ export interface CreateIssueCommand {
   componentIds?: string[];
   /** User IDs picked from the @-picker in the description editor. */
   mentionedUserIds?: string[];
+  /** Client that originated this create — see common/source.ts. */
+  source?: import('../../common/source.js').SourceLiteral;
 }
 
 /**
@@ -109,6 +111,7 @@ export class CreateIssueUseCase {
         dueDate: cmd.dueDate ? new Date(cmd.dueDate) : null,
         labelIds: cmd.labelIds ?? [],
         componentIds: cmd.componentIds ?? [],
+        source: cmd.source,
       });
     } catch (err) {
       // Prisma raises P2025 ("record not found") when a foreign key

@@ -54,7 +54,11 @@ export class ExternalService {
     return { projectId: project.id, issueId: issue.id };
   }
 
-  async createIssue(dto: ExternalCreateIssueDto, creatorId: string) {
+  async createIssue(
+    dto: ExternalCreateIssueDto,
+    creatorId: string,
+    source?: string,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { key: dto.projectKey },
     });
@@ -101,6 +105,7 @@ export class ExternalService {
       startDate: dto.startDate,
       dueDate: dto.dueDate,
       labelIds,
+      source: source as import('../common/source.js').SourceLiteral | undefined,
     });
   }
 
@@ -109,6 +114,7 @@ export class ExternalService {
     issueNumber: number,
     dto: ExternalUpdateIssueDto,
     userId: string,
+    source?: string,
   ) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
@@ -150,6 +156,7 @@ export class ExternalService {
       projectId: project.id,
       issueId: issue.id,
       actorId: userId,
+      source: source as import('../common/source.js').SourceLiteral | undefined,
       changes: {
         title: dto.title,
         description: dto.description,
@@ -508,15 +515,22 @@ export class ExternalService {
     issueNumber: number,
     dto: ExternalCreateCommentDto,
     userId: string,
+    source?: string,
   ) {
     const { projectId, issueId } = await this.resolveProjectAndIssue(
       projectKey,
       issueNumber,
     );
-    return this.commentService.create(projectId, issueId, userId, {
-      content: dto.content,
-      mentionedUserIds: dto.mentionedUserIds,
-    });
+    return this.commentService.create(
+      projectId,
+      issueId,
+      userId,
+      {
+        content: dto.content,
+        mentionedUserIds: dto.mentionedUserIds,
+      },
+      source,
+    );
   }
 
   /**

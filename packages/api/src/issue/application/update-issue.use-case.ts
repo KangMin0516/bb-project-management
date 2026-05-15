@@ -74,6 +74,8 @@ export interface UpdateIssueCommand {
   silent?: boolean;
   /** User IDs newly picked via the @-picker in the description editor. */
   mentionedUserIds?: string[];
+  /** Client that originated this update — stamped on each activity row. */
+  source?: import('../../common/source.js').SourceLiteral;
 }
 
 /**
@@ -119,7 +121,7 @@ export class UpdateIssueUseCase {
 
     // 2. Build field updates + activity diff (over the tracked subset).
     const fieldUpdates = this.buildFieldUpdates(c);
-    const activities = this.buildActivities(existing, fieldUpdates);
+    const activities = this.buildActivities(existing, fieldUpdates, cmd.source);
 
     // 3. Coalesce rapid clicks on assignee / reviewer fields.
     const assigneeIsNetNoop = await this.coalesceField(
@@ -309,6 +311,7 @@ export class UpdateIssueUseCase {
   private buildActivities(
     existing: IssueRowForUpdate,
     fieldUpdates: Record<string, unknown>,
+    source?: string,
   ): ActivityRowToWrite[] {
     const activities: ActivityRowToWrite[] = [];
     const existingAsRecord = existing as unknown as Record<string, unknown>;
@@ -319,7 +322,7 @@ export class UpdateIssueUseCase {
         existingAsRecord[key] != null ? String(existingAsRecord[key]) : null;
       const newStr = next != null ? String(next) : null;
       if (newStr !== oldStr) {
-        activities.push({ field: key, oldValue: oldStr, newValue: newStr });
+        activities.push({ field: key, oldValue: oldStr, newValue: newStr, source });
       }
     }
     return activities;

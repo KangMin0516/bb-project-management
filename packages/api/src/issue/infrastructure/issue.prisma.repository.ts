@@ -43,6 +43,7 @@ export class IssuePrismaRepository implements IssueRepository {
       });
       const order = (lastInColumn?.order ?? 0) + ORDER_GAP;
 
+      const source = payload.source ?? 'WEB';
       const issue = await tx.issue.create({
         data: {
           ...(payload.id ? { id: payload.id } : {}),
@@ -60,6 +61,7 @@ export class IssuePrismaRepository implements IssueRepository {
           order,
           projectId: payload.projectId,
           creatorId: payload.creatorId,
+          source,
           ...(payload.labelIds.length && {
             labels: {
               create: payload.labelIds.map((labelId) => ({ labelId })),
@@ -77,7 +79,8 @@ export class IssuePrismaRepository implements IssueRepository {
       });
 
       // Initial activity row — same shape the legacy service produced,
-      // co-committed with the issue row.
+      // co-committed with the issue row. Stamps the same source so the
+      // "Created" entry in the activity feed shows the right badge.
       await tx.activity.create({
         data: {
           field: 'created',
@@ -85,6 +88,7 @@ export class IssuePrismaRepository implements IssueRepository {
           newValue: null,
           issueId: issue.id,
           userId: payload.creatorId,
+          source,
         },
       });
 

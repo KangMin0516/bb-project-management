@@ -4,6 +4,7 @@ import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
 import MarkdownEditor from '@/shared/ui/markdown/MarkdownEditor'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import { timeAgo } from '@/shared/lib/time'
+import SourceBadge from '@/shared/ui/SourceBadge'
 
 interface CommentItemProps {
   comment: Comment
@@ -49,6 +50,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
           {comment.createdAt !== comment.updatedAt && (
             <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>
           )}
+          <SourceBadge source={comment.source} />
           {isOwner && !editing && !readOnly && (
             <div className="ml-auto flex gap-1">
               <button

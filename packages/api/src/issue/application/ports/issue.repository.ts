@@ -37,6 +37,12 @@ export interface CreateIssuePayload {
   dueDate: Date | null;
   labelIds: string[];
   componentIds: string[];
+  /**
+   * Client that created the issue — persisted on `issues.source` and
+   * stamped on the initial "created" activity row. Repo defaults to
+   * 'WEB' when omitted so legacy callers keep working unchanged.
+   */
+  source?: string;
 }
 
 /** Row shape returned by `findForUpdate` — every field the update
@@ -64,6 +70,12 @@ export interface ActivityRowToWrite {
   field: string;
   oldValue: string | null;
   newValue: string | null;
+  /**
+   * Client that produced this activity row. Repo defaults to 'WEB' so
+   * call sites that haven't been wired through (cron, internal cleanup)
+   * stay valid without a forced refactor.
+   */
+  source?: string;
 }
 
 export interface RecentActivityRow {

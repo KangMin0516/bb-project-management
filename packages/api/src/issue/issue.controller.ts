@@ -26,7 +26,8 @@ import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
 import { ReorderIssueDto } from './dto/reorder-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
-import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
+import { CurrentUser, Source, type JwtPayload } from '../common/decorators/index.js';
+import type { SourceLiteral } from '../common/source.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 
 /**
@@ -55,6 +56,7 @@ export class IssueController {
     @Param('projectId') projectId: string,
     @Body() dto: CreateIssueDto,
     @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
   ) {
     return this.createIssue.execute({
       projectId,
@@ -72,6 +74,7 @@ export class IssueController {
       labelIds: dto.labelIds,
       componentIds: dto.componentIds,
       mentionedUserIds: dto.mentionedUserIds,
+      source,
     });
   }
 
@@ -138,6 +141,7 @@ export class IssueController {
     @Param('issueId') issueId: string,
     @Body() dto: UpdateIssueDto,
     @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
   ) {
     const { silent, mentionedUserIds, labelIds, componentIds, ...rest } = dto;
     return this.updateIssue.execute({
@@ -146,6 +150,7 @@ export class IssueController {
       actorId: user.sub,
       silent,
       mentionedUserIds,
+      source,
       changes: { ...rest, labelIds, componentIds },
     });
   }

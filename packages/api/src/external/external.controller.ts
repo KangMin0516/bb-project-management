@@ -22,8 +22,10 @@ import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import {
   Public,
   CurrentUser,
+  Source,
   type JwtPayload,
 } from '../common/decorators/index.js';
+import type { SourceLiteral } from '../common/source.js';
 
 @ApiTags('External API (API Key Auth)')
 @ApiHeader({ name: 'X-API-Key', description: 'API Key for authentication' })
@@ -37,8 +39,9 @@ export class ExternalController {
   createIssue(
     @Body() dto: ExternalCreateIssueDto,
     @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
   ) {
-    return this.externalService.createIssue(dto, user.sub);
+    return this.externalService.createIssue(dto, user.sub, source);
   }
 
   @Patch('issues/:projectKey/:issueNumber')
@@ -47,12 +50,14 @@ export class ExternalController {
     @Param('issueNumber', ParseIntPipe) issueNumber: number,
     @Body() dto: ExternalUpdateIssueDto,
     @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
   ) {
     return this.externalService.updateIssue(
       projectKey,
       issueNumber,
       dto,
       user.sub,
+      source,
     );
   }
 
@@ -175,12 +180,14 @@ export class ExternalController {
     @Param('issueNumber', ParseIntPipe) issueNumber: number,
     @Body() dto: ExternalCreateCommentDto,
     @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
   ) {
     return this.externalService.createComment(
       projectKey,
       issueNumber,
       dto,
       user.sub,
+      source,
     );
   }
 

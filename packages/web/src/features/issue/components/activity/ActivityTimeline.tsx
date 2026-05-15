@@ -14,6 +14,7 @@ import {
 import type { Activity } from '@/features/issue/api'
 import type { ProjectMember } from '@/features/project/api'
 import { timeAgo } from '@/shared/lib/time'
+import SourceBadge from '@/shared/ui/SourceBadge'
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -236,6 +237,7 @@ function ActivityItem({
               <span className="text-gray-500 dark:text-gray-400">{getFieldLabel(field)}</span>
             </>
           )}
+          <SourceBadge source={activity.source} />
         </div>
 
         {!isCreation && !isDescription && (

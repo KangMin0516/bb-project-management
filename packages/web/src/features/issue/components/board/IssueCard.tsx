@@ -9,6 +9,7 @@ import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
 import { ChevronRight, ChevronDown, Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { issueRepository } from '@/features/issue/repository'
+import SourceBadge from '@/shared/ui/SourceBadge'
 import {
   Command,
   CommandEmpty,
@@ -122,6 +123,7 @@ export default memo(function IssueCard({
               Recheck
             </span>
           )}
+          <SourceBadge source={issue.source} />
           {dueBadge && (
             <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium', dueBadge.className)}>
               {dueBadge.text}

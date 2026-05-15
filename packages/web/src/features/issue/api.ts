@@ -1,6 +1,8 @@
 import api from '@/shared/api/client'
 import type { GitHubPrLink } from '@/features/integrations/github/api'
 
+export type IssueSource = 'WEB' | 'MCP' | 'SLACK' | 'WEBHOOK' | 'API' | 'SYSTEM'
+
 export interface Issue {
   id: string
   number: number
@@ -15,6 +17,8 @@ export interface Issue {
   dueDate: string | null
   focusDate: string | null
   archivedAt: string | null
+  /** Client that originally created this issue. Drives the "via MCP" badge in UI. */
+  source: IssueSource
   createdAt: string
   updatedAt: string
   projectId: string
@@ -82,6 +86,7 @@ export interface Activity {
   oldValue: string | null
   newValue: string | null
   createdAt: string
+  source: IssueSource
   user: { id: string; email: string; name: string; avatar: string | null }
   issue?: { id: string; number: number; title: string }
 }
@@ -100,6 +105,7 @@ export interface Comment {
   content: string
   createdAt: string
   updatedAt: string
+  source: IssueSource
   user: { id: string; email: string; name: string; avatar: string | null }
   attachments?: Attachment[]
 }
