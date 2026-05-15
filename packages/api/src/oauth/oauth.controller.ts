@@ -41,16 +41,18 @@ export class OAuthController {
     private config: ConfigService,
   ) {}
 
-  private issuer(): string {
-    return this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+  private bases(): { apiBase: string; webBase: string } {
+    const webBase =
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+    return { webBase, apiBase: `${webBase}/api` };
   }
 
-  // ─── Discovery ───────────────────────────────────────────
+  // ─── Discovery (legacy path, kept for back-compat) ──────
 
   @Public()
   @Get('.well-known/oauth-authorization-server')
   metadata() {
-    return this.oauth.metadata(this.issuer());
+    return this.oauth.metadata(this.bases());
   }
 
   // ─── Dynamic Client Registration (RFC 7591) ─────────────

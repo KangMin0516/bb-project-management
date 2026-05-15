@@ -69,15 +69,25 @@ export class OAuthService {
     );
   }
 
-  /** Build the AS metadata document (RFC 8414). */
-  metadata(issuer: string) {
+  /**
+   * Build the AS metadata document (RFC 8414).
+   *
+   * `apiBase` is the issuer URL (e.g. `https://pm.burningbros.kr/api`)
+   * — clients fetch metadata at `<apiBase>/.well-known/oauth-authorization-server`
+   * and we must echo it verbatim back as `issuer`.
+   *
+   * `webBase` is the React app root (e.g. `https://pm.burningbros.kr`)
+   * because the consent screen is a React route, not an API endpoint.
+   */
+  metadata(opts: { apiBase: string; webBase: string }) {
+    const { apiBase, webBase } = opts;
     return {
-      issuer,
-      authorization_endpoint: `${issuer}/oauth/authorize`,
-      token_endpoint: `${issuer}/api/oauth/token`,
-      registration_endpoint: `${issuer}/api/oauth/register`,
-      revocation_endpoint: `${issuer}/api/oauth/revoke`,
-      userinfo_endpoint: `${issuer}/api/oauth/userinfo`,
+      issuer: apiBase,
+      authorization_endpoint: `${webBase}/oauth/authorize`,
+      token_endpoint: `${apiBase}/oauth/token`,
+      registration_endpoint: `${apiBase}/oauth/register`,
+      revocation_endpoint: `${apiBase}/oauth/revoke`,
+      userinfo_endpoint: `${apiBase}/oauth/userinfo`,
       scopes_supported: ['mcp', 'openid', 'profile', 'email'],
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
@@ -92,7 +102,7 @@ export class OAuthService {
         'client_secret_post',
         'none',
       ],
-      service_documentation: `${issuer}/api/docs`,
+      service_documentation: `${apiBase}/docs`,
     };
   }
 

@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ApiKeyModule } from '../api-key/api-key.module.js';
 import { OAuthController } from './oauth.controller.js';
+import { WellKnownController } from './well-known.controller.js';
 import { OAuthService } from './oauth.service.js';
 
 @Module({
   imports: [ApiKeyModule],
-  controllers: [OAuthController],
+  controllers: [OAuthController, WellKnownController],
   providers: [OAuthService],
   exports: [OAuthService],
 })
