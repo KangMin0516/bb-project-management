@@ -28,19 +28,55 @@ interface AugmentedRequest extends Request {
 }
 
 /**
- * Inspect the User-Agent header and decide which client made the call.
- * Called by `ApiKeyGuard` after validating the key so the same routing
- * can be reused regardless of which endpoint accepts API keys.
+ * Decide which client made the request. Priority:
+ *
+ * 1. `X-Client-Source` header — explicit declaration from clients we
+ *    own (bbpm-internal-mcp sends this). Wins because Node's http
+ *    layer can rewrite User-Agent in subtle ways.
+ * 2. `User-Agent` sniffing — best-effort fallback for third-party
+ *    integrations (Slack, GitHub webhooks).
+ * 3. Generic `API` when nothing matches.
+ *
+ * Called by `ApiKeyGuard` after validating the key so any endpoint
+ * accepting API keys gets the same source resolution.
  */
-export function detectSourceFromUserAgent(
-  userAgent: string | undefined,
-): SourceLiteral {
+export function detectSourceFromHeaders(headers: {
+  'x-client-source'?: string | string[];
+  'user-agent'?: string | string[];
+}): SourceLiteral {
+  const explicit = normaliseHeader(headers['x-client-source'])?.toUpperCase();
+  if (explicit && isSourceLiteral(explicit)) return explicit;
+
+  const userAgent = normaliseHeader(headers['user-agent']);
   if (!userAgent) return 'API';
   const ua = userAgent.toLowerCase();
   if (ua.includes('bbpm-mcp')) return 'MCP';
   if (ua.includes('slack') || ua.includes('slackbot')) return 'SLACK';
   if (ua.includes('github-hookshot') || ua.includes('webhook')) return 'WEBHOOK';
   return 'API';
+}
+
+/** Legacy entry point retained for any callers still passing UA only. */
+export function detectSourceFromUserAgent(
+  userAgent: string | undefined,
+): SourceLiteral {
+  return detectSourceFromHeaders({ 'user-agent': userAgent });
+}
+
+function normaliseHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+function isSourceLiteral(s: string): s is SourceLiteral {
+  return (
+    s === 'WEB' ||
+    s === 'MCP' ||
+    s === 'SLACK' ||
+    s === 'WEBHOOK' ||
+    s === 'API' ||
+    s === 'SYSTEM'
+  );
 }
 
 /** Set the source on the request — called by guards once. */

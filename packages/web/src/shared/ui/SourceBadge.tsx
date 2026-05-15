@@ -82,7 +82,7 @@ export default function SourceBadge({
       title={`Created via ${label}`}
     >
       <Icon className="h-3 w-3" />
-      via {label}
+      {label}
     </span>
   )
 }

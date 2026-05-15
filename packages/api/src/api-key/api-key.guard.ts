@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ApiKeyService } from './api-key.service.js';
 import {
-  detectSourceFromUserAgent,
+  detectSourceFromHeaders,
   setRequestSource,
 } from '../common/source.js';
 
@@ -38,10 +38,7 @@ export class ApiKeyGuard implements CanActivate {
 
     // Set user on request for downstream use (same shape as JWT payload)
     request.user = { sub: user.id, email: user.email };
-    setRequestSource(
-      request,
-      detectSourceFromUserAgent(request.headers['user-agent'] as string),
-    );
+    setRequestSource(request, detectSourceFromHeaders(request.headers));
     return true;
   }
 }
