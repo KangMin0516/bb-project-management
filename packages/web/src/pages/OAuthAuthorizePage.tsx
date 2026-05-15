@@ -20,8 +20,21 @@ const SCOPE_LABELS: Record<string, string> = {
 }
 
 export default function OAuthAuthorizePage() {
-  const { user, token, isLoading } = useAuthStore()
+  const { user, token, isLoading, loadUser } = useAuthStore()
   const [params] = useSearchParams()
+
+  // OAuthAuthorizePage lives outside <AuthGuard> so the OAuth params
+  // survive a round-trip through /login. That means we own the
+  // isLoading lifecycle here: hydrate the profile when a token is
+  // present, otherwise drop straight to the login redirect instead of
+  // spinning forever on the initial `isLoading: true` state.
+  useEffect(() => {
+    if (token) {
+      loadUser()
+    } else {
+      useAuthStore.setState({ isLoading: false })
+    }
+  }, [token, loadUser])
 
   const required = useMemo(
     () => ({
