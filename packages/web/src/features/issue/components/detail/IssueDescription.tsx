@@ -7,8 +7,12 @@ import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 
 interface IssueDescriptionProps {
   description: string | null
-  /** Notified once the user clicks Save with the new markdown. */
-  onSave: (next: string) => void
+  /**
+   * Notified once the user clicks Save with the new markdown. Receives the
+   * user IDs picked from the @-picker during this edit so the parent can
+   * send them to the API for MENTIONED notification dispatch.
+   */
+  onSave: (next: string, mentionedUserIds: string[]) => void
   /** Tells parent to react to edit mode (e.g., disable Escape close). */
   onEditingChange?: (editing: boolean) => void
   /** When provided, the editor offers @-mentions for these members. */
@@ -23,9 +27,11 @@ interface IssueDescriptionProps {
 export default function IssueDescription({ description, onSave, onEditingChange, members }: IssueDescriptionProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
 
   const enterEdit = () => {
     setDraft(description ?? '')
+    setMentionedUserIds([])
     setEditing(true)
     onEditingChange?.(true)
   }
@@ -56,6 +62,7 @@ export default function IssueDescription({ description, onSave, onEditingChange,
               members={members}
               placeholder="Add description... (@ to mention)"
               minHeight="150px"
+              onMentionsChange={setMentionedUserIds}
             />
           ) : (
             <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" />
@@ -63,7 +70,7 @@ export default function IssueDescription({ description, onSave, onEditingChange,
           <div className="mt-2 flex gap-2">
             <button
               type="button"
-              onClick={() => { onSave(draft); exitEdit() }}
+              onClick={() => { onSave(draft, mentionedUserIds); exitEdit() }}
               className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
             >
               Save

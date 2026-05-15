@@ -38,8 +38,10 @@ export interface CreateNotificationInput {
     issueNumber?: number;
     issueTitle?: string;
     actorName?: string;
-    /** Plain-text snippet of the comment that triggered the mention. */
+    /** Plain-text snippet of the comment / description that triggered the mention. */
     commentSnippet?: string;
+    /** Where the mention came from — drives the Slack DM header copy. */
+    mentionSource?: 'comment' | 'description';
   };
 }
 
@@ -386,6 +388,8 @@ export class NotificationService {
     const actorName = meta.actorName ?? 'Someone';
     const issueKey = issueNumber != null ? `${projectKey}-${issueNumber}` : '';
     const snippet = meta.commentSnippet ?? '';
+    const source = meta.mentionSource ?? 'comment';
+    const sourceLabel = source === 'description' ? 'a description' : 'a comment';
 
     const fallbackText =
       issueKey && issueTitle
@@ -395,7 +399,7 @@ export class NotificationService {
     const blocks: MessageBlock[] = [
       {
         type: 'section',
-        text: ':speech_balloon: *You were mentioned in a comment*',
+        text: `:speech_balloon: *You were mentioned in ${sourceLabel}*`,
       },
       {
         type: 'fields',

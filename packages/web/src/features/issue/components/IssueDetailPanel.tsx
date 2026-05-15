@@ -145,7 +145,12 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
             <div className="space-y-5 p-6">
               <IssueDescription
                 description={d.description}
-                onSave={(description) => update.mutate({ description })}
+                onSave={(description, mentionedUserIds) =>
+                  update.mutate({
+                    description,
+                    mentionedUserIds: mentionedUserIds.length ? mentionedUserIds : undefined,
+                  })
+                }
                 onEditingChange={setDescriptionEditing}
                 members={members ?? []}
               />

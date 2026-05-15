@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MAX_MENTIONS } from '../../common/constants.js';
+import { NotificationService } from '../../notification/notification.service.js';
 import {
   IssueType,
   type IssuePriority,
@@ -14,6 +16,7 @@ import {
   ISSUE_REPOSITORY,
   type IssueRepository,
 } from './ports/issue.repository.js';
+import { stripHtml } from '../../common/strip-html.js';
 
 export interface CreateIssueCommand {
   projectId: string;
@@ -30,6 +33,8 @@ export interface CreateIssueCommand {
   dueDate?: string;
   labelIds?: string[];
   componentIds?: string[];
+  /** User IDs picked from the @-picker in the description editor. */
+  mentionedUserIds?: string[];
 }
 
 /**
@@ -54,6 +59,7 @@ export interface CreateIssueCommand {
 export class CreateIssueUseCase {
   constructor(
     @Inject(ISSUE_REPOSITORY) private readonly repo: IssueRepository,
+    private readonly notifications: NotificationService,
   ) {}
 
   async execute(cmd: CreateIssueCommand): Promise<unknown> {
@@ -86,8 +92,9 @@ export class CreateIssueUseCase {
       );
     }
 
+    let issue: unknown;
     try {
-      return await this.repo.createWithSequenceAndActivity({
+      issue = await this.repo.createWithSequenceAndActivity({
         projectId: cmd.projectId,
         creatorId: cmd.creatorId,
         title: cmd.title,
@@ -112,6 +119,56 @@ export class CreateIssueUseCase {
         throw new NotFoundException('Referenced record does not exist');
       }
       throw err;
+    }
+
+    // Fire MENTIONED notifications for users picked from the @-picker
+    // in the description editor. Skipped silently if no description or
+    // no mentions. Same fire-and-forget pattern as comment mentions.
+    void this.notifyDescriptionMentions(cmd, issue, effectiveAssigneeId);
+
+    return issue;
+  }
+
+  private async notifyDescriptionMentions(
+    cmd: CreateIssueCommand,
+    created: unknown,
+    effectiveAssigneeId: string | null,
+  ): Promise<void> {
+    const mentioned = (cmd.mentionedUserIds ?? []).slice(0, MAX_MENTIONS);
+    if (mentioned.length === 0 || !cmd.description) return;
+
+    const row = created as { id: string; number: number };
+    const [projectKey, actorName] = await Promise.all([
+      this.repo.fetchProjectKey(cmd.projectId),
+      this.repo.fetchUserName(cmd.creatorId),
+    ]);
+    const key = projectKey ?? '';
+    const snippet = stripHtml(cmd.description).slice(0, 200);
+    const issueKey = `${key}-${row.number}`;
+
+    for (const userId of mentioned) {
+      if (userId === cmd.creatorId) continue;
+      // Assignee is getting their own ASSIGNED DM separately — skip the
+      // MENTIONED one to keep the inbox clean (matches comment flow).
+      if (userId === effectiveAssigneeId) continue;
+      this.notifications
+        .create({
+          type: 'MENTIONED',
+          message: `${actorName ?? 'Someone'} mentioned you in ${issueKey} "${cmd.title}"`,
+          userId,
+          issueId: row.id,
+          projectId: cmd.projectId,
+          actorId: cmd.creatorId,
+          meta: {
+            projectKey: key,
+            issueNumber: row.number,
+            issueTitle: cmd.title,
+            actorName: actorName ?? undefined,
+            commentSnippet: snippet,
+            mentionSource: 'description',
+          },
+        })
+        .catch(() => {});
     }
   }
 }

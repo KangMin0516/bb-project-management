@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { USER_SELECT, MAX_MENTIONS } from '../common/constants.js';
+import { stripHtml } from '../common/strip-html.js';
 import type { CreateCommentDto } from './dto/create-comment.dto.js';
 import type { UpdateCommentDto } from './dto/update-comment.dto.js';
 import { NotificationService } from '../notification/notification.service.js';
@@ -115,6 +116,7 @@ export class CommentService {
               issueTitle: issue.title,
               actorName,
               commentSnippet: stripHtml(dto.content).slice(0, 200),
+              mentionSource: 'comment',
             },
           })
           .catch(() => {});
@@ -179,9 +181,6 @@ export class CommentService {
     });
   }
 
-  // Strip HTML tags for plain-text Slack snippet. Comments are stored as
-  // sanitized HTML by the TipTap editor.
-  // Kept local — only used here.
   async remove(issueId: string, commentId: string, userId: string) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
@@ -204,15 +203,3 @@ export class CommentService {
   }
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
-}

@@ -125,6 +125,7 @@ export interface CreateIssuePayload {
   dueDate?: string
   labelIds?: string[]
   componentIds?: string[]
+  mentionedUserIds?: string[]
 }
 
 export interface UpdateIssuePayload {
@@ -143,6 +144,7 @@ export interface UpdateIssuePayload {
   isRecheck?: boolean
   labelIds?: string[]
   componentIds?: string[]
+  mentionedUserIds?: string[]
 }
 
 export interface DependencyLink {

@@ -71,6 +71,7 @@ export class IssueController {
       dueDate: dto.dueDate,
       labelIds: dto.labelIds,
       componentIds: dto.componentIds,
+      mentionedUserIds: dto.mentionedUserIds,
     });
   }
 
@@ -138,12 +139,13 @@ export class IssueController {
     @Body() dto: UpdateIssueDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    const { silent, labelIds, componentIds, ...rest } = dto;
+    const { silent, mentionedUserIds, labelIds, componentIds, ...rest } = dto;
     return this.updateIssue.execute({
       projectId,
       issueId,
       actorId: user.sub,
       silent,
+      mentionedUserIds,
       changes: { ...rest, labelIds, componentIds },
     });
   }

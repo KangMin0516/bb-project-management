@@ -4,6 +4,8 @@ import {
   IsEnum,
   IsUUID,
   IsDateString,
+  IsArray,
+  ArrayMaxSize,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -76,4 +78,12 @@ export class CreateIssueDto {
   @IsOptional()
   @IsUUID('4', { each: true })
   componentIds?: string[];
+
+  /** User IDs explicitly mentioned via the @-picker in the description editor. */
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('4', { each: true })
+  mentionedUserIds?: string[];
 }

@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MAX_MENTIONS } from '../../common/constants.js';
+import { stripHtml } from '../../common/strip-html.js';
 import { NotificationService } from '../../notification/notification.service.js';
 import { validateTypeWithParent } from '../domain/issue-type.vo.js';
 import {
@@ -70,6 +72,8 @@ export interface UpdateIssueCommand {
   /** When true, skip assignee/reviewer Slack DM scheduling — also
    *  cancels any pending DM (legacy Undo flow). */
   silent?: boolean;
+  /** User IDs newly picked via the @-picker in the description editor. */
+  mentionedUserIds?: string[];
 }
 
 /**
@@ -191,7 +195,57 @@ export class UpdateIssueUseCase {
       });
     }
 
+    // Fire MENTIONED notifications for newly-picked mentions in the
+    // description. Gated on description actually changing — saving with
+    // no description edit (e.g. status change only) should never DM.
+    if (
+      c.description !== undefined &&
+      c.description !== existing.description &&
+      (cmd.mentionedUserIds?.length ?? 0) > 0
+    ) {
+      void this.notifyDescriptionMentions(existing, cmd, c.description);
+    }
+
     return issue;
+  }
+
+  private async notifyDescriptionMentions(
+    existing: IssueRowForUpdate,
+    cmd: UpdateIssueCommand,
+    newDescription: string | null,
+  ): Promise<void> {
+    const mentioned = (cmd.mentionedUserIds ?? []).slice(0, MAX_MENTIONS);
+    if (mentioned.length === 0 || !newDescription) return;
+
+    const [projectKey, actorName] = await Promise.all([
+      this.repo.fetchProjectKey(cmd.projectId),
+      this.repo.fetchUserName(cmd.actorId),
+    ]);
+    const key = projectKey ?? '';
+    const issueKey = `${key}-${existing.number}`;
+    const snippet = stripHtml(newDescription).slice(0, 200);
+
+    for (const userId of mentioned) {
+      if (userId === cmd.actorId) continue;
+      this.notifications
+        .create({
+          type: 'MENTIONED',
+          message: `${actorName ?? 'Someone'} mentioned you in ${issueKey} "${existing.title}"`,
+          userId,
+          issueId: existing.id,
+          projectId: cmd.projectId,
+          actorId: cmd.actorId,
+          meta: {
+            projectKey: key,
+            issueNumber: existing.number,
+            issueTitle: existing.title,
+            actorName: actorName ?? undefined,
+            commentSnippet: snippet,
+            mentionSource: 'description',
+          },
+        })
+        .catch(() => {});
+    }
   }
 
   // ─── Helpers ─────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import {
   IsInt,
   IsBoolean,
   IsDateString,
+  IsArray,
+  ArrayMaxSize,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
@@ -112,4 +114,16 @@ export class UpdateIssueDto {
   @IsOptional()
   @IsBoolean()
   silent?: boolean;
+
+  /**
+   * User IDs explicitly mentioned via the @-picker in the description
+   * editor. Only fires MENTIONED notifications when description is also
+   * being changed in this update.
+   */
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('4', { each: true })
+  mentionedUserIds?: string[];
 }

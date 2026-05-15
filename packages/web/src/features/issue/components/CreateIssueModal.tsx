@@ -48,6 +48,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
   const [labelIds, setLabelIds] = useState<string[]>([])
   const [componentIds, setComponentIds] = useState<string[]>([])
   const [parentId, setParentId] = useState('')
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const queryClient = useQueryClient()
 
   const { data: members } = useQuery({
@@ -123,6 +124,8 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
       parentId: parentId || undefined,
       labelIds: labelIds.length ? labelIds : undefined,
       componentIds: componentIds.length ? componentIds : undefined,
+      mentionedUserIds:
+        description && mentionedUserIds.length ? mentionedUserIds : undefined,
     })
   }
 
@@ -151,6 +154,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
               members={members}
               placeholder="Description (optional, @ to mention)"
               minHeight="100px"
+              onMentionsChange={setMentionedUserIds}
             />
           ) : (
             <TipTapEditor
