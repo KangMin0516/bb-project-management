@@ -50,12 +50,31 @@ export class OutboxPublisher {
   }
 
   private async pumpOnce(): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const batch = await this.repo.claimBatch(tx, BATCH_SIZE);
-      for (const row of batch) {
-        await this.dispatchOne(row, tx);
+    // Claim a batch in a short, dedicated transaction. Holding it open
+    // across handler invocations is what blew the default 5 s timeout
+    // when a tick scooped up many rows whose handlers each fired a
+    // Slack HTTP call — the tx died, markDelivered rolled back, and
+    // the next tick re-dispatched the same rows (4× Slack spam).
+    const batch = await this.prisma.$transaction((tx) =>
+      this.repo.claimBatch(tx, BATCH_SIZE),
+    );
+    for (const row of batch) {
+      // Each row's dispatch + mark-* gets its own short transaction.
+      // One slow handler no longer threatens the whole batch.
+      try {
+        await this.prisma.$transaction((tx) => this.dispatchOne(row, tx));
+      } catch (err) {
+        // dispatchOne already markFailed/markDelivered within its own
+        // tx; an error escaping here means the inner transaction
+        // itself failed (e.g. DB outage). Log and continue — the row
+        // stays undelivered and the next tick will retry per
+        // attempts/nextRetryAt backoff.
+        this.logger.warn(
+          `Outbox row ${row.id} (${row.eventType}) dispatch transaction failed: ` +
+            (err instanceof Error ? err.message : String(err)),
+        );
       }
-    });
+    }
   }
 
   private async dispatchOne(

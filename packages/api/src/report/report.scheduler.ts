@@ -247,18 +247,18 @@ function scheduledTodayInTz(
   const month = parseInt(lookup.month, 10);
   const day = parseInt(lookup.day, 10);
 
-  let guess = new Date(
+  // Treat the target wall clock as UTC, then shift by the timezone
+  // offset to get the real UTC instant. For a constant-offset zone
+  // (Asia/Ho_Chi_Minh, Asia/Seoul) one pass converges exactly. For DST
+  // zones a second pass realigns if the offset crossed a transition.
+  const utcGuess = new Date(
     Date.UTC(year, month - 1, day, targetHour, targetMinute, 0),
   );
-  for (let i = 0; i < 2; i++) {
-    const offsetMs = tzOffsetAt(guess, timeZone);
-    const corrected = new Date(guess.getTime() - offsetMs);
-    if (Math.abs(corrected.getTime() - guess.getTime()) < 1000) {
-      return corrected;
-    }
-    guess = corrected;
-  }
-  return guess;
+  const offsetMs = tzOffsetAt(utcGuess, timeZone);
+  const firstPass = new Date(utcGuess.getTime() - offsetMs);
+  const offsetMs2 = tzOffsetAt(firstPass, timeZone);
+  if (offsetMs2 === offsetMs) return firstPass;
+  return new Date(utcGuess.getTime() - offsetMs2);
 }
 
 function tzOffsetAt(instant: Date, timeZone: string): number {
