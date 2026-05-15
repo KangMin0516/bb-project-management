@@ -21,7 +21,7 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         projectId: 'p',
         creatorId: 'u',
         title: 't',
-        type: 'EPIC' as 'EPIC',
+        type: 'EPIC' as const,
         parentId: 'parent-1',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -34,7 +34,7 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         projectId: 'p',
         creatorId: 'u',
         title: 't',
-        type: 'SUB_TASK' as 'SUB_TASK',
+        type: 'SUB_TASK' as const,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -47,7 +47,7 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         projectId: 'p',
         creatorId: 'u',
         title: 't',
-        type: 'TASK' as 'TASK',
+        type: 'TASK' as const,
         parentId: 'nope',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -63,7 +63,7 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         projectId: 'p',
         creatorId: 'u',
         title: 't',
-        type: 'TASK' as 'TASK',
+        type: 'TASK' as const,
         parentId: 'sub',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -79,7 +79,7 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         projectId: 'p',
         creatorId: 'u',
         title: 't',
-        type: 'TASK' as 'TASK',
+        type: 'TASK' as const,
         parentId: 'epic-1',
       }),
     ).resolves.toBeDefined();

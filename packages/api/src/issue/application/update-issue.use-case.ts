@@ -316,13 +316,18 @@ export class UpdateIssueUseCase {
     const activities: ActivityRowToWrite[] = [];
     const existingAsRecord = existing as unknown as Record<string, unknown>;
     for (const key of TRACKED_FIELDS) {
-      const next = fieldUpdates[key as TrackedField];
+      const next = fieldUpdates[key];
       if (next === undefined) continue;
       const oldStr =
         existingAsRecord[key] != null ? String(existingAsRecord[key]) : null;
       const newStr = next != null ? String(next) : null;
       if (newStr !== oldStr) {
-        activities.push({ field: key, oldValue: oldStr, newValue: newStr, source });
+        activities.push({
+          field: key,
+          oldValue: oldStr,
+          newValue: newStr,
+          source,
+        });
       }
     }
     return activities;

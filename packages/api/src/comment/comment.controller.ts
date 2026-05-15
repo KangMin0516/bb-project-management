@@ -15,7 +15,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CommentService } from './comment.service.js';
 import { CreateCommentDto } from './dto/create-comment.dto.js';
 import { UpdateCommentDto } from './dto/update-comment.dto.js';
-import { CurrentUser, Source, type JwtPayload } from '../common/decorators/index.js';
+import {
+  CurrentUser,
+  Source,
+  type JwtPayload,
+} from '../common/decorators/index.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 import type { SourceLiteral } from '../common/source.js';
 
@@ -34,7 +38,13 @@ export class CommentController {
     @CurrentUser() user: JwtPayload,
     @Source() source: SourceLiteral,
   ) {
-    return this.commentService.create(projectId, issueId, user.sub, dto, source);
+    return this.commentService.create(
+      projectId,
+      issueId,
+      user.sub,
+      dto,
+      source,
+    );
   }
 
   @Get()

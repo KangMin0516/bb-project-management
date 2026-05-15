@@ -232,7 +232,10 @@ export function formatEveningDigest(
       alertLines,
     );
   } else {
-    blocks.push({ type: 'section', text: ':white_check_mark: All clear today!' });
+    blocks.push({
+      type: 'section',
+      text: ':white_check_mark: All clear today!',
+    });
   }
 
   return { blocks, text: title };

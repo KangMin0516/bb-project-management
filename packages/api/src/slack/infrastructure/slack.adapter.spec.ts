@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,
-                   @typescript-eslint/no-unsafe-member-access */
 import { describe, expect, it, jest } from '@jest/globals';
 import type { WebClient } from '@slack/web-api';
 import { EncryptionService } from '../../common/encryption.service.js';

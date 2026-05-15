@@ -26,7 +26,11 @@ import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
 import { ReorderIssueDto } from './dto/reorder-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
-import { CurrentUser, Source, type JwtPayload } from '../common/decorators/index.js';
+import {
+  CurrentUser,
+  Source,
+  type JwtPayload,
+} from '../common/decorators/index.js';
 import type { SourceLiteral } from '../common/source.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 

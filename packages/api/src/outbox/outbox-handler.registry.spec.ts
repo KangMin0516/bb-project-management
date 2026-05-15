@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { describe, expect, it, jest } from '@jest/globals';
 import { OutboxHandlerRegistry } from './outbox-handler.registry.js';
 import type { ClaimedOutboxRow } from './outbox.repository.js';

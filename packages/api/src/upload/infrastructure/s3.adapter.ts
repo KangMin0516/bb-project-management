@@ -111,7 +111,11 @@ export class S3Adapter implements FileStoragePort {
 
 function isNotFound(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) return false;
-  const candidate = err as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number } };
+  const candidate = err as {
+    name?: string;
+    Code?: string;
+    $metadata?: { httpStatusCode?: number };
+  };
   return (
     candidate.name === 'NoSuchKey' ||
     candidate.Code === 'NoSuchKey' ||

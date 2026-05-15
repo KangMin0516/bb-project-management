@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,
-                   @typescript-eslint/no-unsafe-member-access,
-                   @typescript-eslint/no-unsafe-argument */
 import { describe, expect, it, jest } from '@jest/globals';
 import { NotFoundException } from '@nestjs/common';
 import type { JoinRequestRepository } from './ports/join-request.repository.js';

@@ -52,7 +52,8 @@ export function detectSourceFromHeaders(headers: {
   const ua = userAgent.toLowerCase();
   if (ua.includes('bbpm-mcp')) return 'MCP';
   if (ua.includes('slack') || ua.includes('slackbot')) return 'SLACK';
-  if (ua.includes('github-hookshot') || ua.includes('webhook')) return 'WEBHOOK';
+  if (ua.includes('github-hookshot') || ua.includes('webhook'))
+    return 'WEBHOOK';
   return 'API';
 }
 
@@ -63,7 +64,9 @@ export function detectSourceFromUserAgent(
   return detectSourceFromHeaders({ 'user-agent': userAgent });
 }
 
-function normaliseHeader(value: string | string[] | undefined): string | undefined {
+function normaliseHeader(
+  value: string | string[] | undefined,
+): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }

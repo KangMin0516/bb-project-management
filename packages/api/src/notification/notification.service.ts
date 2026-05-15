@@ -159,7 +159,7 @@ export class NotificationService {
       this.deliverSlackMentionDm(data).catch((err) =>
         this.logger.error(
           `[Notify] [${hcmTimestamp()}] Slack mention DM threw: ` +
-            (err instanceof Error ? err.stack ?? err.message : String(err)),
+            (err instanceof Error ? (err.stack ?? err.message) : String(err)),
         ),
       );
     }
@@ -414,7 +414,8 @@ export class NotificationService {
     const issueKey = issueNumber != null ? `${projectKey}-${issueNumber}` : '';
     const snippet = meta.commentSnippet ?? '';
     const source = meta.mentionSource ?? 'comment';
-    const sourceLabel = source === 'description' ? 'a description' : 'a comment';
+    const sourceLabel =
+      source === 'description' ? 'a description' : 'a comment';
 
     const fallbackText =
       issueKey && issueTitle
