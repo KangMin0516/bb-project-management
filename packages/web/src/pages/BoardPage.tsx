@@ -75,6 +75,19 @@ export default function BoardPage() {
 
   const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
+
+  // Archived toggle is a view switch (matches Lists page semantics):
+  //   off → server already excludes archived
+  //   on  → keep only archived issues for display
+  const viewBoard = useMemo(() => {
+    if (!board || !showArchived) return board
+    const out: Record<string, Issue[]> = {}
+    for (const [status, issues] of Object.entries(board)) {
+      out[status] = issues.filter((i) => i.archivedAt != null)
+    }
+    return out
+  }, [board, showArchived])
+
   const {
     allIssuesById,
     childrenMap,
@@ -84,7 +97,7 @@ export default function BoardPage() {
     boardComponents,
     boardEpics,
     flatBoardIssues,
-  } = useBoardDerivations(board)
+  } = useBoardDerivations(viewBoard)
 
   const expandAllSwimlanes = useCallback(() => setCollapsedEpics(new Set()), [])
   const collapseAllSwimlanes = useCallback(() => {
