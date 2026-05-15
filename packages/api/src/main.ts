@@ -13,12 +13,42 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS
+  // CORS — strict for the cookie-bearing web session, permissive for
+  // cross-origin OAuth / MCP clients that authenticate via Bearer
+  // tokens (Inspector on localhost, claude.ai web custom connectors,
+  // ChatGPT remote MCP servers). Requests without an Origin header
+  // (curl, server-to-server) are always allowed.
+  const configuredOrigins = config
+    .get<string>('CORS_ORIGINS', 'http://localhost:5173')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const isOriginAllowed = (origin: string): boolean => {
+    if (configuredOrigins.includes(origin)) return true;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin)) {
+      return true;
+    }
+    if (
+      /^https:\/\/([a-z0-9-]+\.)?(claude\.ai|anthropic\.com|chatgpt\.com|openai\.com)$/.test(
+        origin,
+      )
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   app.enableCors({
-    origin: config
-      .get<string>('CORS_ORIGINS', 'http://localhost:5173')
-      .split(','),
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin) return callback(null, true);
+      callback(null, isOriginAllowed(origin));
+    },
     credentials: true,
+    exposedHeaders: ['WWW-Authenticate', 'Mcp-Session-Id'],
   });
 
   // Validation
