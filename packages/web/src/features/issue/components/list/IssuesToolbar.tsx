@@ -46,7 +46,7 @@ export default function IssuesToolbar({
         className={cn(
           'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
           showArchived
-            ? 'border-amber-300 bg-amber-50 text-amber-700'
+            ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
             : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700',
         )}
       >

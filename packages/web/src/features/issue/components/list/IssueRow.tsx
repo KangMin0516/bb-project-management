@@ -26,10 +26,10 @@ export default function IssueRow({ issue, projectKey, isSelected, isFocused, onO
       onClick={() => onOpen(issue)}
       className={cn(
         'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700',
-        overdue && 'bg-red-50/50',
-        isSelected && 'bg-primary-50',
+        overdue && 'bg-red-50/50 dark:bg-red-900/20',
+        isSelected && 'bg-primary-50 dark:bg-primary-900/30',
         issue.archivedAt && 'opacity-50',
-        isFocused && 'ring-2 ring-inset ring-primary-400 bg-primary-50/50',
+        isFocused && 'ring-2 ring-inset ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20',
       )}
     >
       <td className="w-8 px-3 py-2" onClick={(e) => e.stopPropagation()}>

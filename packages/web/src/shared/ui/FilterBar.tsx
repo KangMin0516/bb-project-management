@@ -40,7 +40,7 @@ function FilterDropdown({
         className={cn(
           'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
           selectedCount > 0
-            ? 'border-primary-300 bg-primary-50 text-primary-700'
+            ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
             : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700',
         )}
       >
