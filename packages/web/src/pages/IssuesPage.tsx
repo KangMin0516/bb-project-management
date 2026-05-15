@@ -51,7 +51,10 @@ export default function IssuesPage() {
   const { project, members, projectLabels, projectComponents, list, isLoading, epicChange, remove } =
     useIssueListData({ projectId: projectId ?? '', listParams })
 
-  const displayItems = useMemo(() => applyClientFilters(list?.items, filters), [list?.items, filters])
+  const displayItems = useMemo(
+    () => applyClientFilters(list?.items, filters, { showArchived: url.showArchived }),
+    [list?.items, filters, url.showArchived],
+  )
 
   const selection = useIssueListSelection({
     items: displayItems,
@@ -97,7 +100,7 @@ export default function IssuesPage() {
           <BulkActionBar
             projectId={projectId}
             selectedIds={selection.selectedIds}
-            members={memberList.map((m) => ({ id: m.id, name: m.name }))}
+            members={memberList.map((m) => ({ id: m.id, name: m.name, avatar: m.avatar }))}
             onClear={selection.clear}
           />
         </div>
