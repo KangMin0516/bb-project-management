@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
+import { Plus } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
@@ -40,10 +41,18 @@ export default memo(function BoardColumn({
   onEpicChange,
 }: BoardColumnProps) {
   return (
-    <div className="flex min-w-[260px] flex-1 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
+    <div className="flex h-full min-w-[300px] flex-1 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[status])} />
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{STATUS_LABELS[status] || status}</span>
+        <button
+          type="button"
+          onClick={() => onAddClick(status)}
+          aria-label={`Add issue to ${STATUS_LABELS[status] || status}`}
+          className="rounded-md p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
         <span className="ml-auto rounded-full bg-gray-200 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
           {issues.length}
         </span>
@@ -92,12 +101,6 @@ export default memo(function BoardColumn({
         )}
       </Droppable>
 
-      <button
-        onClick={() => onAddClick(status)}
-        className="m-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-1.5 text-sm text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-      >
-        + Add issue
-      </button>
     </div>
   )
 })

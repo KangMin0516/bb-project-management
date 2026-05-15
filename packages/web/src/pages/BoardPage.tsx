@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
+import { useDragScroll } from '@/shared/lib/useDragScroll'
 import { getBool, setBool, PARAM } from '@/shared/lib/filter-codec'
 import { STATUSES, calculateDropOrder } from '@/shared/config/constants'
 import { useBoardData } from '@/features/issue/hooks/useBoardData'
@@ -69,6 +70,8 @@ export default function BoardPage() {
     (value: boolean) => mutateParams((p) => setBool(p, PARAM.swimlane, value, true)),
     [mutateParams],
   )
+
+  const dragScrollRef = useDragScroll<HTMLDivElement>()
 
   const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
@@ -202,56 +205,60 @@ export default function BoardPage() {
         />
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 min-h-0 p-4">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
         ) : groupByEpic ? (
-          <SwimlaneBoardView
-            board={filteredBoardForSwimlane || {}}
-            projectKey={projectKey}
-            projectId={projectId}
-            onIssueClick={setSelectedIssue}
-            onEpicClick={setSelectedIssue}
-            onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
-            onSwimlaneReorder={(epicId, status, order) => reorder.mutate({ issueId: epicId, status, order })}
-            onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
-            onAddClick={setCreateModal}
-            childrenMap={childrenMap}
-            expandedIssues={expandedIssues}
-            onToggleExpand={toggleExpand}
-            onChildClick={openChild}
-            onChildStatusToggle={toggleChildStatus}
-            epicOwnersFilter={filters.epicOwners}
-            epics={boardEpics}
-            collapsedEpics={collapsedEpics}
-            onCollapseToggle={toggleCollapse}
-          />
+          <div className="h-full overflow-auto">
+            <SwimlaneBoardView
+              board={filteredBoardForSwimlane || {}}
+              projectKey={projectKey}
+              projectId={projectId}
+              onIssueClick={setSelectedIssue}
+              onEpicClick={setSelectedIssue}
+              onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
+              onSwimlaneReorder={(epicId, status, order) => reorder.mutate({ issueId: epicId, status, order })}
+              onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
+              onAddClick={setCreateModal}
+              childrenMap={childrenMap}
+              expandedIssues={expandedIssues}
+              onToggleExpand={toggleExpand}
+              onChildClick={openChild}
+              onChildStatusToggle={toggleChildStatus}
+              epicOwnersFilter={filters.epicOwners}
+              epics={boardEpics}
+              collapsedEpics={collapsedEpics}
+              onCollapseToggle={toggleCollapse}
+            />
+          </div>
         ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex min-w-max gap-4">
-              {STATUSES.map((status) => (
-                <BoardColumn
-                  key={status}
-                  status={status}
-                  issues={filteredBoard?.[status] || []}
-                  projectKey={projectKey}
-                  projectId={projectId}
-                  onIssueClick={setSelectedIssue}
-                  onAddClick={setCreateModal}
-                  childrenMap={childrenMap}
-                  expandedIssues={expandedIssues}
-                  onToggleExpand={toggleExpand}
-                  onChildClick={openChild}
-                  onChildStatusToggle={toggleChildStatus}
-                  focusedIssueId={focusedIssueId}
-                  epics={boardEpics}
-                  onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
-                />
-              ))}
-            </div>
-          </DragDropContext>
+          <div ref={dragScrollRef} className="h-full overflow-x-auto cursor-grab">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex h-full min-w-max gap-4">
+                {STATUSES.map((status) => (
+                  <BoardColumn
+                    key={status}
+                    status={status}
+                    issues={filteredBoard?.[status] || []}
+                    projectKey={projectKey}
+                    projectId={projectId}
+                    onIssueClick={setSelectedIssue}
+                    onAddClick={setCreateModal}
+                    childrenMap={childrenMap}
+                    expandedIssues={expandedIssues}
+                    onToggleExpand={toggleExpand}
+                    onChildClick={openChild}
+                    onChildStatusToggle={toggleChildStatus}
+                    focusedIssueId={focusedIssueId}
+                    epics={boardEpics}
+                    onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
+                  />
+                ))}
+              </div>
+            </DragDropContext>
+          </div>
         )}
       </div>
 

@@ -239,7 +239,7 @@ export default memo(function IssueCard({
 
       {/* Expanded child issues */}
       {isExpanded && hasChildren && (
-        <div className="rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+        <div className="overflow-hidden rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
           {displayList.map((child, idx) => (
             <div
               key={child.id}
