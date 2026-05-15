@@ -116,14 +116,25 @@ export default function CreateApiKeyDialog({ open, onOpenChange }: CreateApiKeyD
                 manager or paste it into your client config now.
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-3 py-2 font-mono text-xs">
-              <span className="flex-1 truncate text-gray-900 dark:text-gray-100">
+            <div className="flex items-start gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-3 py-2 font-mono text-xs">
+              <span
+                className="flex-1 min-w-0 break-all select-all text-gray-900 dark:text-gray-100"
+                onClick={(e) => {
+                  // Triple-click selects whole key — flex layout sometimes
+                  // breaks the default selection range, so help it along.
+                  const range = document.createRange()
+                  range.selectNodeContents(e.currentTarget)
+                  const sel = window.getSelection()
+                  sel?.removeAllRanges()
+                  sel?.addRange(range)
+                }}
+              >
                 {generated.key}
               </span>
               <button
                 type="button"
                 onClick={copyKey}
-                className="flex items-center gap-1 rounded-md bg-primary-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-primary-700"
+                className="shrink-0 flex items-center gap-1 rounded-md bg-primary-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-primary-700"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 {copied ? 'Copied' : 'Copy'}
