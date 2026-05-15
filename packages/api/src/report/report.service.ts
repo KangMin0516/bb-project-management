@@ -119,6 +119,7 @@ export class ReportService {
     const issues = await this.prisma.issue.findMany({
       where: {
         projectId,
+        archivedAt: null,
         status: { in: ['TODO', 'IN_PROGRESS'] },
       },
       include: {
@@ -131,6 +132,7 @@ export class ReportService {
     const overdueIssues = await this.prisma.issue.findMany({
       where: {
         projectId,
+        archivedAt: null,
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
       },
@@ -160,7 +162,10 @@ export class ReportService {
 
     const activities = await this.prisma.activity.findMany({
       where: {
-        issue: { projectId },
+        // Skip activities tied to issues that are now archived — they
+        // show up as orphaned history in the lunch digest, which
+        // confuses the team. Activities on still-active issues only.
+        issue: { projectId, archivedAt: null },
         createdAt: { gte: todayStart },
       },
       include: {
@@ -184,10 +189,13 @@ export class ReportService {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // Completed today: issues with a status activity changing to DONE today
+    // Completed today: issues with a status activity changing to DONE
+    // today. Filter out activities tied to issues that were archived
+    // after completion — those moved off the board, no need to
+    // re-celebrate them in the evening report.
     const completedActivities = await this.prisma.activity.findMany({
       where: {
-        issue: { projectId },
+        issue: { projectId, archivedAt: null },
         field: 'status',
         newValue: 'DONE',
         createdAt: { gte: todayStart },
@@ -200,7 +208,7 @@ export class ReportService {
     const completedToday =
       completedIds.length > 0
         ? await this.prisma.issue.findMany({
-            where: { id: { in: completedIds } },
+            where: { id: { in: completedIds }, archivedAt: null },
             include: {
               assignee: true,
               project: { select: { key: true } },
@@ -208,9 +216,10 @@ export class ReportService {
           })
         : [];
 
-    // In progress
+    // In progress — snapshot of active work, so archived issues are
+    // out of scope (matches the "Overall: X/Y done" denominator).
     const inProgress = await this.prisma.issue.findMany({
-      where: { projectId, status: 'IN_PROGRESS' },
+      where: { projectId, archivedAt: null, status: 'IN_PROGRESS' },
       include: {
         assignee: true,
         project: { select: { key: true } },
@@ -218,10 +227,13 @@ export class ReportService {
       orderBy: { priority: 'asc' },
     });
 
-    // Overdue
+    // Overdue — same scope as In progress. Archived overdue rows are
+    // historical drift; surfacing them in the daily report just
+    // creates noise the team can't act on anymore.
     const overdueIssues = await this.prisma.issue.findMany({
       where: {
         projectId,
+        archivedAt: null,
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
       },
@@ -233,13 +245,19 @@ export class ReportService {
 
     // Created today
     const createdTodayCount = await this.prisma.issue.count({
-      where: { projectId, createdAt: { gte: todayStart } },
+      where: { projectId, archivedAt: null, createdAt: { gte: todayStart } },
     });
 
-    // Overall progress
-    const totalAll = await this.prisma.issue.count({ where: { projectId } });
+    // Overall progress — count only ACTIVE work. Archived issues are
+    // out of scope (already shipped + cleared off the board); counting
+    // them in the denominator inflated the "% done" number so that a
+    // project with 2 active DONE out of 10 active issues was reading
+    // 89% just because 69 historical DONE rows were archived.
+    const totalAll = await this.prisma.issue.count({
+      where: { projectId, archivedAt: null },
+    });
     const totalDone = await this.prisma.issue.count({
-      where: { projectId, status: 'DONE' },
+      where: { projectId, archivedAt: null, status: 'DONE' },
     });
 
     return formatEveningReport(
