@@ -39,6 +39,15 @@ export class ExternalUpdateIssueDto {
   @IsString()
   assigneeEmail?: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Assignee user UUID (null to clear). Takes precedence over assigneeEmail.',
+  })
+  @IsOptional()
+  @ValidateIf((o) => o.assigneeId !== null)
+  @IsUUID()
+  assigneeId?: string | null;
+
   @ApiPropertyOptional({ description: 'Parent issue ID (null to clear)' })
   @IsOptional()
   @ValidateIf((o) => o.parentId !== null)

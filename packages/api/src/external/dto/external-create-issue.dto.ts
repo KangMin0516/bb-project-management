@@ -44,10 +44,18 @@ export class ExternalCreateIssueDto {
   @IsEnum(IssueType)
   type?: IssueType;
 
-  @ApiPropertyOptional({ description: 'Assignee email' })
+  @ApiPropertyOptional({ description: 'Assignee email (resolved to a user)' })
   @IsOptional()
   @IsString()
   assigneeEmail?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Assignee user UUID. Takes precedence over assigneeEmail when both are sent.',
+  })
+  @IsOptional()
+  @IsUUID()
+  assigneeId?: string;
 
   @ApiPropertyOptional({ description: 'Parent issue ID' })
   @IsOptional()

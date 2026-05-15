@@ -62,9 +62,12 @@ export class ExternalService {
       throw new NotFoundException(`Project "${dto.projectKey}" not found`);
     }
 
-    // Resolve assignee by email
+    // Resolve assignee — `assigneeId` (UUID from list_members) wins over
+    // `assigneeEmail` (email lookup) when both are sent.
     let assigneeId: string | undefined;
-    if (dto.assigneeEmail) {
+    if (dto.assigneeId) {
+      assigneeId = dto.assigneeId;
+    } else if (dto.assigneeEmail) {
       const user = await this.prisma.user.findUnique({
         where: { email: dto.assigneeEmail },
       });
@@ -123,9 +126,12 @@ export class ExternalService {
         `Issue ${projectKey}-${issueNumber} not found`,
       );
 
-    // Resolve assignee by email
+    // Resolve assignee — `assigneeId` wins over `assigneeEmail`. Both
+    // accept null/empty to clear the assignee.
     let assigneeId: string | null | undefined;
-    if (dto.assigneeEmail !== undefined) {
+    if (dto.assigneeId !== undefined) {
+      assigneeId = dto.assigneeId;
+    } else if (dto.assigneeEmail !== undefined) {
       if (dto.assigneeEmail === null || dto.assigneeEmail === '') {
         assigneeId = null;
       } else {
