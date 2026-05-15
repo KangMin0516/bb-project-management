@@ -17,6 +17,7 @@ import { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
+import { ExternalCreateCommentDto } from './dto/external-create-comment.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import {
   Public,
@@ -164,5 +165,37 @@ export class ExternalController {
       issueNumber,
       linkId,
     );
+  }
+
+  // ─── Phase 1 — endpoints consumed by bbpm-internal-mcp ─────
+
+  @Post('issues/:projectKey/:issueNumber/comments')
+  createComment(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() dto: ExternalCreateCommentDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.externalService.createComment(
+      projectKey,
+      issueNumber,
+      dto,
+      user.sub,
+    );
+  }
+
+  @Get('projects')
+  listProjects(@CurrentUser() user: JwtPayload) {
+    return this.externalService.listProjectsForUser(user.sub);
+  }
+
+  @Get('projects/:projectKey/members')
+  listMembers(@Param('projectKey') projectKey: string) {
+    return this.externalService.listMembers(projectKey);
+  }
+
+  @Get('projects/:projectKey/labels')
+  listLabels(@Param('projectKey') projectKey: string) {
+    return this.externalService.listLabels(projectKey);
   }
 }

@@ -8,11 +8,13 @@ import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.j
 import { UpdateIssueUseCase } from '../issue/application/update-issue.use-case.js';
 import { SpecificationService } from '../specification/specification.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
+import { CommentService } from '../comment/comment.service.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import type { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import type { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import type { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
+import type { ExternalCreateCommentDto } from './dto/external-create-comment.dto.js';
 import { SpecStatus, type IssueStatus } from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
 
@@ -26,6 +28,7 @@ export class ExternalService {
     private updateIssueUC: UpdateIssueUseCase,
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
+    private commentService: CommentService,
   ) {}
 
   private async resolveProjectAndIssue(
@@ -490,6 +493,83 @@ export class ExternalService {
       issueNumber,
     );
     return this.issueSpecLinkService.remove(projectId, issueId, linkId);
+  }
+
+  // ─── New: comment + project meta (Phase 1 for bbpm-internal-mcp) ──
+
+  async createComment(
+    projectKey: string,
+    issueNumber: number,
+    dto: ExternalCreateCommentDto,
+    userId: string,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    return this.commentService.create(projectId, issueId, userId, {
+      content: dto.content,
+      mentionedUserIds: dto.mentionedUserIds,
+    });
+  }
+
+  /**
+   * Projects the calling user is a member of. The MCP server uses this
+   * to populate the `list_projects` tool — the LLM needs a list of keys
+   * before it can pick one for create/update/list operations.
+   */
+  async listProjectsForUser(userId: string) {
+    const projects = await this.prisma.project.findMany({
+      where: { members: { some: { userId } } },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        description: true,
+        createdAt: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    return projects;
+  }
+
+  async listMembers(projectKey: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    const members = await this.prisma.projectMember.findMany({
+      where: { projectId: project.id },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+      orderBy: { user: { name: 'asc' } },
+    });
+    return members.map((m) => ({
+      id: m.user.id,
+      name: m.user.name,
+      email: m.user.email,
+      avatar: m.user.avatar,
+      role: m.role,
+    }));
+  }
+
+  async listLabels(projectKey: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    return this.prisma.label.findMany({
+      where: { projectId: project.id },
+      select: { id: true, name: true, color: true },
+      orderBy: { name: 'asc' },
+    });
   }
 }
 

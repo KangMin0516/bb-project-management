@@ -1,6 +1,7 @@
 import { useProfileMutations } from '@/features/auth/hooks/useProfileMutations'
 import ProfileForm from '@/features/auth/components/ProfileForm'
 import ChangePasswordForm from '@/features/auth/components/ChangePasswordForm'
+import ApiKeyList from '@/features/api-key/components/ApiKeyList'
 
 export default function ProfilePage() {
   const { updateProfile, changePassword } = useProfileMutations()
@@ -18,6 +19,8 @@ export default function ProfilePage() {
         isChanging={changePassword.isPending}
         onChange={(data) => changePassword.mutate(data)}
       />
+
+      <ApiKeyList />
     </div>
   )
 }
