@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -34,8 +34,8 @@ async function bootstrap() {
   // Exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Response transform
-  app.useGlobalInterceptors(new TransformInterceptor());
+  // Response transform — respects @RawResponse() on RFC-bound routes.
+  app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()

@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { OAuthService } from './oauth.service.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
+import { RawResponse } from '../common/interceptors/index.js';
 import {
   CurrentUser,
   Public,
@@ -32,6 +33,7 @@ import {
  * with the web app rather than reimplementing it server-side.
  */
 @ApiExcludeController()
+@RawResponse()
 @Controller('oauth')
 export class OAuthController {
   constructor(
