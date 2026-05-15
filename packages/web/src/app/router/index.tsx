@@ -24,6 +24,7 @@ const TeamIssuesPage = lazy(() => import('@/pages/TeamIssuesPage'))
 const MemberTasksPage = lazy(() => import('@/pages/MemberTasksPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 const ApiDocsPage = lazy(() => import('@/pages/ApiDocsPage'))
+const OAuthAuthorizePage = lazy(() => import('@/pages/OAuthAuthorizePage'))
 
 function AuthGuard() {
   const { token, isLoading, loadUser } = useAuthStore()
@@ -50,6 +51,7 @@ export function AppRouter() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>

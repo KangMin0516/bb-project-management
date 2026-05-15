@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/store'
 import { getErrorMessage } from '@/shared/lib/error'
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +20,15 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/')
+      // Honour ?next=<path> so OAuth authorize flows resume after login.
+      // Only same-origin relative paths are accepted to defeat open
+      // redirects.
+      const next = searchParams.get('next')
+      if (next && next.startsWith('/') && !next.startsWith('//')) {
+        navigate(next, { replace: true })
+      } else {
+        navigate('/')
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Login failed'))
     } finally {

@@ -29,26 +29,29 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  memberships    ProjectMember[]
-  assignedIssues  Issue[]    @relation("AssignedIssues")
-  reviewerIssues  Issue[]    @relation("ReviewerIssues")
-  createdIssues   Issue[]    @relation("CreatedIssues")
-  activities     Activity[]
-  comments       Comment[]
-  attachments    Attachment[]
-  apiKeys        ApiKey[]
-  templates      IssueTemplate[]
-  notifications  Notification[]
-  createdLinks   IssueLink[] @relation("CreatedLinks")
-  componentLeads             Component[] @relation("ComponentLead")
-  componentDefaultAssignees  Component[] @relation("ComponentDefaultAssignee")
-  createdSpecs   Specification[] @relation("CreatedSpecs")
-  specComments   SpecComment[]   @relation("SpecComments")
-  credentials    ProjectCredential[] @relation("UserCredentials")
-  slackInstallations SlackIntegration[]
-  githubInstallations GitHubIntegration[]
-  joinRequests        ProjectJoinRequest[] @relation("JoinRequester")
-  resolvedJoinRequests ProjectJoinRequest[] @relation("JoinResolver")
+  memberships               ProjectMember[]
+  assignedIssues            Issue[]              @relation("AssignedIssues")
+  reviewerIssues            Issue[]              @relation("ReviewerIssues")
+  createdIssues             Issue[]              @relation("CreatedIssues")
+  activities                Activity[]
+  comments                  Comment[]
+  attachments               Attachment[]
+  apiKeys                   ApiKey[]
+  templates                 IssueTemplate[]
+  notifications             Notification[]
+  createdLinks              IssueLink[]          @relation("CreatedLinks")
+  componentLeads            Component[]          @relation("ComponentLead")
+  componentDefaultAssignees Component[]          @relation("ComponentDefaultAssignee")
+  createdSpecs              Specification[]      @relation("CreatedSpecs")
+  specComments              SpecComment[]        @relation("SpecComments")
+  credentials               ProjectCredential[]  @relation("UserCredentials")
+  slackInstallations        SlackIntegration[]
+  githubInstallations       GitHubIntegration[]
+  joinRequests              ProjectJoinRequest[] @relation("JoinRequester")
+  resolvedJoinRequests      ProjectJoinRequest[] @relation("JoinResolver")
+  oauthAuthCodes            OAuthAuthCode[]
+  oauthAccessTokens         OAuthAccessToken[]
+  oauthRefreshTokens        OAuthRefreshToken[]
 
   @@map("users")
 }
@@ -63,15 +66,15 @@ model Project {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  members        ProjectMember[]
-  issues         Issue[]
-  labels         Label[]
-  components     Component[]
-  specifications Specification[]
-  credentials    ProjectCredential[]
-  reportConfig   DailyReportConfig?
+  members           ProjectMember[]
+  issues            Issue[]
+  labels            Label[]
+  components        Component[]
+  specifications    Specification[]
+  credentials       ProjectCredential[]
+  reportConfig      DailyReportConfig?
   githubIntegration GitHubIntegration?
-  joinRequests   ProjectJoinRequest[]
+  joinRequests      ProjectJoinRequest[]
 
   @@map("projects")
 }
@@ -114,11 +117,11 @@ model ProjectJoinRequest {
   createdAt       DateTime          @default(now()) @map("created_at")
   resolvedAt      DateTime?         @map("resolved_at")
 
-  requesterId  String  @map("requester_id")
-  requester    User    @relation("JoinRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterId String @map("requester_id")
+  requester   User   @relation("JoinRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
-  projectId    String  @map("project_id")
-  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   resolvedById String? @map("resolved_by_id")
   resolvedBy   User?   @relation("JoinResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
@@ -151,10 +154,10 @@ model Issue {
   // detected client (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM).
   // Stored as VARCHAR rather than a Prisma enum so new clients can be
   // added without a migration.
-  source      String        @default("WEB") @db.VarChar(20)
+  source String @default("WEB") @db.VarChar(20)
 
-  projectId  String  @map("project_id")
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   assigneeId String? @map("assignee_id")
   assignee   User?   @relation("AssignedIssues", fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -175,8 +178,8 @@ model Issue {
   comments      Comment[]
   attachments   Attachment[]
   notifications Notification[]
-  sourceLinks   IssueLink[] @relation("SourceLinks")
-  targetLinks   IssueLink[] @relation("TargetLinks")
+  sourceLinks   IssueLink[]         @relation("SourceLinks")
+  targetLinks   IssueLink[]         @relation("TargetLinks")
   specLinks     IssueSpecLink[]
   githubPrLinks GitHubPrIssueLink[]
 
@@ -292,8 +295,8 @@ model Attachment {
   url       String
   createdAt DateTime @default(now()) @map("created_at")
 
-  issueId   String? @map("issue_id")
-  issue     Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String? @map("issue_id")
+  issue   Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
   commentId String?  @map("comment_id")
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
@@ -331,15 +334,15 @@ model Notification {
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
 
-  userId    String @map("user_id")
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  issueId   String? @map("issue_id")
-  issue     Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String? @map("issue_id")
+  issue   Issue?  @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
   projectId String? @map("project_id")
 
-  actorId   String? @map("actor_id")
+  actorId String? @map("actor_id")
 
   @@index([userId, isRead, createdAt])
   @@map("notifications")
@@ -350,7 +353,7 @@ model Notification {
 model ApiKey {
   id        String    @id @default(uuid())
   key       String    @unique @db.VarChar(255)
-  keyPrefix String    @db.VarChar(8) @map("key_prefix")
+  keyPrefix String    @map("key_prefix") @db.VarChar(8)
   name      String    @db.VarChar(100)
   lastUsed  DateTime? @map("last_used")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -360,6 +363,78 @@ model ApiKey {
 
   @@index([keyPrefix])
   @@map("api_keys")
+}
+
+// ─── OAuth 2.1 (Authorization Server for MCP / external clients) ──
+
+model OAuthClient {
+  id                      String   @id @default(uuid())
+  clientId                String   @unique @map("client_id")
+  clientSecret            String?  @map("client_secret")
+  clientName              String   @map("client_name")
+  redirectUris            String[] @map("redirect_uris")
+  scopes                  String[] @default(["mcp"])
+  grantTypes              String[] @default(["authorization_code", "refresh_token"]) @map("grant_types")
+  responseTypes           String[] @default(["code"]) @map("response_types")
+  tokenEndpointAuthMethod String   @default("client_secret_basic") @map("token_endpoint_auth_method")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  authCodes     OAuthAuthCode[]
+  accessTokens  OAuthAccessToken[]
+  refreshTokens OAuthRefreshToken[]
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthCode {
+  code                String   @id
+  clientId            String   @map("client_id")
+  userId              String   @map("user_id")
+  redirectUri         String   @map("redirect_uri")
+  scopes              String[]
+  codeChallenge       String   @map("code_challenge")
+  codeChallengeMethod String   @default("S256") @map("code_challenge_method")
+  resource            String?
+  expiresAt           DateTime @map("expires_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("oauth_auth_codes")
+}
+
+model OAuthAccessToken {
+  token     String   @id
+  clientId  String   @map("client_id")
+  userId    String   @map("user_id")
+  scopes    String[]
+  resource  String?
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("oauth_access_tokens")
+}
+
+model OAuthRefreshToken {
+  token     String   @id
+  clientId  String   @map("client_id")
+  userId    String   @map("user_id")
+  scopes    String[]
+  resource  String?
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("oauth_refresh_tokens")
 }
 
 // ─── Issue Link ────────────────────────────────────────────
@@ -417,9 +492,9 @@ model Component {
 }
 
 model IssueComponent {
-  issueId     String @map("issue_id")
-  componentId String @map("component_id")
-  issue       Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId     String    @map("issue_id")
+  componentId String    @map("component_id")
+  issue       Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
   component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
 
   @@id([issueId, componentId])
@@ -461,7 +536,7 @@ model Specification {
 
 model SpecSection {
   id        String @id @default(uuid())
-  sectionId String @db.VarChar(100) @map("section_id")
+  sectionId String @map("section_id") @db.VarChar(100)
   level     Int
   title     String @db.VarChar(300)
   order     Int    @default(0)
@@ -483,8 +558,8 @@ model SpecComment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  specId    String        @map("spec_id")
-  spec      Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
+  specId String        @map("spec_id")
+  spec   Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
 
   sectionId String?      @map("section_id")
   section   SpecSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
@@ -492,8 +567,8 @@ model SpecComment {
   userId String @map("user_id")
   user   User   @relation("SpecComments", fields: [userId], references: [id], onDelete: Cascade)
 
-  parentId String?      @map("parent_id")
-  parent   SpecComment? @relation("SpecCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String?       @map("parent_id")
+  parent   SpecComment?  @relation("SpecCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies  SpecComment[] @relation("SpecCommentReplies")
 
   @@index([specId, resolved])
@@ -505,21 +580,21 @@ model SpecComment {
 // ─── Project Credential ───────────────────────────────────
 
 model ProjectCredential {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
-  serviceType String   @map("service_type")
+  serviceType String  @map("service_type")
   description String?
   url         String?
-  entries     Json     // [{ key: "Access Key", value: "AKIA...", sensitive: true }]
+  entries     Json // [{ key: "Access Key", value: "AKIA...", sensitive: true }]
 
-  projectId   String   @map("project_id")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdById String   @map("created_by_id")
-  createdBy   User     @relation("UserCredentials", fields: [createdById], references: [id])
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("UserCredentials", fields: [createdById], references: [id])
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("project_credentials")
 }
@@ -527,16 +602,16 @@ model ProjectCredential {
 // ─── Issue-Spec Link ───────────────────────────────────────
 
 model IssueSpecLink {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  issueId     String        @map("issue_id")
-  issue       Issue         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String @map("issue_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
-  specId      String        @map("spec_id")
-  spec        Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
+  specId String        @map("spec_id")
+  spec   Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
 
-  sectionSlug String        @default("") @db.VarChar(100) @map("section_slug")
+  sectionSlug String @default("") @map("section_slug") @db.VarChar(100)
 
   @@unique([issueId, specId, sectionSlug])
   @@index([issueId])
@@ -566,36 +641,36 @@ model SlackIntegration {
 // ─── Daily Report Config ──────────────────────────────────
 
 model DailyReportConfig {
-  id                 String    @id @default(uuid())
-  enabled            Boolean   @default(false)
-  timezone           String    @default("Asia/Seoul")
+  id       String  @id @default(uuid())
+  enabled  Boolean @default(false)
+  timezone String  @default("Asia/Seoul")
 
-  morningTime        String    @default("09:00") @map("morning_time")
-  morningChannelId   String?   @map("morning_channel_id")
-  morningChannelName String?   @map("morning_channel_name")
+  morningTime        String  @default("09:00") @map("morning_time")
+  morningChannelId   String? @map("morning_channel_id")
+  morningChannelName String? @map("morning_channel_name")
 
-  lunchTime          String    @default("13:00") @map("lunch_time")
-  lunchChannelId     String?   @map("lunch_channel_id")
-  lunchChannelName   String?   @map("lunch_channel_name")
+  lunchTime        String  @default("13:00") @map("lunch_time")
+  lunchChannelId   String? @map("lunch_channel_id")
+  lunchChannelName String? @map("lunch_channel_name")
 
-  eveningTime        String    @default("18:00") @map("evening_time")
-  eveningChannelId   String?   @map("evening_channel_id")
-  eveningChannelName String?   @map("evening_channel_name")
+  eveningTime        String  @default("18:00") @map("evening_time")
+  eveningChannelId   String? @map("evening_channel_id")
+  eveningChannelName String? @map("evening_channel_name")
 
-  skipWeekends       Boolean   @default(true) @map("skip_weekends")
+  skipWeekends Boolean @default(true) @map("skip_weekends")
 
-  morningLastSent    DateTime? @map("morning_last_sent")
-  lunchLastSent      DateTime? @map("lunch_last_sent")
-  eveningLastSent    DateTime? @map("evening_last_sent")
+  morningLastSent DateTime? @map("morning_last_sent")
+  lunchLastSent   DateTime? @map("lunch_last_sent")
+  eveningLastSent DateTime? @map("evening_last_sent")
 
-  project            Project   @relation(fields: [projectId], references: [id])
-  projectId          String    @unique @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String  @unique @map("project_id")
 
   slackIntegration   SlackIntegration @relation(fields: [slackIntegrationId], references: [id])
-  slackIntegrationId String    @map("slack_integration_id")
+  slackIntegrationId String           @map("slack_integration_id")
 
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("daily_report_configs")
 }
@@ -685,9 +760,9 @@ model StandupReport {
   config   StandupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
   answers    StandupAnswer[]
-  remindedAt DateTime? @map("reminded_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+  remindedAt DateTime?       @map("reminded_at")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
 
   @@index([configId, createdAt])
   @@index([slackUserId, status])
@@ -700,8 +775,8 @@ model StandupAnswer {
   messageTs String? @map("message_ts")
   order     Int
 
-  reportId   String          @map("report_id")
-  report     StandupReport   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId String        @map("report_id")
+  report   StandupReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   questionId String          @map("question_id")
   question   StandupQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -713,64 +788,65 @@ model StandupAnswer {
 // ─── GitHub Integration ─────────────────────────────
 
 model GitHubIntegration {
-  id              String   @id @default(uuid())
-  accessToken     String   @map("access_token")
-  webhookSecret   String   @map("webhook_secret")
-  ownerLogin      String   @map("owner_login")
-  repoName        String?  @map("repo_name")
+  id            String  @id @default(uuid())
+  accessToken   String  @map("access_token")
+  webhookSecret String  @map("webhook_secret")
+  ownerLogin    String  @map("owner_login")
+  repoName      String? @map("repo_name")
 
-  onPrOpenStatus    String?  @map("on_pr_open_status")
-  onPrMergeStatus   String?  @map("on_pr_merge_status")
-  autoLinkEnabled   Boolean  @default(true) @map("auto_link_enabled")
+  onPrOpenStatus  String? @map("on_pr_open_status")
+  onPrMergeStatus String? @map("on_pr_merge_status")
+  autoLinkEnabled Boolean @default(true) @map("auto_link_enabled")
 
-  projectId       String   @unique @map("project_id")
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  installedById   String   @map("installed_by_id")
-  installedBy     User     @relation(fields: [installedById], references: [id])
+  projectId     String  @unique @map("project_id")
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  installedById String  @map("installed_by_id")
+  installedBy   User    @relation(fields: [installedById], references: [id])
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  pullRequests    GitHubPullRequest[]
+  pullRequests GitHubPullRequest[]
+
   @@map("github_integrations")
 }
 
 model GitHubPullRequest {
-  id              String   @id @default(uuid())
-  githubId        Int      @map("github_id")
-  number          Int
-  title           String   @db.VarChar(500)
-  url             String
-  state           String   @db.VarChar(20)
-  authorLogin     String   @map("author_login")
-  authorAvatar    String?  @map("author_avatar")
-  repoFullName    String   @map("repo_full_name")
-  baseBranch      String   @map("base_branch")
-  headBranch      String   @map("head_branch")
-  mergedAt        DateTime? @map("merged_at")
+  id           String    @id @default(uuid())
+  githubId     Int       @map("github_id")
+  number       Int
+  title        String    @db.VarChar(500)
+  url          String
+  state        String    @db.VarChar(20)
+  authorLogin  String    @map("author_login")
+  authorAvatar String?   @map("author_avatar")
+  repoFullName String    @map("repo_full_name")
+  baseBranch   String    @map("base_branch")
+  headBranch   String    @map("head_branch")
+  mergedAt     DateTime? @map("merged_at")
 
-  integrationId   String   @map("integration_id")
-  integration     GitHubIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  integrationId String            @map("integration_id")
+  integration   GitHubIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
-  issueLinks      GitHubPrIssueLink[]
+  issueLinks GitHubPrIssueLink[]
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([integrationId, githubId])
   @@map("github_pull_requests")
 }
 
 model GitHubPrIssueLink {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  pullRequestId   String   @map("pull_request_id")
-  pullRequest     GitHubPullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  pullRequestId String            @map("pull_request_id")
+  pullRequest   GitHubPullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
 
-  issueId         String   @map("issue_id")
-  issue           Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String @map("issue_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([pullRequestId, issueId])
   @@index([issueId])
@@ -785,19 +861,19 @@ model GitHubPrIssueLink {
 // undelivered rows on a 5s cron and dispatches via handler registry.
 
 model OutboxEvent {
-  id            String   @id @default(uuid()) @db.Uuid
-  eventType     String   @map("event_type")
-  aggregateType String   @map("aggregate_type")
-  aggregateId   String   @map("aggregate_id") @db.Uuid
+  id            String @id @default(uuid()) @db.Uuid
+  eventType     String @map("event_type")
+  aggregateType String @map("aggregate_type")
+  aggregateId   String @map("aggregate_id") @db.Uuid
   payload       Json
 
-  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz
-  deliveredAt   DateTime? @map("delivered_at") @db.Timestamptz
-  attempts      Int      @default(0)
-  lastError     String?  @map("last_error")
-  nextRetryAt   DateTime @default(now()) @map("next_retry_at") @db.Timestamptz
+  occurredAt  DateTime  @default(now()) @map("occurred_at") @db.Timestamptz
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  nextRetryAt DateTime  @default(now()) @map("next_retry_at") @db.Timestamptz
 
-  sequenceNo    BigInt   @default(autoincrement()) @map("sequence_no")
+  sequenceNo BigInt @default(autoincrement()) @map("sequence_no")
 
   @@index([nextRetryAt], map: "idx_outbox_undelivered")
   @@index([aggregateType, aggregateId, sequenceNo], map: "idx_outbox_aggregate")

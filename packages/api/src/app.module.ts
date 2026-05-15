@@ -15,6 +15,7 @@ import { LabelModule } from './label/label.module.js';
 import { ActivityModule } from './activity/activity.module.js';
 import { CommentModule } from './comment/comment.module.js';
 import { ApiKeyModule } from './api-key/api-key.module.js';
+import { OAuthModule } from './oauth/oauth.module.js';
 import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { UploadModule } from './upload/upload.module.js';
@@ -58,6 +59,7 @@ import { AppController } from './app.controller.js';
     ActivityModule,
     CommentModule,
     ApiKeyModule,
+    OAuthModule,
     ExternalModule,
     DashboardModule,
     UploadModule,
