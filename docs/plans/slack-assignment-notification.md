@@ -1,8 +1,13 @@
 # Plan: Slack DM the new assignee on every issue assignment
 
-> **Status**: Proposed
+> **Status**: ✅ Shipped — 2026-05-13 in commit [`037f848`](https://github.com/) (`feat(api): DM the new assignee on Slack when an issue is assigned`).
 > **Domain**: `slack`, `notification`, `issue` (see [`docs/changelogs/slack-changelog.md`](../changelogs/slack-changelog.md), [`docs/changelogs/notification-changelog.md`](../changelogs/notification-changelog.md))
 > **Related**: extends the existing `notifyAssignment` path at `packages/api/src/issue/issue.service.ts:72`.
+> **Where it landed**: `SlackService.sendDirectMessage()` at `packages/api/src/slack/slack.service.ts:256`; `NotificationService.deliverSlackAssignedDm()` at `packages/api/src/notification/notification.service.ts:324`, dispatched from `NotificationService.create()` via fire-and-forget `.catch(warn)` at `:150`.
+> **Deviations from this plan**:
+> - **Deferred delivery added on top.** Plan called for synchronous DM dispatch from `create()`. The shipped version introduces `scheduleAssignmentNotification()` with a 10-second grace window and `cancelPendingAssignment()` so the UI can undo a mis-click before the DM fires. See [`docs/ARCHITECTURE.md` §7.6](../ARCHITECTURE.md#76-issue-assignment--slack-dm-fire-and-forget) and the notification-changelog.
+> - **REVIEWER_ASSIGNED parity.** Same code path extended to the reviewer-assignment slot; not in the original plan but a natural follow-up.
+> - **`meta` not persisted.** Plan suggested passing project key/issue number/title/actor name via `data.meta`. Shipped that way; `meta` is destructured off the create input and consumed only by the delivery side-effect, never written to the `notifications` row.
 
 ---
 
@@ -178,4 +183,6 @@ After merge:
 
 ## Next step
 
-**Awaiting user approval** → `/2-implement`.
+~~**Awaiting user approval** → `/2-implement`.~~
+
+**Done.** Implemented in `037f848` (2026-05-13). See [`docs/changelogs/slack-changelog.md`](../changelogs/slack-changelog.md) and [`docs/changelogs/notification-changelog.md`](../changelogs/notification-changelog.md) for the entries.

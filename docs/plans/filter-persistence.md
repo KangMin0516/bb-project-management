@@ -1,8 +1,10 @@
 # Plan: Persist Board / Issues / Timeline filters across reload
 
-> **Status**: Proposed
+> **Status**: ✅ Shipped — 2026-05-13 in commit [`1d3a69a`](https://github.com/) (`feat(web): persist Board/Issues/Timeline filters via URL searchParams`).
 > **Domain**: `ui`, frontend cross-cutting (see [`docs/changelogs/ui-changelog.md`](../changelogs/ui-changelog.md))
-> **Tracks**: original `docs/IMPLEMENTATION_PLAN.md` Phase 2 Step 2.4 — "URL-based filter persistence (back / refresh)" — never shipped.
+> **Tracks**: original `docs/IMPLEMENTATION_PLAN.md` Phase 2 Step 2.4 — "URL-based filter persistence (back / refresh)".
+> **Where it landed**: `packages/web/src/shared/lib/useFilterSearchParams.ts` + `packages/web/src/shared/lib/filter-codec.ts`, consumed by `BoardPage.tsx`, `IssuesPage.tsx`, `TimelinePage.tsx`. (Hook later moved from `hooks/` → `shared/lib/` during the feature-based refactor in commit `486a2d6`; behaviour unchanged.)
+> **Deviations from this plan**: none material — hook signature, codec rules, debounced search write, and the three-page migration all match the plan as written.
 
 ---
 
@@ -142,6 +144,6 @@ No frontend test runner today (per [`docs/changelogs/ui-changelog.md`](../change
 
 ## Next step
 
-**Awaiting user approval** → `/2-implement`.
+~~**Awaiting user approval** → `/2-implement`.~~
 
-When implemented, update [`docs/changelogs/ui-changelog.md`](../changelogs/ui-changelog.md) with an entry under the date of merge, citing the merge commit SHA.
+**Done.** Implemented in `1d3a69a` (2026-05-13). See [`docs/changelogs/ui-changelog.md`](../changelogs/ui-changelog.md) for the changelog entry.

@@ -8,8 +8,8 @@ Concrete implementation plans, one file per feature. Each plan is the artifact t
 
 | File | Status | Domain | Summary |
 |---|---|---|---|
-| [`filter-persistence.md`](./filter-persistence.md) | **Proposed** | `ui`, frontend cross-cutting | Board / Issues / Timeline filters survive reload via URL searchParams sync. |
-| [`slack-assignment-notification.md`](./slack-assignment-notification.md) | **Proposed** | `slack`, `notification` | When an issue's assignee changes, the new assignee receives a Slack DM (in addition to the existing in-app notification). |
+| [`filter-persistence.md`](./filter-persistence.md) | ✅ **Shipped** — `1d3a69a` (2026-05-13) | `ui`, frontend cross-cutting | Board / Issues / Timeline filters survive reload via URL searchParams sync. |
+| [`slack-assignment-notification.md`](./slack-assignment-notification.md) | ✅ **Shipped** — `037f848` (2026-05-13) | `slack`, `notification` | When an issue's assignee changes, the new assignee receives a Slack DM (in addition to the existing in-app notification). |
 
 ## Convention
 
