@@ -35,6 +35,48 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 
 ## Timeline
 
+### 2026-05-15 — Comments + activities readable, members + labels listable (74e3064, 853651e)
+**Added.** Phase 1 of the MCP rollout — endpoints an LLM agent needs
+*before* it can sensibly call `create_issue` or `comment`.
+- `POST /api/external/issues/:projectKey/:issueNumber/comments` —
+  delegates to `CommentService` so `@mention` dispatch (Slack DM,
+  `MENTIONED` notification) runs through the same path as the web flow.
+- `GET /api/external/projects` — projects the calling user is a
+  member of.
+- `GET /api/external/projects/:projectKey/members` — id + role +
+  avatar; lets an LLM resolve a human name to a user UUID.
+- `GET /api/external/projects/:projectKey/labels` — label catalog.
+- `GET /api/external/issues/:projectKey/:issueNumber/comments` and
+  `…/activities` — readable threaded discussion + audit history.
+- Source: `packages/api/src/external/external.controller.ts`,
+  `packages/api/src/external/external.service.ts`. Full rollout notes:
+  [`mcp-changelog.md`](./mcp-changelog.md).
+
+### 2026-05-15 — Accept `assigneeId` on create + update (3ca73ba)
+**Fixed.** External DTOs only declared `assigneeEmail`, so the global
+`ValidationPipe` (`whitelist: true`) silently dropped any
+`assigneeId` an LLM-driven client sent — and the create succeeded
+without an assignee. Added `assigneeId` (UUID) to both create + update
+DTOs; when both are sent, `assigneeId` wins. Email lookup stays as a
+fallback for clients that only have the email.
+
+### 2026-05-15 — Bearer tokens accepted alongside `X-API-Key` (a0629e0)
+**Changed.** The guard on `/api/external/*` is still `ApiKeyGuard`, but
+the guard itself now accepts `Authorization: Bearer bbpm_at_<…>` in
+addition to `X-API-Key`. Cursor / Claude Code / scripts keep using
+their API keys; claude.ai web custom connectors and ChatGPT remote
+MCP use OAuth-issued Bearer tokens — the controller surface is the
+same either way. See
+[`docs/architecture/backend/mcp-server.md`](../architecture/backend/mcp-server.md).
+
+### 2026-05-15 — Row provenance via `source` column (8316d12, 4bd0043)
+**Changed.** Every write through the external surface now tags
+`issues.source`, `activities.source`, `comments.source` with the
+detected client (`MCP`, `API`, `SLACK`, `WEBHOOK`, `SYSTEM`).
+Detection priority: `X-Client-Source` header > User-Agent sniffing >
+`API` fallback. Migration `20260515064854_add_source_columns` backfills
+existing rows to `'WEB'`.
+
 ### 2026-05-11 — Issue↔spec links via external API (7eb50ad)
 **Added.** Three endpoints to wire issues to specs from an agent context. Lets the agent that just generated an issue from a spec section persist the back-link in the same call sequence.
 - Source: `packages/api/src/external/external.controller.ts:134`, `packages/api/src/external/external.service.ts:468`.

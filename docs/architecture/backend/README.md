@@ -22,6 +22,10 @@
 5. **[entities.md](./entities.md)** — every Prisma model (30 of them) with
    fields, FKs, indexes, and cascade behaviour. The *what's in the database*
    reference, grouped by domain.
+6. **[mcp-server.md](./mcp-server.md)** — how Claude / ChatGPT / other MCP
+   clients talk to BB-PM: local `npx` vs remote/cloud delivery, OAuth 2.1
+   PKCE handshake, dual `ApiKeyGuard`, source-of-write tagging, threat
+   model.
 
 ## What's NOT in here
 

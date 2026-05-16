@@ -23,6 +23,7 @@ Per-domain changelogs for the `bb-pm` (BB Project Management) monorepo. Each fil
 | [`report-changelog.md`](./report-changelog.md)               | **Slack reports**      | Daily project reports (morning/lunch/evening) + management digest |
 | [`github-changelog.md`](./github-changelog.md)               | **GitHub integration** | PAT connect, HMAC-verified webhooks, PR↔issue auto-link, status sync |
 | [`external-api-changelog.md`](./external-api-changelog.md)   | **External API**       | `X-API-Key`-authenticated REST surface for AI agents and external integrations |
+| [`mcp-changelog.md`](./mcp-changelog.md)                     | **MCP server**         | OAuth 2.1 Authorization Server, dual `X-API-Key`/`Bearer` guard, source-of-write tagging, `/external/*` additions for MCP agents |
 | [`dashboard-changelog.md`](./dashboard-changelog.md)         | **Dashboards**         | Global, project, team dashboards, KPI cards, focus issues, member tasks |
 | [`timeline-changelog.md`](./timeline-changelog.md)           | **Timeline view**      | Gantt-style timeline, EPIC grouping, scroll sync, CANCELED filtering |
 | [`ui-changelog.md`](./ui-changelog.md)                       | **Frontend cross-cutting** | Dark mode, keyboard shortcuts + command palette, API docs page, breadcrumbs, accessibility |

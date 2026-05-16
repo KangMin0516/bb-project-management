@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-15 — Dual credentials in `ApiKeyGuard` (a0629e0)
+**Changed.** The `ApiKeyGuard` now accepts **either** `X-API-Key: bbpm_<hex>` (long-lived personal key) **or** `Authorization: Bearer bbpm_at_<…>` (short-lived OAuth 2.1 access token). Both paths populate `request.user = { sub, email }` so every downstream `/api/external/*` controller treats them identically. The OAuth side is its own surface — see [`mcp-changelog.md`](./mcp-changelog.md) and [`docs/architecture/backend/mcp-server.md`](../architecture/backend/mcp-server.md). Auth-wise the only change here is that the guard gained a second resolution path.
+- Source: `packages/api/src/api-key/api-key.guard.ts`.
+
 ### 2026-04-17 — DELETED user status (Schema: `20260417033840_add_deleted_user_status`)
 **Schema.** Added `DELETED` to `UserStatus` enum so superusers can soft-delete accounts. Login refuses any non-`ACTIVE` status with a localized message.
 - Migration: `20260417033840_add_deleted_user_status`.
