@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import type { Component, CreateComponentPayload, UpdateComponentPayload } from '@/features/project/component-api'
 import type { ProjectMember } from '@/features/project/api'
+import UserAvatar from '@/entities/user/UserAvatar'
 import SettingsSection from './SettingsSection'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import {
@@ -119,7 +120,15 @@ function MemberSelect({ value, onChange, members, placeholder }: { value: string
       <SelectContent>
         <SelectItem value={NO_MEMBER}>{placeholder}</SelectItem>
         {members?.map((m) => (
-          <SelectItem key={m.user.id} value={m.user.id}>{m.user.name}</SelectItem>
+          <SelectItem key={m.user.id} value={m.user.id}>
+            <span className="flex items-center gap-2">
+              <UserAvatar user={m.user} size="md" />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{m.user.name}</span>
+                <span className="truncate text-xs text-gray-500 dark:text-gray-400">{m.user.email}</span>
+              </span>
+            </span>
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>

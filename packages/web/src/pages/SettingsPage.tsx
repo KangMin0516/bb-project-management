@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Project Settings</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
 
       <GeneralSection project={project} onSave={(data) => projectMutations.update.mutate(data)} />
 

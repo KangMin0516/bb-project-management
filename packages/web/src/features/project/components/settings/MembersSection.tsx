@@ -3,6 +3,7 @@ import { Trash2, UserPlus } from 'lucide-react'
 import type { ProjectMember } from '@/features/project/api'
 import type { User } from '@/entities/user/api'
 import { useImagePreviewStore } from '@/shared/lib/imagePreview'
+import UserAvatar from '@/entities/user/UserAvatar'
 import SettingsSection from './SettingsSection'
 import {
   Select,
@@ -109,7 +110,15 @@ function AddMemberForm({
           <SelectContent>
             <SelectItem value={NO_USER}>Select user...</SelectItem>
             {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>
+              <SelectItem key={u.id} value={u.id}>
+                <span className="flex items-center gap-2">
+                  <UserAvatar user={u} size="md" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{u.name}</span>
+                    <span className="truncate text-xs text-gray-500 dark:text-gray-400">{u.email}</span>
+                  </span>
+                </span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
