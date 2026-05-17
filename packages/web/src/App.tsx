@@ -7,6 +7,7 @@ import ErrorBoundary from '@/shared/ui/ErrorBoundary'
 import ImagePreviewModal from '@/shared/ui/atoms/ImagePreviewModal'
 import { ConfirmDialogHost } from '@/shared/ui/confirm-dialog'
 import { Toaster } from 'sonner'
+import { Agentation } from 'agentation'
 
 export default function App() {
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function App() {
       <Toaster position="bottom-right" richColors />
       <ImagePreviewModal />
       <ConfirmDialogHost />
+      {import.meta.env.DEV && <Agentation />}
     </AppProviders>
   )
 }
