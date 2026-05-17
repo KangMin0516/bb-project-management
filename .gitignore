@@ -8,3 +8,5 @@ coverage/
 .turbo/
 generated/
 .playwright-mcp
+.claude/worktrees/
+.agents/
