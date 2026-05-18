@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { IssueRuleService, type ResolvedIssueRule } from './issue-rule.service.js';
 import { IssueType } from '../../generated/prisma/enums.js';
 
@@ -83,5 +83,52 @@ describe('IssueRuleService.applyDefaultsAndValidate', () => {
       description: '',
     });
     expect(warnings).toHaveLength(1);
+  });
+});
+
+describe('IssueRuleService.resolveEnforcedLabels', () => {
+  it('returns [] when rule is null', async () => {
+    const ids = await svc().resolveEnforcedLabels(null, 'p1');
+    expect(ids).toEqual([]);
+  });
+
+  it('reuses an existing label even when case differs (no duplicate)', async () => {
+    // Project already has "Bug" (capitalised). Rule says "bug".
+    // The lookup must find the existing row instead of creating a
+    // second one.
+    const findMany = jest.fn(async () => [{ id: 'lbl-bug-existing', name: 'Bug' }]);
+    const create = jest.fn();
+    const prisma = {
+      label: { findMany, create },
+    };
+    const service = new IssueRuleService(prisma as never);
+    const rule = mkRule({ enforcedLabelNames: ['bug'] });
+    const ids = await service.resolveEnforcedLabels(rule, 'p1');
+    expect(ids).toEqual(['lbl-bug-existing']);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('trims whitespace before matching', async () => {
+    const findMany = jest.fn(async () => [
+      { id: 'lbl-existing', name: 'needs-triage' },
+    ]);
+    const create = jest.fn();
+    const prisma = { label: { findMany, create } };
+    const service = new IssueRuleService(prisma as never);
+    const rule = mkRule({ enforcedLabelNames: ['  needs-triage  '] });
+    const ids = await service.resolveEnforcedLabels(rule, 'p1');
+    expect(ids).toEqual(['lbl-existing']);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('creates a new label when no row matches case-insensitively', async () => {
+    const findMany = jest.fn(async () => []);
+    const create = jest.fn(async () => ({ id: 'lbl-new' }));
+    const prisma = { label: { findMany, create } };
+    const service = new IssueRuleService(prisma as never);
+    const rule = mkRule({ enforcedLabelNames: ['fresh-label'] });
+    const ids = await service.resolveEnforcedLabels(rule, 'p1');
+    expect(ids).toEqual(['lbl-new']);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 });

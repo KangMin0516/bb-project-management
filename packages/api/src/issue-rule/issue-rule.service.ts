@@ -150,6 +150,12 @@ export class IssueRuleService {
    * missing in the target project are created on the fly with a
    * neutral default color so the rule "just works" regardless of
    * which project the LLM creates in.
+   *
+   * Matching is **case-insensitive + whitespace-trimmed** so a rule
+   * spelling of "bug" reuses the team's existing "Bug" label instead
+   * of creating a near-duplicate row (Prisma's `name: { in: [...] }`
+   * matches case-sensitively, which previously created "Bug" + "bug"
+   * side-by-side in the same project).
    */
   async resolveEnforcedLabels(
     rule: ResolvedIssueRule | null,
@@ -157,33 +163,55 @@ export class IssueRuleService {
   ): Promise<string[]> {
     if (!rule || rule.enforcedLabelNames.length === 0) return [];
 
+    const normalized = rule.enforcedLabelNames
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    if (normalized.length === 0) return [];
+
+    // Case-insensitive lookup. `OR` of `{ name: { equals, mode:
+    // 'insensitive' } }` is cheap because the table is small and
+    // the `(projectId, name)` index covers the projectId predicate.
     const existing = await this.prisma.label.findMany({
       where: {
         projectId,
-        name: { in: rule.enforcedLabelNames },
+        OR: normalized.map((name) => ({
+          name: { equals: name, mode: 'insensitive' as const },
+        })),
       },
       select: { id: true, name: true },
     });
-    const existingByName = new Map(existing.map((l) => [l.name, l.id]));
+    const existingByLower = new Map(
+      existing.map((l) => [l.name.toLowerCase(), l.id]),
+    );
 
-    const missing = rule.enforcedLabelNames.filter(
-      (name) => !existingByName.has(name),
+    const missing = normalized.filter(
+      (name) => !existingByLower.has(name.toLowerCase()),
     );
     if (missing.length > 0) {
-      // Create one-by-one (small N — usually 0-3 labels per rule) so
-      // each row picks up its own UUID and createdAt. Could be a
-      // createMany() with skipDuplicates if we add a (projectId, name)
-      // unique constraint later.
       for (const name of missing) {
-        const created = await this.prisma.label.create({
-          data: { projectId, name, color: '#9CA3AF' },
-        });
-        existingByName.set(name, created.id);
+        // Race-safe: if a concurrent create snuck in, the
+        // `(projectId, name)` unique index will reject the dup —
+        // fall back to a re-find with case-insensitive equality.
+        try {
+          const created = await this.prisma.label.create({
+            data: { projectId, name, color: '#9CA3AF' },
+          });
+          existingByLower.set(name.toLowerCase(), created.id);
+        } catch {
+          const found = await this.prisma.label.findFirst({
+            where: {
+              projectId,
+              name: { equals: name, mode: 'insensitive' },
+            },
+            select: { id: true },
+          });
+          if (found) existingByLower.set(name.toLowerCase(), found.id);
+        }
       }
     }
 
-    return rule.enforcedLabelNames
-      .map((name) => existingByName.get(name))
+    return normalized
+      .map((name) => existingByLower.get(name.toLowerCase()))
       .filter((id): id is string => Boolean(id));
   }
 }
