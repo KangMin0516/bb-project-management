@@ -1392,6 +1392,141 @@ export class ExternalService {
     return { merged: [...next], missing };
   }
 
+  /**
+   * Attachments on an issue. Returns sparse rows — id, filename, url,
+   * mimeType, fileSize, uploader profile — so the LLM can pick which
+   * one to delete or render. Includes both attachments uploaded
+   * inline at create time and ones attached later.
+   */
+  async listAttachments(projectKey: string, issueNumber: number) {
+    const { issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    return this.prisma.attachment.findMany({
+      where: { issueId },
+      include: {
+        uploader: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Delete an attachment. Delegates to UploadService.remove which
+   * enforces the uploader-only invariant and best-effort S3 cleanup,
+   * so the external surface gets the same permission model as the
+   * web UI.
+   */
+  async deleteAttachment(attachmentId: string, userId: string) {
+    return this.uploadService.remove(attachmentId, userId);
+  }
+
+  /**
+   * Cross-project issue search. Postgres `ILIKE` on title (and
+   * optionally description when `includeDescription=true`) across
+   * every project the caller is a member of. Returns a sparse
+   * projection so a thousand-row search stays small.
+   *
+   * Postgres FTS would be more accurate (stemming + ranking) but
+   * adds operational cost (`GIN` index + tsvector column). ILIKE is
+   * good enough for the workspace sizes we expect (<100k issues).
+   * Bump to FTS only when search latency or precision becomes a real
+   * complaint.
+   */
+  async searchIssues(
+    userId: string,
+    params: {
+      q: string;
+      projectKey?: string;
+      type?: string;
+      includeDescription?: boolean;
+      limit?: number;
+    },
+  ) {
+    if (!params.q || params.q.trim().length < 2) {
+      throw new BadRequestException('Query must be at least 2 characters');
+    }
+    const safeLimit = Math.min(Math.max(params.limit ?? 25, 1), 100);
+    const q = params.q.trim();
+
+    // Restrict to projects the caller can read.
+    const memberships = await this.prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true, project: { select: { key: true } } },
+    });
+    const accessibleProjectIds = memberships.map((m) => m.projectId);
+    const projectKeyById = new Map(
+      memberships.map((m) => [m.projectId, m.project.key]),
+    );
+    if (accessibleProjectIds.length === 0) return [];
+
+    let scopedProjectIds = accessibleProjectIds;
+    if (params.projectKey) {
+      const target = memberships.find(
+        (m) => m.project.key === params.projectKey,
+      );
+      if (!target) {
+        throw new NotFoundException(
+          `Project "${params.projectKey}" not found or not accessible`,
+        );
+      }
+      scopedProjectIds = [target.projectId];
+    }
+
+    const where: {
+      projectId: { in: string[] };
+      archivedAt: null;
+      type?: IssueType;
+      OR?: Array<{
+        title?: { contains: string; mode: 'insensitive' };
+        description?: { contains: string; mode: 'insensitive' };
+      }>;
+      title?: { contains: string; mode: 'insensitive' };
+    } = {
+      projectId: { in: scopedProjectIds },
+      archivedAt: null,
+    };
+    if (params.type) where.type = params.type.toUpperCase() as IssueType;
+
+    if (params.includeDescription) {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ];
+    } else {
+      where.title = { contains: q, mode: 'insensitive' };
+    }
+
+    const issues = await this.prisma.issue.findMany({
+      where,
+      select: {
+        id: true,
+        number: true,
+        title: true,
+        status: true,
+        priority: true,
+        type: true,
+        projectId: true,
+        assignee: { select: { id: true, name: true } },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: safeLimit,
+    });
+
+    return issues.map((i) => ({
+      id: i.id,
+      key: `${projectKeyById.get(i.projectId) ?? '?'}-${i.number}`,
+      number: i.number,
+      title: i.title,
+      status: i.status,
+      priority: i.priority,
+      type: i.type,
+      assignee: i.assignee,
+      projectKey: projectKeyById.get(i.projectId) ?? null,
+    }));
+  }
+
   async listMembers(projectKey: string) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },

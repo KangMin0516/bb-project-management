@@ -304,6 +304,41 @@ export class ExternalController {
     );
   }
 
+  @Get('issues/:projectKey/:issueNumber/attachments')
+  listAttachments(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+  ) {
+    return this.externalService.listAttachments(projectKey, issueNumber);
+  }
+
+  @Delete('attachments/:id')
+  deleteAttachment(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.externalService.deleteAttachment(id, user.sub);
+  }
+
+  @Get('search')
+  searchIssues(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q: string,
+    @Query('projectKey') projectKey?: string,
+    @Query('type') type?: string,
+    @Query('includeDescription') includeDescription?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.externalService.searchIssues(user.sub, {
+      q,
+      projectKey,
+      type,
+      includeDescription:
+        includeDescription === 'true' || includeDescription === '1',
+      limit: limit ? parseInt(limit, 10) || undefined : undefined,
+    });
+  }
+
   @Delete('issues/:projectKey/:issueNumber/labels')
   removeLabels(
     @Param('projectKey') projectKey: string,
