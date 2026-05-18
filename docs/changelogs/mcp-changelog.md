@@ -86,6 +86,48 @@ the rest of `/api/external/*`.
 
 ## Timeline
 
+### 2026-05-18 — Phase 1+2+3+4: full external API surface for `bbpm-internal-mcp` v0.5→v0.8
+
+Four BB-PM commits + four MCP package versions shipped in one push.
+
+**BB-PM (`/api/external/*`)**
+
+- **`bf8dda9`** — token-efficient `list_issues` (sparse fields opt-in,
+  `mode=summary` aggregate response, 8 new filters); `IssueRule`
+  table + admin UI `/admin/issue-rules` + Prisma migration
+  `20260518081015_add_issue_rules`; `POST /external/issues/:k/:n/
+  attachments` (base64 body, avoids multipart so JSON-only MCP
+  clients can attach screenshots); inline `attachments[]` on
+  `POST /external/issues`.
+- **`6aed690`** — productivity shortcuts: `/external/me`, `/external/
+  me/assignments`, `/external/issues/:k/:n/focus`, `.../archive`,
+  `.../unarchive`, `.../labels` (POST adds by name, DELETE removes).
+- **`c176174`** — `GET /external/issues/:k/:n/attachments`,
+  `DELETE /external/attachments/:id`, `GET /external/search?q=...`
+  (cross-project ILIKE, scoped to projects the caller is a member of).
+- **`48f955b`** — bug fix: `IssueRule.enforcedLabelNames` matches
+  project labels case-insensitively + whitespace-trimmed, so a rule
+  spelling of `"bug"` reuses an existing `"Bug"` label instead of
+  creating a near-duplicate row. Race-safe against concurrent
+  creates (catches the `(projectId, name)` unique conflict and
+  re-finds case-insensitively).
+
+**MCP package (`@burningbrosdabi/bbpm-mcp`)**
+
+- **v0.5.0** — `get_create_rules` + `attach_image_to_issue`; sparse
+  `list_issues` defaults + summary mode + filter explosion; rules-
+  driven `create_issue` with soft `warnings[]` in the response.
+- **v0.6.0** — `get_project_digest` + specs CRUD (5 tools) + issue↔
+  spec links (3 tools).
+- **v0.7.0** — `whoami`, `list_my_assignments`, `set_focus_today`,
+  `archive_issue`, `unarchive_issue`, `add_label_to_issue`,
+  `remove_label_from_issue`.
+- **v0.8.0** — `search_issues`, `list_attachments_for_issue`,
+  `delete_attachment`.
+
+Tool catalogue grew from **10 → 31** in a single day. Per-version
+detail tracked in `bbpm-internal-mcp/CHANGELOG.md`.
+
 ### 2026-05-15 19:26 — OAuth consent page hydrates auth state itself (`df78c01`)
 **Fixed.** `OAuthAuthorizePage` lived outside `<AuthGuard>` (so the
 `?response_type=code&client_id=…` params survive a round-trip through
