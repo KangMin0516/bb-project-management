@@ -6,13 +6,16 @@ import {
   MaxLength,
   IsArray,
   IsDateString,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IssueStatus,
   IssuePriority,
   IssueType,
 } from '../../../generated/prisma/enums.js';
+import { ExternalInlineAttachmentDto } from './external-attach-image.dto.js';
 
 export class ExternalCreateIssueDto {
   @ApiProperty({ example: 'BBPM' })
@@ -77,4 +80,15 @@ export class ExternalCreateIssueDto {
   @IsArray()
   @IsString({ each: true })
   labels?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Inline image attachments. Each is base64-encoded and uploaded to storage before the issue is created; their markdown is appended to the description so they render in the issue body.',
+    type: [ExternalInlineAttachmentDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExternalInlineAttachmentDto)
+  attachments?: ExternalInlineAttachmentDto[];
 }

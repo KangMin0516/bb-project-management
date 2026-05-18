@@ -22,6 +22,7 @@ import {
   Home,
   LayoutDashboard,
   List,
+  ListChecks,
   LogOut,
   MessageCircle,
   Monitor,
@@ -175,6 +176,7 @@ export default function AppLayout() {
     ...(user?.isSuperuser ? [
       { to: '/admin', icon: Users, label: 'Admin' },
       { to: '/admin/dashboard', icon: BarChart3, label: 'Team' },
+      { to: '/admin/issue-rules', icon: ListChecks, label: 'Issue Rules' },
     ] : []),
     { to: '/profile', icon: User, label: 'Profile' },
     { to: '/api-docs', icon: BookOpen, label: 'API Docs' },

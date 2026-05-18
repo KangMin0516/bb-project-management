@@ -9,13 +9,24 @@ import { UpdateIssueUseCase } from '../issue/application/update-issue.use-case.j
 import { SpecificationService } from '../specification/specification.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
 import { CommentService } from '../comment/comment.service.js';
+import { IssueRuleService } from '../issue-rule/issue-rule.service.js';
+import { UploadService } from '../upload/upload.service.js';
+import type {
+  ExternalAttachImageDto,
+  ExternalInlineAttachmentDto,
+} from './dto/external-attach-image.dto.js';
 import type { ExternalCreateIssueDto } from './dto/external-create-issue.dto.js';
 import type { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import type { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import type { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import type { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
 import type { ExternalCreateCommentDto } from './dto/external-create-comment.dto.js';
-import { SpecStatus, type IssueStatus } from '../../generated/prisma/enums.js';
+import {
+  SpecStatus,
+  type IssueStatus,
+  type IssuePriority,
+  type IssueType,
+} from '../../generated/prisma/enums.js';
 import { USER_SELECT } from '../common/constants.js';
 
 const TERMINAL_STATUSES = new Set<string>(['DONE', 'CANCELED']);
@@ -29,6 +40,8 @@ export class ExternalService {
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
     private commentService: CommentService,
+    private issueRuleService: IssueRuleService,
+    private uploadService: UploadService,
   ) {}
 
   private async resolveProjectAndIssue(
@@ -92,21 +105,204 @@ export class ExternalService {
       labelIds = labels.map((l) => l.id);
     }
 
-    return this.createIssueUC.execute({
-      projectId: project.id,
-      creatorId,
+    // ─── Apply global per-type rules ───────────────────────────
+    // Look up the workspace-wide rule for this issue's type. Merges
+    // default_values into the create payload, collects warnings for
+    // missing required_fields / title_pattern mismatches, and
+    // auto-attaches enforced labels (created in this project if they
+    // don't exist yet). Soft: never blocks creation.
+    const issueType = dto.type ?? 'TASK';
+    const rule = await this.issueRuleService.resolve(issueType);
+
+    const incoming: Record<string, unknown> = {
       title: dto.title,
       description: dto.description,
       status: dto.status,
       priority: dto.priority,
-      type: dto.type,
-      assigneeId: assigneeId ?? undefined,
-      parentId: dto.parentId,
-      startDate: dto.startDate,
+      assigneeId,
       dueDate: dto.dueDate,
-      labelIds,
+      startDate: dto.startDate,
+      parentId: dto.parentId,
+      labels: labelIds,
+    };
+    const { merged, warnings } = this.issueRuleService.applyDefaultsAndValidate(
+      rule,
+      incoming,
+    );
+
+    // Resolve enforced label names to per-project label IDs (creating
+    // missing labels on the fly), then merge de-duped with whatever
+    // the caller already passed.
+    const enforcedIds = await this.issueRuleService.resolveEnforcedLabels(
+      rule,
+      project.id,
+    );
+    if (enforcedIds.length) {
+      const existing = (merged.labels as string[] | undefined) ?? [];
+      merged.labels = Array.from(new Set([...existing, ...enforcedIds]));
+    }
+
+    const issue = await this.createIssueUC.execute({
+      projectId: project.id,
+      creatorId,
+      title: merged.title as string,
+      description: merged.description as string | undefined,
+      status: merged.status as IssueStatus | undefined,
+      priority: merged.priority as IssuePriority | undefined,
+      type: issueType,
+      assigneeId: (merged.assigneeId as string | undefined) ?? undefined,
+      parentId: merged.parentId as string | undefined,
+      startDate: merged.startDate as string | undefined,
+      dueDate: merged.dueDate as string | undefined,
+      labelIds: merged.labels as string[] | undefined,
       source: source as import('../common/source.js').SourceLiteral | undefined,
     });
+
+    // ─── Inline attachments ────────────────────────────────────
+    // Upload after issue creation so each Attachment row gets the
+    // issueId FK. The new attachments' markdown is appended to the
+    // description (in-place) so they render in the issue body — same
+    // mental model as the web TipTap editor's image paste.
+    const uploadedAttachments: Array<{
+      attachmentId: string;
+      url: string;
+      filename: string;
+      embedMarkdown: string;
+    }> = [];
+    if (dto.attachments?.length) {
+      const issueId = (issue as { id: string }).id;
+      const snippets: string[] = [];
+      for (const att of dto.attachments) {
+        try {
+          const stored = await this.uploadBase64Attachment(
+            att,
+            issueId,
+            creatorId,
+          );
+          const md = `![${att.alt ?? att.filename}](${stored.url})`;
+          snippets.push(md);
+          uploadedAttachments.push({
+            attachmentId: stored.id,
+            url: stored.url,
+            filename: stored.fileName,
+            embedMarkdown: md,
+          });
+        } catch (err) {
+          warnings.push(
+            `Failed to attach '${att.filename}': ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+
+      if (snippets.length > 0) {
+        const baseDescription = (
+          (merged.description as string | undefined) ?? ''
+        ).trimEnd();
+        const augmented = baseDescription
+          ? `${baseDescription}\n\n${snippets.join('\n\n')}`
+          : snippets.join('\n\n');
+        await this.updateIssueUC.execute({
+          projectId: project.id,
+          issueId,
+          actorId: creatorId,
+          source: source as
+            | import('../common/source.js').SourceLiteral
+            | undefined,
+          changes: { description: augmented },
+        });
+      }
+    }
+
+    const result: {
+      issue: typeof issue;
+      warnings?: string[];
+      attachments?: typeof uploadedAttachments;
+    } = { issue };
+    if (warnings.length) result.warnings = warnings;
+    if (uploadedAttachments.length) result.attachments = uploadedAttachments;
+    return result;
+  }
+
+  /**
+   * Standalone image-attach for an existing issue. Used by MCP tool
+   * `attach_image_to_issue` when the LLM already has an issue and
+   * wants to add a screenshot.
+   *
+   * Returns the public URL plus a ready-to-paste markdown snippet so
+   * the caller can drop it into a subsequent `update_issue` or
+   * `comment_on_issue` body without constructing the URL itself.
+   */
+  async attachImage(
+    projectKey: string,
+    issueNumber: number,
+    dto: ExternalAttachImageDto,
+    uploaderId: string,
+  ) {
+    const { issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    const attachment = await this.uploadBase64Attachment(
+      dto,
+      issueId,
+      uploaderId,
+    );
+    return {
+      attachmentId: attachment.id,
+      url: attachment.url,
+      filename: attachment.fileName,
+      mimeType: attachment.mimeType,
+      embedMarkdown: `![${dto.alt ?? dto.filename}](${attachment.url})`,
+    };
+  }
+
+  /**
+   * Decode a base64 payload, validate mime + size, and hand off to
+   * the existing UploadService so the attachment ends up in S3 + the
+   * `attachments` table the web UI already reads from.
+   */
+  private async uploadBase64Attachment(
+    dto: ExternalInlineAttachmentDto,
+    issueId: string | null,
+    uploaderId: string,
+  ) {
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(dto.data, 'base64');
+    } catch {
+      throw new BadRequestException('Invalid base64 image data');
+    }
+    // Defensive size cap before disk hit. UploadService re-checks its
+    // own MAX_FILE_SIZE downstream so callers get a single source of
+    // truth on the actual limit.
+    if (buffer.length === 0) {
+      throw new BadRequestException('Decoded image is empty');
+    }
+
+    // Shape a synthetic Multer file so UploadService keeps its
+    // existing signature — no need to refactor the upload pipeline
+    // around base64 input.
+    const fakeFile = {
+      buffer,
+      mimetype: dto.mimeType,
+      originalname: dto.filename,
+      size: buffer.length,
+    } as Express.Multer.File;
+
+    return this.uploadService.upload(fakeFile, uploaderId, {
+      issueId: issueId ?? undefined,
+    });
+  }
+
+  /**
+   * MCP `get_create_rules` payload. Returns the resolved global rule
+   * for the requested type or null if no rule has been configured.
+   */
+  async getCreateRules(type?: string) {
+    const issueType = (
+      type ?? 'TASK'
+    ).toUpperCase() as import('../../generated/prisma/enums.js').IssueType;
+    return this.issueRuleService.resolve(issueType);
   }
 
   async updateIssue(
@@ -448,38 +644,313 @@ export class ExternalService {
     };
   }
 
-  async listIssues(projectKey: string, status?: string, page = 1, limit = 50) {
+  /**
+   * Optional projection slices that the caller can opt-into via the
+   * `fields` query param. The default response is intentionally lean to
+   * keep token usage low for LLM clients — heavy fields (description,
+   * labels, full date set) only ship when asked.
+   */
+  private readonly LIST_FIELD_SLICES = [
+    'description',
+    'labels',
+    'dates',
+    'creator',
+    'parent',
+    'email',
+  ] as const;
+
+  /**
+   * Parses a window like `7d`, `30d`, `2h`, or a raw ISO date into a
+   * past instant. Returns null for invalid input so the caller can
+   * skip the filter rather than 400.
+   */
+  private parseRelativePast(value: string | undefined): Date | null {
+    if (!value) return null;
+    const match = /^(\d+)([dhm])$/.exec(value);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      const unit = match[2];
+      const ms =
+        unit === 'd'
+          ? n * 24 * 60 * 60 * 1000
+          : unit === 'h'
+            ? n * 60 * 60 * 1000
+            : n * 60 * 1000;
+      return new Date(Date.now() - ms);
+    }
+    const iso = new Date(value);
+    return Number.isNaN(iso.getTime()) ? null : iso;
+  }
+
+  /**
+   * Parses a future window (e.g. `7d`, `14d`) into an upper-bound
+   * instant. ISO dates pass through.
+   */
+  private parseRelativeFuture(value: string | undefined): Date | null {
+    if (!value) return null;
+    const match = /^(\d+)([dhm])$/.exec(value);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      const unit = match[2];
+      const ms =
+        unit === 'd'
+          ? n * 24 * 60 * 60 * 1000
+          : unit === 'h'
+            ? n * 60 * 60 * 1000
+            : n * 60 * 1000;
+      return new Date(Date.now() + ms);
+    }
+    const iso = new Date(value);
+    return Number.isNaN(iso.getTime()) ? null : iso;
+  }
+
+  async listIssues(
+    projectKey: string,
+    params: {
+      status?: string;
+      page?: number;
+      limit?: number;
+      assignee?: string;
+      priority?: string;
+      type?: string;
+      text?: string;
+      updatedSince?: string;
+      dueIn?: string;
+      hasOverdue?: boolean;
+      mode?: 'list' | 'summary';
+      fields?: string[];
+    },
+    callerUserId?: string,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
+      select: { id: true, key: true },
     });
     if (!project)
       throw new NotFoundException(`Project "${projectKey}" not found`);
 
-    const where = {
+    // ─── Build where ───────────────────────────────────────────
+    const where: {
+      projectId: string;
+      status?: IssueStatus | { in: IssueStatus[] } | { notIn: IssueStatus[] };
+      priority?: IssuePriority;
+      type?: IssueType;
+      assigneeId?: string | null;
+      title?: { contains: string; mode: 'insensitive' };
+      updatedAt?: { gte: Date };
+      dueDate?: { gte: Date; lte: Date } | { lt: Date };
+      archivedAt: null;
+    } = {
       projectId: project.id,
-      ...(status && { status: status as IssueStatus }),
+      archivedAt: null,
     };
+
+    if (params.status) where.status = params.status as IssueStatus;
+    if (params.priority)
+      where.priority = params.priority.toUpperCase() as IssuePriority;
+    if (params.type) where.type = params.type.toUpperCase() as IssueType;
+    if (params.text) {
+      where.title = { contains: params.text, mode: 'insensitive' };
+    }
+
+    // assignee=me → resolve from caller; assignee=email → lookup; else UUID
+    if (params.assignee) {
+      if (params.assignee === 'me') {
+        if (!callerUserId) {
+          throw new BadRequestException(
+            'assignee=me requires an authenticated caller',
+          );
+        }
+        where.assigneeId = callerUserId;
+      } else if (params.assignee.includes('@')) {
+        const user = await this.prisma.user.findUnique({
+          where: { email: params.assignee },
+          select: { id: true },
+        });
+        if (!user) {
+          throw new BadRequestException(`User "${params.assignee}" not found`);
+        }
+        where.assigneeId = user.id;
+      } else if (
+        params.assignee === 'none' ||
+        params.assignee === 'unassigned'
+      ) {
+        where.assigneeId = null;
+      } else {
+        where.assigneeId = params.assignee;
+      }
+    }
+
+    const updatedSince = this.parseRelativePast(params.updatedSince);
+    if (updatedSince) where.updatedAt = { gte: updatedSince };
+
+    const now = new Date();
+    if (params.hasOverdue) {
+      where.dueDate = { lt: now };
+      // Exclude terminal statuses — overdue only makes sense for live work.
+      where.status = {
+        notIn: ['DONE', 'CANCELED'] as IssueStatus[],
+      };
+    } else {
+      const dueIn = this.parseRelativeFuture(params.dueIn);
+      if (dueIn) where.dueDate = { gte: now, lte: dueIn };
+    }
+
+    // ─── Summary mode — short-circuit before listing rows ──────
+    if (params.mode === 'summary') {
+      return this.listIssuesSummary(where, project.key, now);
+    }
+
+    // ─── Field projection ──────────────────────────────────────
+    const requested = new Set(params.fields ?? []);
+    const wantDescription = requested.has('description');
+    const wantLabels = requested.has('labels');
+    const wantDates = requested.has('dates');
+    const wantCreator = requested.has('creator');
+    const wantParent = requested.has('parent');
+    const wantEmail = requested.has('email');
+
+    const userSelect = wantEmail
+      ? { id: true, name: true, email: true }
+      : { id: true, name: true };
+
+    const select = {
+      id: true,
+      number: true,
+      title: true,
+      status: true,
+      priority: true,
+      type: true,
+      assignee: { select: userSelect },
+      ...(wantDescription && { description: true }),
+      ...(wantDates && {
+        createdAt: true,
+        updatedAt: true,
+        startDate: true,
+        dueDate: true,
+        focusDate: true,
+      }),
+      ...(wantCreator && { creator: { select: userSelect } }),
+      ...(wantParent && {
+        parentId: true,
+        parent: { select: { id: true, number: true, title: true, type: true } },
+      }),
+      ...(wantLabels && {
+        labels: {
+          select: {
+            label: { select: { id: true, name: true, color: true } },
+          },
+        },
+      }),
+    };
+
+    const safeLimit = Math.min(Math.max(params.limit ?? 20, 1), 100);
+    const safePage = Math.max(params.page ?? 1, 1);
 
     const [items, total] = await Promise.all([
       this.prisma.issue.findMany({
         where,
-        include: {
-          assignee: { select: { id: true, email: true, name: true } },
-          labels: { include: { label: true } },
-        },
+        select,
         orderBy: [{ status: 'asc' }, { order: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
       }),
       this.prisma.issue.count({ where }),
     ]);
 
+    // Flatten the `labels: [{ label: {...} }]` join shape into the
+    // simpler `labels: [{...}]` MCP/LLM clients actually want.
+    const flatten = (i: Record<string, unknown>) => {
+      const out: Record<string, unknown> = { ...i };
+      out.key = `${project.key}-${i.number as number}`;
+      if (wantLabels && Array.isArray(i.labels)) {
+        out.labels = (i.labels as Array<{ label: unknown }>).map(
+          (l) => l.label,
+        );
+      }
+      return out;
+    };
+
     return {
-      items,
+      items: items.map((i) => flatten(i as unknown as Record<string, unknown>)),
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
+  }
+
+  /**
+   * Aggregate-only summary for an issue search. Skips row payloads
+   * entirely — returns counts the LLM can chunk on instead of
+   * receiving 1000 row objects. Cuts response size by ~95% for
+   * dashboard-style questions.
+   */
+  private async listIssuesSummary(
+    where: Record<string, unknown>,
+    projectKey: string,
+    now: Date,
+  ) {
+    const issues = await this.prisma.issue.findMany({
+      where,
+      select: {
+        status: true,
+        priority: true,
+        type: true,
+        dueDate: true,
+        assigneeId: true,
+        assignee: { select: { id: true, name: true } },
+      },
+    });
+
+    const byStatus: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
+    const byType: Record<string, number> = {};
+    const byAssigneeMap = new Map<string, { name: string; count: number }>();
+    let overdue = 0;
+    let unassigned = 0;
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    let dueThisWeek = 0;
+
+    for (const i of issues) {
+      byStatus[i.status] = (byStatus[i.status] ?? 0) + 1;
+      byPriority[i.priority] = (byPriority[i.priority] ?? 0) + 1;
+      byType[i.type] = (byType[i.type] ?? 0) + 1;
+      if (i.assignee) {
+        const key = i.assignee.id;
+        const entry = byAssigneeMap.get(key) ?? {
+          name: i.assignee.name,
+          count: 0,
+        };
+        entry.count += 1;
+        byAssigneeMap.set(key, entry);
+      } else {
+        unassigned += 1;
+      }
+      if (i.dueDate && i.dueDate < now && !TERMINAL_STATUSES.has(i.status)) {
+        overdue += 1;
+      }
+      if (
+        i.dueDate &&
+        i.dueDate >= now &&
+        i.dueDate <= oneWeekFromNow &&
+        !TERMINAL_STATUSES.has(i.status)
+      ) {
+        dueThisWeek += 1;
+      }
+    }
+
+    return {
+      mode: 'summary' as const,
+      projectKey,
+      total: issues.length,
+      byStatus,
+      byPriority,
+      byType,
+      byAssignee: [...byAssigneeMap.values()].sort((a, b) => b.count - a.count),
+      overdue,
+      unassigned,
+      dueThisWeek,
     };
   }
 

@@ -20,6 +20,7 @@ import { ExternalModule } from './external/external.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { UploadModule } from './upload/upload.module.js';
 import { TemplateModule } from './template/template.module.js';
+import { IssueRuleModule } from './issue-rule/issue-rule.module.js';
 import { SearchModule } from './search/search.module.js';
 import { NotificationModule } from './notification/notification.module.js';
 import { ShareModule } from './share/share.module.js';
@@ -64,6 +65,7 @@ import { AppController } from './app.controller.js';
     DashboardModule,
     UploadModule,
     TemplateModule,
+    IssueRuleModule,
     SearchModule,
     NotificationModule,
     ShareModule,

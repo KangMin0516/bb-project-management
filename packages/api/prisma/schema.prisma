@@ -325,6 +325,52 @@ model IssueTemplate {
   @@map("issue_templates")
 }
 
+// ─── Issue Rule (global) ───────────────────────────────────
+// Per-issue-type rules consumed by the MCP `create_issue` flow (and
+// the web UI later). Global by design — one rule per IssueType across
+// all projects, so the team has a single source of truth for what a
+// well-formed bug/task/epic looks like regardless of which project
+// the LLM is creating in.
+//
+// Soft-validated at create time so a missing/invalid template never
+// blocks creation; instead the API returns warnings the LLM can
+// address with a follow-up update_issue call.
+
+model IssueRule {
+  id        String    @id @default(uuid())
+  issueType IssueType @unique @map("issue_type")
+
+  /// Pattern for `title`. Treated as either a regex (if it starts/ends
+  /// with `/`) or a plain glob with `{var}` placeholders for hints in
+  /// the LLM-facing tool output. Validation only checks regex matches
+  /// against the literal title.
+  titlePattern String? @map("title_pattern") @db.VarChar(500)
+
+  /// Markdown skeleton the LLM is told to use as the description's
+  /// starting point (e.g. "## Steps to reproduce\n\n## Expected\n").
+  descriptionTemplate String? @map("description_template") @db.Text
+
+  /// Fields the LLM should populate at creation time. Stored as JSON
+  /// array of camelCase issue keys ("priority", "assigneeId",
+  /// "dueDate", "labels", "description").
+  requiredFields Json @default("[]") @map("required_fields")
+
+  /// Defaults merged into the create payload when the LLM omits the
+  /// field. Stored as `{ field: value }` JSON.
+  defaultValues Json @default("{}") @map("default_values")
+
+  /// Label NAMES auto-attached to issues created against this rule.
+  /// Names (not IDs) because labels are per-project and rules are
+  /// global — the API resolves names to per-project label IDs at
+  /// create time, creating the label if it doesn't exist yet.
+  enforcedLabelNames String[] @default([]) @map("enforced_label_names")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("issue_rules")
+}
+
 // ─── Notification ──────────────────────────────────────────
 
 model Notification {

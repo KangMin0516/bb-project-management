@@ -18,6 +18,7 @@ import { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
 import { ExternalCreateCommentDto } from './dto/external-create-comment.dto.js';
+import { ExternalAttachImageDto } from './dto/external-attach-image.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import {
   Public,
@@ -72,15 +73,43 @@ export class ExternalController {
   @Get('issues/:projectKey')
   listIssues(
     @Param('projectKey') projectKey: string,
+    @CurrentUser() user: JwtPayload,
     @Query('status') status?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('assignee') assignee?: string,
+    @Query('priority') priority?: string,
+    @Query('type') type?: string,
+    @Query('text') text?: string,
+    @Query('updatedSince') updatedSince?: string,
+    @Query('dueIn') dueIn?: string,
+    @Query('hasOverdue') hasOverdue?: string,
+    @Query('mode') mode?: string,
+    @Query('fields') fields?: string,
   ) {
+    const fieldList = fields
+      ? fields
+          .split(',')
+          .map((f) => f.trim())
+          .filter(Boolean)
+      : undefined;
     return this.externalService.listIssues(
       projectKey,
-      status,
-      page ? parseInt(page, 10) || 1 : 1,
-      limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
+      {
+        status,
+        page: page ? parseInt(page, 10) || 1 : 1,
+        limit: limit ? parseInt(limit, 10) || 20 : 20,
+        assignee,
+        priority,
+        type,
+        text,
+        updatedSince,
+        dueIn,
+        hasOverdue: hasOverdue === 'true' || hasOverdue === '1',
+        mode: mode === 'summary' ? 'summary' : 'list',
+        fields: fieldList,
+      },
+      user.sub,
     );
   }
 
@@ -219,6 +248,38 @@ export class ExternalController {
       page ? parseInt(page, 10) || 1 : 1,
       limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50,
     );
+  }
+
+  /**
+   * MCP `attach_image_to_issue` — base64 image upload for an existing
+   * issue. Avoids multipart so any JSON-only MCP client can attach
+   * screenshots without constructing form-data.
+   */
+  @Post('issues/:projectKey/:issueNumber/attachments')
+  attachImage(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() dto: ExternalAttachImageDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.externalService.attachImage(
+      projectKey,
+      issueNumber,
+      dto,
+      user.sub,
+    );
+  }
+
+  /**
+   * MCP `get_create_rules` — returns the global per-type rule the LLM
+   * should follow before calling `create_issue`. Rules are workspace-
+   * wide (one row per IssueType across all projects), so this
+   * endpoint takes no projectKey. Null when no rule has been
+   * configured for the requested type.
+   */
+  @Get('issue-rules')
+  getCreateRules(@Query('type') type?: string) {
+    return this.externalService.getCreateRules(type);
   }
 
   @Get('issues/:projectKey/:issueNumber/activities')

@@ -19,6 +19,7 @@ const SpecificationsPage = lazy(() => import('@/pages/SpecificationsPage'))
 const TimelinePage = lazy(() => import('@/pages/TimelinePage'))
 const StandupSettingsPage = lazy(() => import('@/pages/StandupSettingsPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
+const IssueRulesPage = lazy(() => import('@/pages/IssueRulesPage'))
 const TeamDashboardPage = lazy(() => import('@/pages/TeamDashboardPage'))
 const TeamIssuesPage = lazy(() => import('@/pages/TeamIssuesPage'))
 const MemberTasksPage = lazy(() => import('@/pages/MemberTasksPage'))
@@ -58,6 +59,7 @@ export function AppRouter() {
           <Route path="/" element={<GlobalDashboardPage />} />
           <Route path="/standup" element={<StandupSettingsPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/issue-rules" element={<IssueRulesPage />} />
           <Route path="/admin/dashboard" element={<TeamDashboardPage />} />
           <Route path="/admin/issues" element={<TeamIssuesPage />} />
           <Route path="/admin/members/:userId" element={<MemberTasksPage />} />
