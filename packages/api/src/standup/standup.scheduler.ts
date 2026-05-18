@@ -203,19 +203,20 @@ function formatDateInTz(date: Date, timeZone: string): string {
  * Returns the Date instance representing `targetHour:targetMinute`
  * local-time in `timeZone` on the same local calendar day as `now`.
  *
- * Works without bringing in luxon/date-fns-tz by building a candidate
- * UTC instant for that wall-clock time, then computing the actual UTC
- * offset of the zone at that instant and adjusting once. A second
- * adjustment is performed if the first guess straddled a DST
- * boundary. Two iterations are sufficient for all real zones.
+ * Treat the target wall clock as UTC, then shift by the timezone offset
+ * to get the real UTC instant. For a fixed-offset zone (Asia/Ho_Chi_Minh,
+ * Asia/Seoul) one pass converges exactly. For DST zones a second pass
+ * realigns if the first pass crossed a transition.
+ *
+ * Mirrors `report/report.scheduler.ts:scheduledTodayInTz` — keep them in
+ * sync if you tweak either.
  */
-function scheduledTodayInTz(
+export function scheduledTodayInTz(
   now: Date,
   timeZone: string,
   targetHour: number,
   targetMinute: number,
 ): Date {
-  // Today's wall-clock date components in tz.
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -228,19 +229,14 @@ function scheduledTodayInTz(
   const month = parseInt(lookup.month, 10);
   const day = parseInt(lookup.day, 10);
 
-  // Initial guess: that wall-clock time interpreted as UTC.
-  let guess = new Date(
+  const utcGuess = new Date(
     Date.UTC(year, month - 1, day, targetHour, targetMinute, 0),
   );
-  for (let i = 0; i < 2; i++) {
-    const offsetMs = tzOffsetAt(guess, timeZone);
-    const corrected = new Date(guess.getTime() - offsetMs);
-    if (Math.abs(corrected.getTime() - guess.getTime()) < 1000) {
-      return corrected;
-    }
-    guess = corrected;
-  }
-  return guess;
+  const offsetMs = tzOffsetAt(utcGuess, timeZone);
+  const firstPass = new Date(utcGuess.getTime() - offsetMs);
+  const offsetMs2 = tzOffsetAt(firstPass, timeZone);
+  if (offsetMs2 === offsetMs) return firstPass;
+  return new Date(utcGuess.getTime() - offsetMs2);
 }
 
 /** Returns the offset (ms) such that `localWallClock = utc + offset`. */
