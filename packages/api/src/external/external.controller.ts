@@ -230,6 +230,97 @@ export class ExternalController {
     return this.externalService.listMembers(projectKey);
   }
 
+  // ─── Phase 2: productivity shortcuts ────────────────────
+
+  @Get('me')
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.externalService.getMe(user.sub);
+  }
+
+  @Get('me/assignments')
+  listMyAssignments(
+    @CurrentUser() user: JwtPayload,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.externalService.listMyAssignments(user.sub, {
+      status,
+      limit: limit ? parseInt(limit, 10) || undefined : undefined,
+    });
+  }
+
+  @Patch('issues/:projectKey/:issueNumber/focus')
+  setFocus(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() body: { date?: string | null },
+    @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
+  ) {
+    // `date` undefined → treat as "set to today"; explicit null clears.
+    const date =
+      body.date === undefined
+        ? new Date().toISOString().slice(0, 10)
+        : body.date;
+    return this.externalService.setIssueFocus(
+      projectKey,
+      issueNumber,
+      date,
+      user.sub,
+      source,
+    );
+  }
+
+  @Post('issues/:projectKey/:issueNumber/archive')
+  archiveIssue(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+  ) {
+    return this.externalService.archiveIssue(projectKey, issueNumber);
+  }
+
+  @Post('issues/:projectKey/:issueNumber/unarchive')
+  unarchiveIssue(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+  ) {
+    return this.externalService.unarchiveIssue(projectKey, issueNumber);
+  }
+
+  @Post('issues/:projectKey/:issueNumber/labels')
+  addLabels(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() body: { labels: string[] },
+    @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
+  ) {
+    return this.externalService.addLabelsToIssue(
+      projectKey,
+      issueNumber,
+      body.labels ?? [],
+      user.sub,
+      source,
+    );
+  }
+
+  @Delete('issues/:projectKey/:issueNumber/labels')
+  removeLabels(
+    @Param('projectKey') projectKey: string,
+    @Param('issueNumber', ParseIntPipe) issueNumber: number,
+    @Body() body: { labels: string[] },
+    @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
+  ) {
+    return this.externalService.removeLabelsFromIssue(
+      projectKey,
+      issueNumber,
+      body.labels ?? [],
+      user.sub,
+      source,
+    );
+  }
+
   @Get('projects/:projectKey/labels')
   listLabels(@Param('projectKey') projectKey: string) {
     return this.externalService.listLabels(projectKey);

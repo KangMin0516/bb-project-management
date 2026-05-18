@@ -1096,6 +1096,302 @@ export class ExternalService {
     return projects;
   }
 
+  /**
+   * Whoami — returns the calling user's profile so MCP clients can
+   * resolve "me" without an extra lookup. Used by tools like
+   * `list_my_assignments` and to inject the user's name into LLM
+   * prompts without leaking other workspace members' emails.
+   */
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        isSuperuser: true,
+        slackUserId: true,
+      },
+    });
+    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    return user;
+  }
+
+  /**
+   * Cross-project shortcut for "what's on my plate". Same sparse
+   * projection as the default list_issues so token use stays low.
+   * Excludes archived issues; optional `status` filter narrows further.
+   */
+  async listMyAssignments(
+    userId: string,
+    params: { status?: string; limit?: number } = {},
+  ) {
+    const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
+    const where: {
+      assigneeId: string;
+      archivedAt: null;
+      status?: IssueStatus;
+    } = {
+      assigneeId: userId,
+      archivedAt: null,
+    };
+    if (params.status) where.status = params.status as IssueStatus;
+
+    const issues = await this.prisma.issue.findMany({
+      where,
+      select: {
+        id: true,
+        number: true,
+        title: true,
+        status: true,
+        priority: true,
+        type: true,
+        dueDate: true,
+        focusDate: true,
+        project: { select: { key: true, name: true } },
+      },
+      orderBy: [
+        { focusDate: { sort: 'desc', nulls: 'last' } },
+        { status: 'asc' },
+        { dueDate: { sort: 'asc', nulls: 'last' } },
+      ],
+      take: safeLimit,
+    });
+
+    return issues.map((i) => ({
+      id: i.id,
+      key: `${i.project.key}-${i.number}`,
+      number: i.number,
+      title: i.title,
+      status: i.status,
+      priority: i.priority,
+      type: i.type,
+      dueDate: i.dueDate,
+      focusDate: i.focusDate,
+      projectKey: i.project.key,
+      projectName: i.project.name,
+    }));
+  }
+
+  /**
+   * Set or clear the focusDate flag on an issue. Reuses
+   * UpdateIssueUseCase so an activity row is written and the
+   * dashboard's "today's focus" widget updates without polling.
+   * Pass `date=null` to clear focus.
+   */
+  async setIssueFocus(
+    projectKey: string,
+    issueNumber: number,
+    date: string | null,
+    userId: string,
+    source?: string,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    await this.updateIssueUC.execute({
+      projectId,
+      issueId,
+      actorId: userId,
+      source: source as import('../common/source.js').SourceLiteral | undefined,
+      changes: { focusDate: date },
+    });
+    return { issueKey: `${projectKey}-${issueNumber}`, focusDate: date };
+  }
+
+  /**
+   * Manual archive — sets archivedAt = now. Skipped if already
+   * archived. Unlike the cron, status check is not enforced (admin/AI
+   * intent is explicit), but a soft warning is returned for issues
+   * still in non-terminal status so the caller can second-guess.
+   */
+  async archiveIssue(projectKey: string, issueNumber: number) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    const issue = await this.prisma.issue.findUnique({
+      where: {
+        projectId_number: { projectId: project.id, number: issueNumber },
+      },
+      select: { id: true, status: true, archivedAt: true },
+    });
+    if (!issue)
+      throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+
+    const warnings: string[] = [];
+    if (issue.archivedAt) {
+      return {
+        archived: false,
+        alreadyArchived: true,
+        archivedAt: issue.archivedAt,
+      };
+    }
+    if (issue.status !== 'DONE' && issue.status !== 'CANCELED') {
+      warnings.push(
+        `Archiving a non-terminal issue (status=${issue.status}). The next status change will auto-unarchive it.`,
+      );
+    }
+
+    const updated = await this.prisma.issue.update({
+      where: { id: issue.id },
+      data: { archivedAt: new Date() },
+      select: { archivedAt: true },
+    });
+    return {
+      archived: true,
+      archivedAt: updated.archivedAt,
+      ...(warnings.length ? { warnings } : {}),
+    };
+  }
+
+  async unarchiveIssue(projectKey: string, issueNumber: number) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+
+    const issue = await this.prisma.issue.findUnique({
+      where: {
+        projectId_number: { projectId: project.id, number: issueNumber },
+      },
+      select: { id: true, archivedAt: true },
+    });
+    if (!issue)
+      throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+
+    if (!issue.archivedAt) {
+      return { unarchived: false, alreadyActive: true };
+    }
+    await this.prisma.issue.update({
+      where: { id: issue.id },
+      data: { archivedAt: null },
+    });
+    return { unarchived: true };
+  }
+
+  /**
+   * Add labels by name. Names must already exist in the project —
+   * unlike the issue-rule enforced labels (which auto-create), here
+   * the caller's intent is explicit and a typo should fail loudly.
+   * Idempotent — labels already on the issue are kept.
+   */
+  async addLabelsToIssue(
+    projectKey: string,
+    issueNumber: number,
+    labelNames: string[],
+    userId: string,
+    source?: string,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    const { merged, missing } = await this.resolveLabelDiff(
+      projectId,
+      issueId,
+      labelNames,
+      'add',
+    );
+    if (merged !== null) {
+      await this.updateIssueUC.execute({
+        projectId,
+        issueId,
+        actorId: userId,
+        source: source as import('../common/source.js').SourceLiteral | undefined,
+        changes: { labelIds: merged },
+      });
+    }
+    return {
+      issueKey: `${projectKey}-${issueNumber}`,
+      labelIds: merged,
+      ...(missing.length ? { missingLabels: missing } : {}),
+    };
+  }
+
+  async removeLabelsFromIssue(
+    projectKey: string,
+    issueNumber: number,
+    labelNames: string[],
+    userId: string,
+    source?: string,
+  ) {
+    const { projectId, issueId } = await this.resolveProjectAndIssue(
+      projectKey,
+      issueNumber,
+    );
+    const { merged, missing } = await this.resolveLabelDiff(
+      projectId,
+      issueId,
+      labelNames,
+      'remove',
+    );
+    if (merged !== null) {
+      await this.updateIssueUC.execute({
+        projectId,
+        issueId,
+        actorId: userId,
+        source: source as import('../common/source.js').SourceLiteral | undefined,
+        changes: { labelIds: merged },
+      });
+    }
+    return {
+      issueKey: `${projectKey}-${issueNumber}`,
+      labelIds: merged,
+      ...(missing.length ? { missingLabels: missing } : {}),
+    };
+  }
+
+  /**
+   * Resolve label names → IDs in the project, then merge with the
+   * issue's existing labels. Returns the new full set (suitable for
+   * UpdateIssueUseCase's `labelIds` which is a full replace) or
+   * `null` when the diff is a no-op so callers can skip the
+   * round-trip through the use case.
+   */
+  private async resolveLabelDiff(
+    projectId: string,
+    issueId: string,
+    labelNames: string[],
+    op: 'add' | 'remove',
+  ): Promise<{ merged: string[] | null; missing: string[] }> {
+    const matched = await this.prisma.label.findMany({
+      where: { projectId, name: { in: labelNames } },
+      select: { id: true, name: true },
+    });
+    const matchedByName = new Map(matched.map((l) => [l.name, l.id]));
+    const missing = labelNames.filter((n) => !matchedByName.has(n));
+
+    const existing = await this.prisma.issueLabel.findMany({
+      where: { issueId },
+      select: { labelId: true },
+    });
+    const existingSet = new Set(existing.map((l) => l.labelId));
+    const addIds = matched.map((l) => l.id);
+
+    let next: Set<string>;
+    if (op === 'add') {
+      next = new Set([...existingSet, ...addIds]);
+    } else {
+      next = new Set(existingSet);
+      for (const id of addIds) next.delete(id);
+    }
+
+    // Compare for net no-op.
+    if (
+      next.size === existingSet.size &&
+      [...next].every((id) => existingSet.has(id))
+    ) {
+      return { merged: null, missing };
+    }
+    return { merged: [...next], missing };
+  }
+
   async listMembers(projectKey: string) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
