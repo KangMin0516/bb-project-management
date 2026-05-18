@@ -18,7 +18,7 @@ export function formatMorningReport(
   issues: IssueWithAssignee[],
   overdueIssues: IssueWithAssignee[],
   baseUrl: string,
-): { blocks: MessageBlock[]; text: string } {
+): { blocks: MessageBlock[]; text: string; isEmpty: boolean } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -28,12 +28,15 @@ export function formatMorningReport(
 
   const blocks: MessageBlock[] = [];
   const headerText = `[${projectName}] Morning Report -- ${dateStr}`;
+  const isEmpty = issues.length === 0 && overdueIssues.length === 0;
 
   blocks.push({ type: 'header', text: headerText });
 
-  if (issues.length === 0 && overdueIssues.length === 0) {
+  if (isEmpty) {
+    // Caller (ReportService.sendReport) should skip delivery when isEmpty.
+    // Blocks still rendered so manual/preview callers see something coherent.
     blocks.push({ type: 'section', text: 'No tasks for today. :tada:' });
-    return { blocks, text: headerText };
+    return { blocks, text: headerText, isEmpty };
   }
 
   // Group by assignee
@@ -86,5 +89,5 @@ export function formatMorningReport(
     );
   }
 
-  return { blocks, text: headerText };
+  return { blocks, text: headerText, isEmpty };
 }

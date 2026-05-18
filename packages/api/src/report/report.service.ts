@@ -277,6 +277,7 @@ export class ReportService {
   async sendReport(
     projectId: string,
     type: 'morning' | 'lunch' | 'evening',
+    opts: { bypassEmpty?: boolean } = {},
   ): Promise<void> {
     const config = await this.prisma.dailyReportConfig.findUnique({
       where: { projectId },
@@ -298,13 +299,20 @@ export class ReportService {
       return;
     }
 
-    let report: { blocks: MessageBlock[]; text: string };
+    let report: { blocks: MessageBlock[]; text: string; isEmpty: boolean };
     if (type === 'morning') {
       report = await this.generateMorningReport(projectId);
     } else if (type === 'lunch') {
       report = await this.generateLunchReport(projectId);
     } else {
       report = await this.generateEveningReport(projectId);
+    }
+
+    if (report.isEmpty && !opts.bypassEmpty) {
+      this.logger.log(
+        `Skipping empty ${type} report for project ${projectId} — nothing to report`,
+      );
+      return;
     }
 
     await this.messaging.sendChannelMessage(

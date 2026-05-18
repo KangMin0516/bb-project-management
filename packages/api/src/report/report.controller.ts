@@ -60,9 +60,12 @@ export class ReportController {
     if (!validTypes.includes(type as (typeof validTypes)[number])) {
       throw new ForbiddenException('Invalid report type');
     }
+    // Test-send bypasses the empty-skip so admins can verify Slack config
+    // even on a day with zero activity.
     await this.reportService.sendReport(
       projectId,
       type as 'morning' | 'lunch' | 'evening',
+      { bypassEmpty: true },
     );
     return { sent: true };
   }

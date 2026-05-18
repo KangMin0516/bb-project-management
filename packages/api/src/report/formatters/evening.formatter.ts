@@ -22,7 +22,7 @@ export function formatEveningReport(
   totalDone: number,
   totalAll: number,
   baseUrl: string,
-): { blocks: MessageBlock[]; text: string } {
+): { blocks: MessageBlock[]; text: string; isEmpty: boolean } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -31,6 +31,11 @@ export function formatEveningReport(
   });
 
   const headerText = `[${projectName}] End of Day -- ${dateStr}`;
+  const isEmpty =
+    completedToday.length === 0 &&
+    inProgress.length === 0 &&
+    overdueIssues.length === 0 &&
+    createdTodayCount === 0;
   const blocks: MessageBlock[] = [
     { type: 'header', text: headerText },
     {
@@ -94,5 +99,5 @@ export function formatEveningReport(
     text: `:chart_with_upwards_trend: Overall: ${totalDone}/${totalAll} done (${percent}%)`,
   });
 
-  return { blocks, text: headerText };
+  return { blocks, text: headerText, isEmpty };
 }

@@ -112,6 +112,25 @@ export class StandupService {
     },
     member: { slackUserId: string; username: string | null },
   ) {
+    // Resolve the system user first so we can short-circuit the entire DM
+    // flow for members who have no issues today. Members whose Slack
+    // identity can't be mapped fall through to the legacy behaviour
+    // (greet + ask questions, no issue list) — we can't decide what's
+    // empty for them.
+    const mappedUserId = await this.mapSlackUserToSystemUser(
+      member.slackUserId,
+      client,
+    );
+    if (mappedUserId) {
+      const hasIssues = await this.memberHasIssuesToday(mappedUserId);
+      if (!hasIssues) {
+        this.logger.log(
+          `Skipping standup DM to ${member.slackUserId} — no active or completed-today issues`,
+        );
+        return;
+      }
+    }
+
     // Create report with all answers pre-created
     const report = await this.prisma.standupReport.create({
       data: {
@@ -177,11 +196,7 @@ export class StandupService {
       ],
     });
 
-    // Try Slack-User mapping and send issue list block
-    const mappedUserId = await this.mapSlackUserToSystemUser(
-      member.slackUserId,
-      client,
-    );
+    // We already mapped above — send the issue list when applicable.
     if (mappedUserId) {
       await this.sendIssueListBlock(client, dmChannelId, mappedUserId);
     }
@@ -776,6 +791,36 @@ export class StandupService {
       );
       return null;
     }
+  }
+
+  /**
+   * Cheap counts-only check used by `startReportForUser` to skip
+   * members who have nothing to report. Mirrors the date logic in
+   * `sendIssueListBlock` so the two stay consistent.
+   */
+  private async memberHasIssuesToday(userId: string): Promise<boolean> {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const [activeCount, completedTodayCount] = await Promise.all([
+      this.prisma.issue.count({
+        where: {
+          assigneeId: userId,
+          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+        },
+      }),
+      this.prisma.issue.count({
+        where: {
+          assigneeId: userId,
+          status: IssueStatus.DONE,
+          updatedAt: { gte: todayStart, lte: todayEnd },
+        },
+      }),
+    ]);
+
+    return activeCount > 0 || completedTodayCount > 0;
   }
 
   // ─── Issue List Block for DM ────────────────────────────

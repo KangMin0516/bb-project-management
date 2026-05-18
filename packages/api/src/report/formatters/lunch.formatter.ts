@@ -15,7 +15,7 @@ export function formatLunchReport(
   projectName: string,
   activities: ActivityWithRelations[],
   baseUrl: string,
-): { blocks: MessageBlock[]; text: string } {
+): { blocks: MessageBlock[]; text: string; isEmpty: boolean } {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     month: 'short',
@@ -25,10 +25,12 @@ export function formatLunchReport(
 
   const headerText = `[${projectName}] Midday Update -- ${dateStr}`;
   const blocks: MessageBlock[] = [{ type: 'header', text: headerText }];
+  const isEmpty = activities.length === 0;
 
-  if (activities.length === 0) {
+  if (isEmpty) {
+    // Caller (ReportService.sendReport) should skip delivery when isEmpty.
     blocks.push({ type: 'section', text: 'No changes today so far.' });
-    return { blocks, text: headerText };
+    return { blocks, text: headerText, isEmpty };
   }
 
   const relevant = activities.filter(
@@ -70,5 +72,5 @@ export function formatLunchReport(
     text: `:chart_with_upwards_trend: Today: ${started} started · ${completed} completed · ${created} created`,
   });
 
-  return { blocks, text: headerText };
+  return { blocks, text: headerText, isEmpty };
 }
