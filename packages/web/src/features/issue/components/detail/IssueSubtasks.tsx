@@ -7,6 +7,7 @@ import { issueRepository } from '@/features/issue/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { cn } from '@/shared/lib/utils'
+import { STATUSES, STATUS_LABELS } from '@/shared/config/constants'
 import UserAvatar from '@/entities/user/UserAvatar'
 import StatusBadge from '@/features/issue/components/badges/StatusBadge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
@@ -53,6 +54,18 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
     },
   })
 
+  const statusMutation = useMutation({
+    mutationFn: ({ subtaskId, status }: { subtaskId: string; status: string }) =>
+      issueRepository.update(projectId, subtaskId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issue', projectId, parentId] })
+      queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to change status'), 'error')
+    },
+  })
+
   const submit = () => {
     if (!title.trim()) return
     onCreate({ title, type: 'SUB_TASK', parentId, status: parentStatus })
@@ -92,7 +105,10 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
                 members={members}
                 onChange={(assigneeId) => assignMutation.mutate({ subtaskId: child.id, assigneeId })}
               />
-              <StatusBadge status={child.status} />
+              <SubtaskStatusPicker
+                status={child.status}
+                onChange={(status) => statusMutation.mutate({ subtaskId: child.id, status })}
+              />
             </div>
           ))}
         </div>
@@ -164,10 +180,13 @@ function SubtaskAssigneePicker({
           <UserAvatar user={child.assignee} size="sm" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="end">
+      {/* Explicit max-h on PopoverContent so the inner CommandList scroll
+          viewport has a bounded height to anchor against, even when the
+          Popover renders without an inherited container height. */}
+      <PopoverContent className="w-56 max-h-80 overflow-hidden p-0" align="end">
         <Command>
           <CommandInput placeholder="Search member..." />
-          <CommandList>
+          <CommandList className="max-h-64 overflow-y-auto">
             <CommandEmpty>No matches</CommandEmpty>
             <CommandGroup>
               <CommandItem
@@ -191,6 +210,54 @@ function SubtaskAssigneePicker({
                     <UserAvatar user={m.user} size="sm" />
                     {m.user.name}
                   </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/**
+ * Status pill that opens a Combobox so admins can change a sub-task's
+ * status without diving into the sub-task detail panel. Mirrors
+ * SubtaskAssigneePicker so the two pickers feel identical.
+ */
+function SubtaskStatusPicker({
+  status,
+  onChange,
+}: {
+  status: string
+  onChange: (status: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
+          className="rounded ring-1 ring-transparent transition hover:ring-primary-300"
+          title={`Status: ${STATUS_LABELS[status] ?? status} — click to change`}
+        >
+          <StatusBadge status={status} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-1" align="end">
+        <Command>
+          <CommandList className="max-h-64 overflow-y-auto">
+            <CommandGroup>
+              {STATUSES.map((s) => (
+                <CommandItem
+                  key={s}
+                  value={STATUS_LABELS[s] ?? s}
+                  onSelect={() => { onChange(s); setOpen(false) }}
+                >
+                  <Check className={cn('h-4 w-4', status === s ? 'opacity-100' : 'opacity-0')} />
+                  <StatusBadge status={s} />
                 </CommandItem>
               ))}
             </CommandGroup>
