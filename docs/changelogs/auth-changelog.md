@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-19 — Nginx forwards `/.well-known/*` to the NestJS backend (PM-44 follow-up #2)
+**Fixed.** The previous PM-44 commit excluded `.well-known/*` from NestJS's global `/api` prefix so the handlers existed at host-root paths, but the production nginx config only proxied `/api/*` to the backend — every other path fell through the SPA catch-all (`try_files $uri /index.html`), so Claude.ai's discovery probe at `https://pm.burningbros.kr/.well-known/oauth-authorization-server/api` got the React `index.html` instead of JSON and gave up with "Couldn't reach the MCP server". Added a `location /.well-known/` proxy block.
+- Source: `packages/web/nginx.conf`.
+
 ### 2026-05-19 — OAuth AS metadata served at the RFC 8414 path (PM-44 follow-up)
 **Fixed.** Our issuer is `https://pm.burningbros.kr/api`. RFC 8414 §3 says the well-known suffix goes **between the host and the issuer path**, so a strict client (Claude.ai) probes `https://pm.burningbros.kr/.well-known/oauth-authorization-server/api`. We were only serving the document under the global `/api` prefix, so Claude got the React app's 404 fallback and gave up with "Couldn't reach the MCP server". ChatGPT happened to probe the prefixed path and worked. Excluded `/.well-known/(.*)` from the global prefix and made `WellKnownController` answer at three paths (RFC `/…/api`, host root, and the legacy prefixed path) so every cohort discovers the AS.
 - Source: `packages/api/src/main.ts`, `packages/api/src/oauth/well-known.controller.ts`.
