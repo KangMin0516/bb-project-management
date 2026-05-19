@@ -3,6 +3,7 @@ import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/shared/lib/utils"
+import { SheetPortalContext } from "@/shared/ui/sheet-portal-context"
 
 const Sheet = SheetPrimitive.Root
 
@@ -53,18 +54,29 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+>(({ side = "right", className, children, ...props }, ref) => {
+  const [node, setNode] = React.useState<HTMLDivElement | null>(null)
+  const composedRef = React.useCallback(
+    (n: HTMLDivElement | null) => {
+      setNode(n)
+      if (typeof ref === "function") ref(n)
+      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = n
+    },
+    [ref],
+  )
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={composedRef}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
+      >
+        <SheetPortalContext.Provider value={node}>{children}</SheetPortalContext.Provider>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  )
+})
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({
