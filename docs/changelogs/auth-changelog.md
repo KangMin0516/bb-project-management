@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-19 — OAuth AS metadata served at the RFC 8414 path (PM-44 follow-up)
+**Fixed.** Our issuer is `https://pm.burningbros.kr/api`. RFC 8414 §3 says the well-known suffix goes **between the host and the issuer path**, so a strict client (Claude.ai) probes `https://pm.burningbros.kr/.well-known/oauth-authorization-server/api`. We were only serving the document under the global `/api` prefix, so Claude got the React app's 404 fallback and gave up with "Couldn't reach the MCP server". ChatGPT happened to probe the prefixed path and worked. Excluded `/.well-known/(.*)` from the global prefix and made `WellKnownController` answer at three paths (RFC `/…/api`, host root, and the legacy prefixed path) so every cohort discovers the AS.
+- Source: `packages/api/src/main.ts`, `packages/api/src/oauth/well-known.controller.ts`.
+
 ### 2026-05-19 — OAuth dynamic client registration no longer requires `client_name` (PM-44)
 **Fixed.** The dynamic registration endpoint (`POST /api/oauth/register`, RFC 7591) refused to create a client without `client_name`. Per the spec the field is OPTIONAL, and Claude.ai's MCP connector doesn't send one — so the OAuth bootstrap died before the user even saw a consent screen ("Couldn't reach the MCP server"). ChatGPT's connector happened to send `client_name`, masking the bug. Dropped the guard and added `deriveClientNameFromRedirect` which falls back to the redirect URI's hostname (e.g. `claude.ai`) or `"Anonymous MCP Client"`.
 - Source: `packages/api/src/oauth/oauth.service.ts`.

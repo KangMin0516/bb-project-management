@@ -10,8 +10,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+  // Global prefix. `/.well-known/*` is excluded so OAuth metadata can
+  // be served at the spec-mandated path (RFC 8414 places the metadata
+  // file BETWEEN host and issuer-path, e.g.
+  // `https://host/.well-known/oauth-authorization-server/api` for an
+  // issuer of `https://host/api`). Claude.ai follows this strictly;
+  // ChatGPT was lenient and probed our pre-fix path under `/api`.
+  app.setGlobalPrefix('api', {
+    exclude: ['/.well-known/(.*)'],
+  });
 
   // CORS — strict for the cookie-bearing web session, permissive for
   // cross-origin OAuth / MCP clients that authenticate via Bearer
