@@ -27,6 +27,54 @@ export const ISSUE_INCLUDE = {
   _count: { select: { children: true } },
 } as const;
 
+/**
+ * Fields the FE can sort by. Mirrors `SORT_FIELDS` in the web layer.
+ * Enums (priority, status) rely on Postgres enum declaration order in
+ * `schema.prisma`: `HIGH/MEDIUM/LOW` and `BACKLOG/TODO/.../CANCELED`,
+ * so `desc` on priority puts HIGH first and `asc` on status follows
+ * the workflow — no custom collator needed.
+ */
+const SORTABLE_FIELDS = new Set([
+  'priority',
+  'dueDate',
+  'startDate',
+  'createdAt',
+  'updatedAt',
+  'title',
+  'number',
+  'status',
+  'order',
+]);
+const NULLABLE_DATE_FIELDS = new Set([
+  'dueDate',
+  'startDate',
+  'focusDate',
+]);
+
+type OrderByEntry = Record<string, 'asc' | 'desc' | { sort: 'asc' | 'desc'; nulls: 'last' | 'first' }>;
+
+/**
+ * Parse `?sort=priority:desc,dueDate:asc` into a Prisma orderBy array.
+ * Invalid fields are dropped silently so a stale URL doesn't 400 the
+ * whole list. Date fields get `nulls: 'last'` so issues without due
+ * dates fall to the bottom regardless of direction.
+ */
+function parseSortParam(sort?: string): OrderByEntry[] | null {
+  if (!sort) return null;
+  const out: OrderByEntry[] = [];
+  for (const part of sort.split(',')) {
+    const [field, dir] = part.trim().split(':');
+    if (!field || !SORTABLE_FIELDS.has(field)) continue;
+    const direction: 'asc' | 'desc' = dir === 'asc' ? 'asc' : 'desc';
+    out.push(
+      NULLABLE_DATE_FIELDS.has(field)
+        ? { [field]: { sort: direction, nulls: 'last' } }
+        : { [field]: direction },
+    );
+  }
+  return out.length > 0 ? out : null;
+}
+
 @Injectable()
 export class IssueQueryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -39,6 +87,7 @@ export class IssueQueryService {
       source,
       assigneeId,
       search,
+      sort,
       sortBy,
       sortOrder,
       page = 1,
@@ -62,9 +111,13 @@ export class IssueQueryService {
       }),
     };
 
-    const orderBy = sortBy
-      ? { [sortBy]: sortOrder || 'desc' }
-      : [{ status: 'asc' as const }, { order: 'asc' as const }];
+    // Resolution order: explicit `sort=` (multi-field) > legacy
+    // `sortBy/sortOrder` > default (status workflow, then drag-order).
+    const orderBy =
+      parseSortParam(sort) ??
+      (sortBy
+        ? [{ [sortBy]: (sortOrder || 'desc') as 'asc' | 'desc' }]
+        : [{ status: 'asc' as const }, { order: 'asc' as const }]);
 
     const [items, total] = await Promise.all([
       this.prisma.issue.findMany({
@@ -92,7 +145,11 @@ export class IssueQueryService {
    * Archived SUB_TASKs are always included so parent cards render the
    * right child count.
    */
-  async findByStatus(projectId: string, includeArchived = false) {
+  async findByStatus(
+    projectId: string,
+    includeArchived = false,
+    sort?: string,
+  ) {
     const statuses: IssueStatus[] = [
       'BACKLOG',
       'TODO',
@@ -103,6 +160,8 @@ export class IssueQueryService {
       'CANCELED',
     ];
     const grouped: Record<string, unknown[]> = {};
+    // User-supplied sort wins; default to manual `order` (drag-drop).
+    const orderBy = parseSortParam(sort) ?? [{ order: 'asc' as const }];
 
     await Promise.all(
       statuses.map(async (status) => {
@@ -115,7 +174,7 @@ export class IssueQueryService {
             }),
           },
           include: ISSUE_INCLUDE,
-          orderBy: { order: 'asc' },
+          orderBy,
           take: ISSUE_MAX_PER_COLUMN,
         });
         if (issues.length > 0) grouped[status] = issues;

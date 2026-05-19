@@ -73,7 +73,13 @@ export default function BoardPage() {
 
   const dragScrollRef = useDragScroll<HTMLDivElement>()
 
-  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived)
+  const sortParam = useMemo(
+    () => (filters.sortStack.length ? filters.sortStack.map((r) => `${r.field}:${r.dir}`).join(',') : undefined),
+    [filters.sortStack],
+  )
+  const sortActive = filters.sortStack.length > 0
+
+  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
 
   // Archived toggle is a view switch (matches Lists page semantics):
@@ -144,6 +150,11 @@ export default function BoardPage() {
   }, [groupByEpic, parentOnlyBoard, hasFilters, filters, childrenMap])
 
   const handleDragEnd = (result: DropResult) => {
+    // While a server sort is active the cards aren't in manual order,
+    // so reordering would write a meaningless `order` value. The drag
+    // handle is already disabled in the column rendering — this is a
+    // defence-in-depth no-op.
+    if (sortActive) return
     const { destination, source, draggableId } = result
     if (!destination) return
     if (destination.droppableId === source.droppableId && destination.index === source.index) return
@@ -217,6 +228,12 @@ export default function BoardPage() {
           onCollapseAll={collapseAllSwimlanes}
         />
       </div>
+
+      {sortActive && (
+        <div className="border-b border-amber-200 bg-amber-50 px-6 py-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+          Drag-and-drop is disabled while a sort is applied — Reset the sort to drag cards manually.
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 p-4">
         {isLoading ? (

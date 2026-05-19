@@ -62,9 +62,13 @@ export const issueRepository = {
     return issueApi.list(projectId, { type: 'EPIC', limit: String(EPIC_PAGE_SIZE) }).then((r) => r.items)
   },
 
-  /** Full board layout (status → issues), optionally including archived. */
-  findBoardLayout(projectId: string, includeArchived = false) {
-    return issueApi.board(projectId, includeArchived ? { includeArchived: true } : undefined)
+  /** Full board layout (status → issues). `sort` is the comma-separated
+   *  `field:dir` form the FE filter-codec produces. */
+  findBoardLayout(projectId: string, options: { includeArchived?: boolean; sort?: string } = {}) {
+    const params: { includeArchived?: boolean; sort?: string } = {}
+    if (options.includeArchived) params.includeArchived = true
+    if (options.sort) params.sort = options.sort
+    return issueApi.board(projectId, Object.keys(params).length ? params : undefined)
   },
 
   /** BLOCKS-relationship graph for the dependency view. */

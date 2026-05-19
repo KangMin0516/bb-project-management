@@ -58,7 +58,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
                   setEditContent(comment.content)
                   setEditing(true)
                 }}
-                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 Edit
               </button>

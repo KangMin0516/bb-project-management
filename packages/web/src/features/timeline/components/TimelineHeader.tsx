@@ -1,8 +1,13 @@
 import { SearchInput, DropdownFilters, AssigneeAvatars, FilterDivider, ClearFiltersButton } from '@/shared/ui/FilterBar'
+import SortMenu from '@/shared/ui/SortMenu'
 import type { FilterState } from '@/shared/ui/filterState'
 import type { ProjectDetail } from '@/features/project/api'
 import GroupByToggle from './GroupByToggle'
 import type { GroupBy } from '@/features/timeline/lib'
+
+// Timeline doesn't surface status/number sort (status is implicit in the
+// row group; number is the on-screen anchor). Keep the menu focused.
+const TIMELINE_SORT_FIELDS = ['priority', 'dueDate', 'startDate', 'title', 'createdAt', 'updatedAt'] as const
 
 interface TimelineHeaderProps {
   project: ProjectDetail | undefined
@@ -46,6 +51,11 @@ export default function TimelineHeader({
           onPriorityChange={(v) => setFilters({ priority: v })}
           onTypeChange={(v) => setFilters({ type: v })}
           onSourceChange={(v) => setFilters({ source: v })}
+        />
+        <SortMenu
+          sortStack={filters.sortStack}
+          onChange={(v) => setFilters({ sortStack: v })}
+          availableFields={[...TIMELINE_SORT_FIELDS]}
         />
         <FilterDivider />
         <AssigneeAvatars members={assignedMembers} selected={filters.assignees} onToggle={toggleAssignee} />

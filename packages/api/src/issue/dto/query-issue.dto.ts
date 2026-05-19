@@ -63,6 +63,7 @@ export class QueryIssueDto {
 
   @ApiPropertyOptional({
     enum: ['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'],
+    description: 'Legacy single-field sort. Prefer `sort=field:dir,…` for multi-field.',
   })
   @IsOptional()
   @IsIn(['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'])
@@ -72,6 +73,15 @@ export class QueryIssueDto {
   @IsOptional()
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc';
+
+  @ApiPropertyOptional({
+    description:
+      'Multi-field sort, comma-separated `field:dir` pairs. Allowed fields: priority, dueDate, startDate, createdAt, updatedAt, title, number, status. Direction is asc or desc. Example: `priority:desc,dueDate:asc`. Wins over `sortBy`/`sortOrder` when provided.',
+    example: 'priority:desc,dueDate:asc',
+  })
+  @IsOptional()
+  @IsString()
+  sort?: string;
 
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

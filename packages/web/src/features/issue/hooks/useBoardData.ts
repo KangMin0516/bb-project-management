@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
 import { projectRepository } from '@/features/project/repository'
 
-export function useBoardData(projectId: string, showArchived: boolean) {
+export function useBoardData(projectId: string, showArchived: boolean, sort?: string) {
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectRepository.findOne(projectId),
@@ -10,8 +10,8 @@ export function useBoardData(projectId: string, showArchived: boolean) {
   })
 
   const boardQuery = useQuery({
-    queryKey: ['board', projectId, showArchived],
-    queryFn: () => issueRepository.findBoardLayout(projectId, showArchived),
+    queryKey: ['board', projectId, showArchived, sort ?? ''],
+    queryFn: () => issueRepository.findBoardLayout(projectId, { includeArchived: showArchived, sort }),
     enabled: !!projectId,
   })
 

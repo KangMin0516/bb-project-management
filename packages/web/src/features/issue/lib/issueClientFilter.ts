@@ -83,7 +83,10 @@ export function buildListParams(opts: {
   // Assignee filter is fully client-side so we can include ancestor
   // tasks whose subtasks match — sending it to the server would prune
   // those parents before we ever see them.
-  if (viewMode === 'list' && sortBy) {
+  if (filters.sortStack.length > 0) {
+    // Multi-field `sort` wins over legacy sortBy/sortOrder.
+    params.sort = filters.sortStack.map((r) => `${r.field}:${r.dir}`).join(',')
+  } else if (viewMode === 'list' && sortBy) {
     params.sortBy = sortBy
     params.sortOrder = sortOrder
   }

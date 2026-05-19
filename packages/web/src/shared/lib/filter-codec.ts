@@ -4,7 +4,18 @@
 // links stay short. Comma-separated values for Sets. URL-encoded for `q`.
 // deserialize(serialize(state)) === state for any concrete state.
 
-import { INITIAL_FILTER, type FilterState } from '@/shared/ui/filterState'
+import { INITIAL_FILTER, type FilterState, type SortRule, type SortField } from '@/shared/ui/filterState'
+
+const SORT_FIELDS: readonly SortField[] = [
+  'priority',
+  'dueDate',
+  'startDate',
+  'createdAt',
+  'updatedAt',
+  'title',
+  'number',
+  'status',
+]
 // ─── Field name registry ───────────────────────────────────────────
 // Keep param names short — they appear in every shared link.
 
@@ -19,12 +30,14 @@ export const PARAM = {
   priority: 'priority',
   type: 'type',
   source: 'source',
+  sort: 'sort',
   search: 'q',
   // Page-specific extras
   archived: 'archived',
   swimlane: 'swimlane',
   view: 'view',
-  sort: 'sort',
+  /** Legacy single-field sort order. Kept for `useIssueListUrlState`
+   *  back-compat; new code uses the multi-field `sort` codec above. */
   order: 'order',
   group: 'group',
 } as const
@@ -38,6 +51,22 @@ function setToParam(s: Set<string>): string | null {
 function paramToSet(v: string | null): Set<string> {
   if (!v) return new Set()
   return new Set(v.split(',').filter(Boolean))
+}
+
+function sortStackToParam(stack: SortRule[]): string | null {
+  if (stack.length === 0) return null
+  return stack.map((r) => `${r.field}:${r.dir}`).join(',')
+}
+
+function paramToSortStack(v: string | null): SortRule[] {
+  if (!v) return []
+  const out: SortRule[] = []
+  for (const part of v.split(',')) {
+    const [field, dir] = part.split(':') as [string, string | undefined]
+    if (!SORT_FIELDS.includes(field as SortField)) continue
+    out.push({ field: field as SortField, dir: dir === 'asc' ? 'asc' : 'desc' })
+  }
+  return out
 }
 
 // ─── FilterState (shared) ──────────────────────────────────────────
@@ -56,6 +85,7 @@ export function serializeFilter(
     [PARAM.priority, setToParam(state.priority)],
     [PARAM.type, setToParam(state.type)],
     [PARAM.source, setToParam(state.source)],
+    [PARAM.sort, sortStackToParam(state.sortStack)],
     [PARAM.search, state.search || null],
   ]
   for (const [key, value] of writers) {
@@ -76,6 +106,7 @@ export function deserializeFilter(params: URLSearchParams): FilterState {
     priority: paramToSet(params.get(PARAM.priority)),
     type: paramToSet(params.get(PARAM.type)),
     source: paramToSet(params.get(PARAM.source)),
+    sortStack: paramToSortStack(params.get(PARAM.sort)),
     search: params.get(PARAM.search) ?? INITIAL_FILTER.search,
   }
 }

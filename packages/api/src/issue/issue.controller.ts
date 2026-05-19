@@ -94,8 +94,9 @@ export class IssueController {
   board(
     @Param('projectId') projectId: string,
     @Query('includeArchived') includeArchived?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.query.findByStatus(projectId, includeArchived === 'true');
+    return this.query.findByStatus(projectId, includeArchived === 'true', sort);
   }
 
   @Get('dependencies')

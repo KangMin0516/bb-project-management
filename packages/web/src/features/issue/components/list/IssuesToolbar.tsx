@@ -2,6 +2,7 @@ import { Archive } from 'lucide-react'
 import type { FilterState } from '@/shared/ui/filterState'
 import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
 import { AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFiltersButton, DropdownFilters, SearchInput } from '@/shared/ui/FilterBar'
+import SortMenu from '@/shared/ui/SortMenu'
 import ViewToggle, { type ViewOption } from '@/shared/ui/ViewToggle'
 import { cn } from '@/shared/lib/utils'
 import type { Label } from '@/features/project/api'
@@ -65,6 +66,7 @@ export default function IssuesToolbar({
         onTypeChange={(v) => setFilters({ type: v })}
         onSourceChange={(v) => setFilters({ source: v })}
       />
+      <SortMenu sortStack={filters.sortStack} onChange={(v) => setFilters({ sortStack: v })} />
       {members.length > 0 && <FilterDivider />}
       <AssigneeAvatars members={members} selected={filters.assignees} onToggle={(id) => toggle('assignees', id)} />
       {projectLabels.length > 0 && <FilterDivider />}

@@ -1,6 +1,7 @@
 import { Archive, Rows3, ChevronsUpDown, FoldVertical } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
 import { FiltersPopover, ClearFiltersButton, SearchInput } from '@/shared/ui/FilterBar'
+import SortMenu from '@/shared/ui/SortMenu'
 import { cn } from '@/shared/lib/utils'
 import type { FilterState } from '@/shared/ui/filterState'
 interface BoardToolbarProps {
@@ -68,6 +69,10 @@ export default function BoardToolbar({
         boardEpics={boardEpics}
         epicOwners={epicOwners}
         hideEpicOwner={!groupByEpic}
+      />
+      <SortMenu
+        sortStack={filters.sortStack}
+        onChange={(v) => setFilters({ sortStack: v })}
       />
       {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
       <ToggleButton

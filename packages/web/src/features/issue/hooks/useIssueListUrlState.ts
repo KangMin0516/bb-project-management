@@ -3,23 +3,30 @@ import { useSearchParams } from 'react-router-dom'
 import { getBool, getEnum, setBool, setEnum, PARAM } from '@/shared/lib/filter-codec'
 
 const SORT_FIELDS = ['number', 'status', 'priority', 'createdAt', 'dueDate'] as const
-const SORT_ORDERS = ['asc', 'desc'] as const
 const VIEW_MODES = ['list', 'grouped'] as const
 
 export type SortField = (typeof SORT_FIELDS)[number]
-export type SortOrder = (typeof SORT_ORDERS)[number]
+export type SortOrder = 'asc' | 'desc'
 export type ViewMode = (typeof VIEW_MODES)[number]
 
 /**
  * Encapsulates the page-level URL state: sort, view mode, archived flag.
- * Each setter writes through `setSearchParams(replace)` so the back-stack
- * doesn't fill up with every filter tweak.
+ * Sort is stored in the shared `?sort=field:dir` param (multi-field
+ * codec) so the SortMenu and column-header click stay in sync — Phase 1
+ * still surfaces the first entry as the single sortBy/sortOrder pair the
+ * IssuesTable + Toolbar already consume.
  */
 export function useIssueListUrlState() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const sortBy = getEnum(searchParams, PARAM.sort, [...SORT_FIELDS, ''] as const, '' as SortField | '')
-  const sortOrder = getEnum(searchParams, PARAM.order, SORT_ORDERS, 'desc')
+  // Read the first entry of the multi-field sort stack.
+  const sortRaw = searchParams.get(PARAM.sort)
+  const firstSort = sortRaw?.split(',')[0]?.split(':') as [string, string | undefined] | undefined
+  const sortBy: SortField | '' =
+    firstSort && (SORT_FIELDS as readonly string[]).includes(firstSort[0])
+      ? (firstSort[0] as SortField)
+      : ''
+  const sortOrder: SortOrder = firstSort?.[1] === 'asc' ? 'asc' : 'desc'
   const viewMode = getEnum(searchParams, PARAM.view, VIEW_MODES, 'list')
   const showArchived = getBool(searchParams, PARAM.archived, false)
 
@@ -43,14 +50,10 @@ export function useIssueListUrlState() {
   }, [mutateParams])
 
   const toggleSort = useCallback((field: SortField) => {
-    if (sortBy === field) {
-      mutateParams((p) => setEnum(p, PARAM.order, sortOrder === 'asc' ? 'desc' : 'asc', 'desc'))
-    } else {
-      mutateParams((p) => {
-        setEnum(p, PARAM.sort, field, '' as SortField | '')
-        setEnum(p, PARAM.order, 'desc' as const, 'desc' as const)
-      })
-    }
+    // Single-field column click writes a 1-entry stack so the URL stays
+    // compatible with the SortMenu reader (`field:dir`).
+    const nextDir: SortOrder = sortBy === field && sortOrder === 'desc' ? 'asc' : 'desc'
+    mutateParams((p) => p.set(PARAM.sort, `${field}:${nextDir}`))
   }, [sortBy, sortOrder, mutateParams])
 
   return { sortBy, sortOrder, viewMode, showArchived, setViewMode, setShowArchived, toggleSort }
