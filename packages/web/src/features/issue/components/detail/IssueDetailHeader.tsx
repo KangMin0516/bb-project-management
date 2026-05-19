@@ -81,7 +81,8 @@ export default function IssueDetailHeader({
 
   return (
     <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <SourceBadge source={d.source} />
         <div className="flex items-center gap-1">
           <IconButton onClick={handleCopyBranch} title="Copy branch name (derived from labels)" ariaLabel="Copy branch name">
             <GitBranch className="h-4 w-4" />
@@ -144,7 +145,6 @@ export default function IssueDetailHeader({
           onClick={() => { setDraftTitle(d.title); setEditingTitle(true) }}
         >
           <span className="font-mono text-base text-gray-400 mr-2 align-middle">#{d.number}</span>
-          <SourceBadge source={d.source} className="mr-2 align-middle" />
           {d.title}
         </h2>
       )}
