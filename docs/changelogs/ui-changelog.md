@@ -18,6 +18,10 @@
 
 ## Timeline
 
+### 2026-05-19 — Dialog centred without a permanent transform (PM-42 follow-up)
+**Changed.** DialogContent used `translate-x-[-50%] translate-y-[-50%]` for centring, which left a permanent CSS transform on the open dialog. That transform turned the dialog into a containing block for every `position: fixed` descendant — so a Combobox/Select portal'd inside (PM-42) got trapped in the dialog's layout and rendered inline instead of floating above. Swapped centring to `fixed inset-0 m-auto h-fit w-[calc(100%-2rem)] max-w-lg`, which has zero transform at idle, so nested popovers float above the dialog the way users expect.
+- Source: `packages/web/src/shared/ui/dialog.tsx`.
+
 ### 2026-05-19 — Generalised overlay portal context to Dialog + Select (PM-42)
 **Changed.** The PM-27 fix shipped a `SheetPortalContext` so a `Popover` would render inside the enclosing `Sheet` (otherwise the Sheet's `react-remove-scroll` cancelled wheel events on the popover). Same root cause hit `Select`/`Combobox` opened inside the Create Issue **Dialog** — wheel scroll silently dead. Generalised the context to cover both Sheet and Dialog (`useOverlayPortalContainer`, aliased from the existing `useSheetPortalContainer` for back-compat) and taught `Select` to auto-portal into the container too. Combobox already routes through `Popover`, so it inherits the fix for free.
 - New: `useOverlayPortalContainer` export from `packages/web/src/shared/ui/sheet-portal-context.ts` (same value, clearer name).
