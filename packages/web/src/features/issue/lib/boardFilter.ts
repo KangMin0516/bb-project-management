@@ -10,6 +10,7 @@ export interface BoardFilterState {
   status: Set<string>
   priority: Set<string>
   type: Set<string>
+  source: Set<string>
 }
 
 interface FilterOptions {
@@ -28,7 +29,7 @@ interface FilterOptions {
 export function matchesFilters(issue: Issue, filters: BoardFilterState, options?: FilterOptions): boolean {
   if (options?.keepEpics && issue.type === 'EPIC') return true
 
-  const { assignees, labels, components, epicId, search, status, priority, type } = filters
+  const { assignees, labels, components, epicId, search, status, priority, type, source } = filters
   const searchLower = search.toLowerCase()
 
   let assigneeMatch = assignees.size === 0 || (!!issue.assigneeId && assignees.has(issue.assigneeId))
@@ -48,7 +49,8 @@ export function matchesFilters(issue: Issue, filters: BoardFilterState, options?
     (issue.status !== 'CANCELED' || status.has('CANCELED')) &&
     (status.size === 0 || status.has(issue.status)) &&
     (priority.size === 0 || priority.has(issue.priority)) &&
-    (type.size === 0 || type.has(issue.type))
+    (type.size === 0 || type.has(issue.type)) &&
+    (source.size === 0 || source.has(issue.source))
   )
 }
 

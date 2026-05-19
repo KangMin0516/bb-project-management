@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle, SlidersHorizontal } from 'lucide-react'
+import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 import type { FilterState } from '@/shared/ui/filterState'
 import { toggleSet } from '@/shared/ui/filterState'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Checkbox } from '@/shared/ui/checkbox'
+import SourceBadge from '@/shared/ui/SourceBadge'
+import type { IssueSource } from '@/features/issue/api'
+
+const SOURCE_OPTIONS: IssueSource[] = ['WEB', 'MCP', 'SLACK', 'WEBHOOK', 'API', 'SYSTEM']
 
 
 // Generic filter dropdown with checkboxes
@@ -218,6 +222,7 @@ interface FiltersPopoverProps {
   setStatus: (v: Set<string>) => void
   setPriority: (v: Set<string>) => void
   setType: (v: Set<string>) => void
+  setSource: (v: Set<string>) => void
   toggleAssignee: (id: string) => void
   toggleLabel: (id: string) => void
   toggleComponent: (id: string) => void
@@ -237,6 +242,7 @@ export function FiltersPopover({
   setStatus,
   setPriority,
   setType,
+  setSource,
   toggleAssignee,
   toggleLabel,
   toggleComponent,
@@ -254,6 +260,7 @@ export function FiltersPopover({
     filters.status.size +
     filters.priority.size +
     filters.type.size +
+    filters.source.size +
     filters.assignees.size +
     filters.labels.size +
     filters.components.size +
@@ -319,6 +326,18 @@ export function FiltersPopover({
               >
                 <span className="text-xs">{TYPE_EMOJI[t] || ''}</span>
                 <span>{t.replace(/_/g, ' ')}</span>
+              </CheckboxRow>
+            ))}
+          </FilterSection>
+
+          <FilterSection title="Source">
+            {SOURCE_OPTIONS.map((s) => (
+              <CheckboxRow
+                key={s}
+                checked={filters.source.has(s)}
+                onChange={() => setSource(toggleSet(filters.source, s))}
+              >
+                <SourceBadge source={s} hideWhenWeb={false} />
               </CheckboxRow>
             ))}
           </FilterSection>
@@ -472,21 +491,25 @@ const TYPE_EMOJI: Record<string, string> = {
   SUB_TASK: '\uD83D\uDCCE',
 }
 
-// Multi-select dropdown filters (status, priority, type)
+// Multi-select dropdown filters (status, priority, type, source)
 export function DropdownFilters({
   status,
   priority,
   type,
+  source,
   onStatusChange,
   onPriorityChange,
   onTypeChange,
+  onSourceChange,
 }: {
   status: Set<string>
   priority: Set<string>
   type: Set<string>
+  source: Set<string>
   onStatusChange: (v: Set<string>) => void
   onPriorityChange: (v: Set<string>) => void
   onTypeChange: (v: Set<string>) => void
+  onSourceChange: (v: Set<string>) => void
 }) {
   return (
     <>
@@ -523,6 +546,17 @@ export function DropdownFilters({
             <Checkbox checked={type.has(t)} onCheckedChange={() => onTypeChange(toggleSet(type, t))} />
             <span className="text-xs">{TYPE_EMOJI[t] || ''}</span>
             <span className="truncate text-xs text-gray-700 dark:text-gray-300">{t.replace(/_/g, ' ')}</span>
+          </label>
+        ))}
+      </FilterDropdown>
+      <FilterDropdown label="Source" icon={Sparkles} selectedCount={source.size}>
+        {SOURCE_OPTIONS.map((s) => (
+          <label
+            key={s}
+            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Checkbox checked={source.has(s)} onCheckedChange={() => onSourceChange(toggleSet(source, s))} />
+            <SourceBadge source={s} hideWhenWeb={false} />
           </label>
         ))}
       </FilterDropdown>

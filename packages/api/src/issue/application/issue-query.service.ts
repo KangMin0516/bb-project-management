@@ -36,6 +36,7 @@ export class IssueQueryService {
       status,
       priority,
       type,
+      source,
       assigneeId,
       search,
       sortBy,
@@ -51,6 +52,7 @@ export class IssueQueryService {
       ...(status && { status }),
       ...(priority && { priority }),
       ...(type && { type }),
+      ...(source && { source }),
       ...(assigneeId && { assigneeId }),
       ...(search && {
         OR: [

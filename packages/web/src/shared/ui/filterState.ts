@@ -14,6 +14,8 @@ export interface FilterState {
   status: Set<string>
   priority: Set<string>
   type: Set<string>
+  /** Origin of the row (MCP / Slack / API / Webhook / Web / System). */
+  source: Set<string>
   search: string
 }
 
@@ -26,6 +28,7 @@ export const INITIAL_FILTER: FilterState = {
   status: new Set(),
   priority: new Set(),
   type: new Set(),
+  source: new Set(),
   search: '',
 }
 
@@ -39,6 +42,7 @@ export function hasActiveFilters(f: FilterState): boolean {
     f.status.size > 0 ||
     f.priority.size > 0 ||
     f.type.size > 0 ||
+    f.source.size > 0 ||
     !!f.search
   )
 }

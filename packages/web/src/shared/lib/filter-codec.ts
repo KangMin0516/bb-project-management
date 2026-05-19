@@ -18,6 +18,7 @@ export const PARAM = {
   status: 'status',
   priority: 'priority',
   type: 'type',
+  source: 'source',
   search: 'q',
   // Page-specific extras
   archived: 'archived',
@@ -54,6 +55,7 @@ export function serializeFilter(
     [PARAM.status, setToParam(state.status)],
     [PARAM.priority, setToParam(state.priority)],
     [PARAM.type, setToParam(state.type)],
+    [PARAM.source, setToParam(state.source)],
     [PARAM.search, state.search || null],
   ]
   for (const [key, value] of writers) {
@@ -73,6 +75,7 @@ export function deserializeFilter(params: URLSearchParams): FilterState {
     status: paramToSet(params.get(PARAM.status)),
     priority: paramToSet(params.get(PARAM.priority)),
     type: paramToSet(params.get(PARAM.type)),
+    source: paramToSet(params.get(PARAM.source)),
     search: params.get(PARAM.search) ?? INITIAL_FILTER.search,
   }
 }

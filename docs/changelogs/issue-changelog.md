@@ -22,6 +22,14 @@
 
 ## Timeline
 
+### 2026-05-19 — Filter issues by source on Board / Lists / Timeline (PM-31)
+**Added.** Filters panel + dropdown row now have a **Source** section (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM), so a PM can isolate "everything an agent created" without scrolling. Single-value selection is pushed to the server (`GET /api/projects/:projectId/issues?source=MCP`); multi-value falls back to the client filter, same pattern as Status/Priority/Type.
+- New: `source: Set<string>` on `FilterState` + URL codec param (shared across Board/Lists/Timeline, sync via `useFilterSearchParams`).
+- New: `Source` section in `FiltersPopover` (Board) using the existing `SourceBadge` chip for visual consistency; matching `Source` dropdown in `DropdownFilters` (Lists/Timeline).
+- BE: `QueryIssueDto.source` (`@IsIn(ISSUE_SOURCES)`) + Prisma `where: { source }` in `IssueQueryService.findAll`.
+- Wired through: `BoardToolbar` / `IssuesToolbar` / `TimelineHeader` (`setFilters({ source })`), `issueClientFilter.applyClientFilters` + `buildListParams`, `boardFilter.matchesFilters`.
+- Source: `packages/web/src/shared/ui/filterState.ts`, `packages/web/src/shared/lib/filter-codec.ts`, `packages/web/src/shared/ui/FilterBar.tsx`, `packages/web/src/features/issue/lib/issueClientFilter.ts`, `packages/web/src/features/issue/lib/boardFilter.ts`, `packages/web/src/features/issue/components/board/BoardToolbar.tsx`, `packages/web/src/features/issue/components/list/IssuesToolbar.tsx`, `packages/web/src/features/timeline/components/TimelineHeader.tsx`, `packages/api/src/issue/dto/query-issue.dto.ts`, `packages/api/src/issue/application/issue-query.service.ts`.
+
 ### 2026-05-19 — Activity log resolves parentId UUID → `#number title` (PM-30, bcb2296)
 **Fixed.** Activity entries for parent changes used to render a raw UUID truncated to 8 chars (e.g. `9b090110…`), so users couldn't tell which epic an issue moved under without clicking through. `ActivityTimeline` now scans `parentId`-field activities, collects unique parent UUIDs from `oldValue`/`newValue`, batch-fetches them via `useQueries` (react-query, `staleTime: 60s`, cache reused across panels), and renders `{TYPE_ICON} #{number} {title}`. Falls back to the UUID prefix while in-flight or on fetch failure. `projectId` is threaded from `ActivityTab` down (new optional prop).
 - Source: `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx`, `packages/web/src/features/issue/components/ActivityTab.tsx`.

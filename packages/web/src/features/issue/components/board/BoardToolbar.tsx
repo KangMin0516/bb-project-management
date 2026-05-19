@@ -56,6 +56,7 @@ export default function BoardToolbar({
         setStatus={(v) => setFilters({ status: v })}
         setPriority={(v) => setFilters({ priority: v })}
         setType={(v) => setFilters({ type: v })}
+        setSource={(v) => setFilters({ source: v })}
         toggleAssignee={toggleAssignee}
         toggleLabel={toggleLabel}
         toggleComponent={toggleComponent}

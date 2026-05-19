@@ -41,9 +41,11 @@ export default function TimelineHeader({
           status={filters.status}
           priority={filters.priority}
           type={filters.type}
+          source={filters.source}
           onStatusChange={(v) => setFilters({ status: v })}
           onPriorityChange={(v) => setFilters({ priority: v })}
           onTypeChange={(v) => setFilters({ type: v })}
+          onSourceChange={(v) => setFilters({ source: v })}
         />
         <FilterDivider />
         <AssigneeAvatars members={assignedMembers} selected={filters.assignees} onToggle={toggleAssignee} />

@@ -15,7 +15,17 @@ import {
   IssuePriority,
   IssueType,
 } from '../../../generated/prisma/enums.js';
+import type { SourceLiteral } from '../../common/source.js';
 import { Type, Transform } from 'class-transformer';
+
+const ISSUE_SOURCES: SourceLiteral[] = [
+  'WEB',
+  'MCP',
+  'SLACK',
+  'WEBHOOK',
+  'API',
+  'SYSTEM',
+];
 
 export class QueryIssueDto {
   @ApiPropertyOptional({ enum: IssueStatus })
@@ -32,6 +42,14 @@ export class QueryIssueDto {
   @IsOptional()
   @IsEnum(IssueType)
   type?: IssueType;
+
+  @ApiPropertyOptional({
+    enum: ISSUE_SOURCES,
+    description: 'Origin of the row (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM)',
+  })
+  @IsOptional()
+  @IsIn(ISSUE_SOURCES)
+  source?: SourceLiteral;
 
   @ApiPropertyOptional()
   @IsOptional()

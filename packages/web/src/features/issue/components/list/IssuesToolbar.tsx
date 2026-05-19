@@ -59,9 +59,11 @@ export default function IssuesToolbar({
         status={filters.status}
         priority={filters.priority}
         type={filters.type}
+        source={filters.source}
         onStatusChange={(v) => setFilters({ status: v })}
         onPriorityChange={(v) => setFilters({ priority: v })}
         onTypeChange={(v) => setFilters({ type: v })}
+        onSourceChange={(v) => setFilters({ source: v })}
       />
       {members.length > 0 && <FilterDivider />}
       <AssigneeAvatars members={members} selected={filters.assignees} onToggle={(id) => toggle('assignees', id)} />

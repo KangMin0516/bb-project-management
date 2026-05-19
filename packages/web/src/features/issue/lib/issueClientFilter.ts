@@ -33,6 +33,7 @@ export function applyClientFilters(
   if (filters.status.size > 1) result = result.filter((issue) => filters.status.has(issue.status))
   if (filters.priority.size > 1) result = result.filter((issue) => filters.priority.has(issue.priority))
   if (filters.type.size > 1) result = result.filter((issue) => filters.type.has(issue.type))
+  if (filters.source.size > 1) result = result.filter((issue) => filters.source.has(issue.source))
 
   // Assignee filter: include any issue whose assignee matches AND every
   // ancestor of those matches, so root tasks stay visible when a subtask
@@ -78,6 +79,7 @@ export function buildListParams(opts: {
   if (filters.status.size === 1) params.status = [...filters.status][0]
   if (filters.priority.size === 1) params.priority = [...filters.priority][0]
   if (filters.type.size === 1) params.type = [...filters.type][0]
+  if (filters.source.size === 1) params.source = [...filters.source][0]
   // Assignee filter is fully client-side so we can include ancestor
   // tasks whose subtasks match — sending it to the server would prune
   // those parents before we ever see them.
