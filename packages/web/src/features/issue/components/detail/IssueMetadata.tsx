@@ -1,4 +1,3 @@
-import { RotateCw } from 'lucide-react'
 import type { IssueDetail, Issue, UpdateIssuePayload } from '@/features/issue/api'
 import type { ProjectMember, Label } from '@/features/project/api'
 import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, STATUS_COLORS, PRIORITY_COLORS, PRIORITY_DOT_COLORS, TYPE_ICONS } from '@/shared/config/constants'
@@ -55,33 +54,13 @@ export default function IssueMetadata({
         label="Status"
         fieldId="status"
         display={
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
-              STATUS_BADGE_COLORS[d.status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-            )}>
-              <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[d.status] || 'bg-gray-400')} />
-              {STATUS_LABELS[d.status] || d.status}
-            </span>
-            {d.status === 'IN_PROGRESS' && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onUpdate({ isRecheck: !d.isRecheck }) }}
-                title={d.isRecheck ? 'Unmark as needing recheck' : 'Flag this issue for recheck after merge'}
-                className={cn(
-                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
-                  // Dashed border + verb label so this reads as an
-                  // action toggle, not another status chip. See PM-39.
-                  d.isRecheck
-                    ? 'border border-orange-300 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-                    : 'border border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-200',
-                )}
-              >
-                <RotateCw className="h-3 w-3" />
-                {d.isRecheck ? 'Recheck ✓' : 'Flag recheck'}
-              </button>
-            )}
-          </div>
+          <span className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+            STATUS_BADGE_COLORS[d.status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+          )}>
+            <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_COLORS[d.status] || 'bg-gray-400')} />
+            {STATUS_LABELS[d.status] || d.status}
+          </span>
         }
       >
         {(close) => (

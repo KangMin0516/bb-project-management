@@ -22,8 +22,8 @@
 
 ## Timeline
 
-### 2026-05-19 — "Recheck" toggle in IssueMetadata no longer looks like a status chip (PM-39)
-**Fixed.** The IN_PROGRESS-only recheck flag toggle rendered as a flat gray pill labelled "Recheck", indistinguishable from another status badge — users reading the panel thought the issue was in two statuses at once. The button now has a dashed-border outline, a `RotateCw` icon, a verb-form label ("Flag recheck" off / "Recheck ✓" on), and an explanatory `title` tooltip so it reads as an action toggle.
+### 2026-05-19 — Remove `isRecheck` toggle from IssueMetadata, RECHECK status is the source of truth (PM-39)
+**Removed.** The IN_PROGRESS-only recheck flag toggle was redundant with the existing `RECHECK` status column on the Board and confused users into thinking an issue could be in two statuses at once (`In Progress` + `Recheck` chip). Took the toggle out entirely; the `isRecheck` column stays on the Issue model for now (no migration needed, no caller reads it on the FE after this change) but can be dropped in a follow-up cleanup if it isn't useful elsewhere.
 - Source: `packages/web/src/features/issue/components/detail/IssueMetadata.tsx`.
 
 ### 2026-05-19 — Sort issues on Board / Lists / Timeline, ClickUp-style scaffold (PM-34, PM-35→38)
