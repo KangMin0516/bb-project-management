@@ -35,6 +35,12 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 
 ## Timeline
 
+### 2026-05-19 — `parentIssueKey` accepted on create + update (PM-29, f102150)
+**Added.** External create/update endpoints now accept a human-friendly `parentIssueKey` (e.g. `"PM-17"`) alongside the existing UUID `parentId`. The MCP `create_issue` tool already advertised this field, but the API rejected it with `400 property parentIssueKey should not exist` — agents had to fall back to manual UI clicks to attach issues to an epic. `ExternalService.resolveParentIssueKey()` parses `<KEY>-<NUMBER>`, asserts the parent lives in the same project as the child, and forwards the resolved UUID to the use case. `parentId` still wins when both are sent (backward-compat). On update, `parentIssueKey: null | ""` clears the parent. `UpdateIssueUseCase` already has cycle detection + hierarchy validation, so no new guards needed.
+- DTOs: `packages/api/src/external/dto/external-create-issue.dto.ts`, `packages/api/src/external/dto/external-update-issue.dto.ts`.
+- Service: `packages/api/src/external/external.service.ts`.
+- Follow-up: the MCP server tool schema for `update_issue` still needs to expose `parentIssueKey` to agents.
+
 ### 2026-05-15 — Comments + activities readable, members + labels listable (74e3064, 853651e)
 **Added.** Phase 1 of the MCP rollout — endpoints an LLM agent needs
 *before* it can sensibly call `create_issue` or `comment`.

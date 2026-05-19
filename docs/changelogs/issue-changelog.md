@@ -22,6 +22,14 @@
 
 ## Timeline
 
+### 2026-05-19 — Activity log resolves parentId UUID → `#number title` (PM-30, bcb2296)
+**Fixed.** Activity entries for parent changes used to render a raw UUID truncated to 8 chars (e.g. `9b090110…`), so users couldn't tell which epic an issue moved under without clicking through. `ActivityTimeline` now scans `parentId`-field activities, collects unique parent UUIDs from `oldValue`/`newValue`, batch-fetches them via `useQueries` (react-query, `staleTime: 60s`, cache reused across panels), and renders `{TYPE_ICON} #{number} {title}`. Falls back to the UUID prefix while in-flight or on fetch failure. `projectId` is threaded from `ActivityTab` down (new optional prop).
+- Source: `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx`, `packages/web/src/features/issue/components/ActivityTab.tsx`.
+
+### 2026-05-19 — Source badge on IssueDetailHeader (PM-28, a21624e)
+**Added.** `IssueDetailHeader` now renders the existing `SourceBadge` next to the `#number`, so an agent-created (MCP) / Slack / API issue is visible at a glance without scrolling to the activity log. Badge hides itself for the `WEB` default to keep noise down. Reuses the same primitive used by `IssueCard`, `ActivityTimeline`, and `CommentItem` — visual consistency, no new styles.
+- Source: `packages/web/src/features/issue/components/detail/IssueDetailHeader.tsx`.
+
 ### 2026-05-13 — `notifyAssignment` resolves actor name for Slack DM
 **Changed.** `IssueService.notifyAssignment` is now `async` and fetches the actor's display name (single `users.findUnique` on `actorId`) before calling `NotificationService.create`. The name is forwarded via `meta.actorName` so the new Slack DM (see [`notification-changelog.md`](./notification-changelog.md)) reads "Assigned by Alice" instead of a UUID. Failures fall through silently — the in-app notification path is unaffected.
 

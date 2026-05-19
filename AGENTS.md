@@ -103,9 +103,9 @@ When working in a module that's already migrated, follow the new layout (`domain
 
 ## 9. Hard rules
 
-1. **No new top-level changelogs.** Use the per-domain files.
-2. **No bypass of lifecycle stages.** A feature PR should have evidence of `/1-plan` → `/3-review` at minimum.
-3. **No vendor SDK in feature code.** All Slack / S3 / Anthropic calls go through the ports in `packages/api/src/common/ports/`.
-4. **No `window.confirm` in web.** Use `confirmDialog` from `packages/web/src/shared/ui/confirm-dialog.tsx`.
-5. **Native `<select>` is banned in web.** Use the shadcn `Select` from `packages/web/src/shared/ui/select.tsx`.
-6. **Always update the changelog in the same PR as the code change** — never as a follow-up.
+1. **Always update the matching changelog in the same commit (or series) as the behaviour change** — never as a follow-up, never "later". The changelog is treated as source code: it must move forward with the code. See §6 for the mapping. If you submit a code commit without the changelog entry, the next agent loading this repo loses your history.
+2. **No new top-level changelogs.** Use the per-domain files under `docs/changelogs/`.
+3. **No bypass of lifecycle stages.** A feature PR should have evidence of `/1-plan` → `/3-review` at minimum.
+4. **No vendor SDK in feature code.** All Slack / S3 / Anthropic calls go through the ports in `packages/api/src/common/ports/`.
+5. **No `window.confirm` in web.** Use `confirmDialog` from `packages/web/src/shared/ui/confirm-dialog.tsx`.
+6. **Native `<select>` is banned in web.** Use the shadcn `Select` from `packages/web/src/shared/ui/select.tsx`.

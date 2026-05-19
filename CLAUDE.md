@@ -137,10 +137,32 @@ If any of these fail in a way the change introduced, fix before reporting done.
 
 ---
 
-## 10. What not to do
+## 10. Changelog discipline (read before every commit)
+
+**Every behaviour-changing commit MUST update the matching per-domain changelog under [`docs/changelogs/`](./docs/changelogs/), in the same commit (or the same series of commits — never as a follow-up).** This is non-negotiable. See [AGENTS.md §6 / §9](./AGENTS.md#6-domain-history) for the same rule from the vendor-neutral side.
+
+Mapping (commit scope → file):
+
+| Scope of change | Changelog |
+|---|---|
+| `packages/api/src/external/` (the `/api/external/*` surface used by MCP/agents) | `external-api-changelog.md` |
+| `packages/api/src/issue/`, `comment/`, `activity/`, web issue detail / activity / board | `issue-changelog.md` |
+| `packages/web/src/shared/ui/` primitives, theme, shortcuts, app shell | `ui-changelog.md` |
+| `packages/api/src/auth/`, `api-key/`, refresh-token plumbing | `auth-changelog.md` |
+| `packages/api/src/notification/`, in-app + Slack DM delivery | `notification-changelog.md` |
+| Slack OAuth + bot + slash commands | `slack-changelog.md` |
+| Specifications, dashboards, standups, GitHub PR sync, etc. | use the matching `*-changelog.md` |
+| MCP server schema / agent-facing tools | `mcp-changelog.md` |
+
+Each entry: date heading (`### YYYY-MM-DD — Title (ISSUE-KEY, commit-sha)`), an **Added / Changed / Fixed** verb, a 2–3-sentence narrative including the *why*, then `- Source:` bullets listing the touched files. Match the style of the existing entries — read the top of the target file before writing.
+
+**Do this every commit. If you forget, the next session will silently drift away from history.**
+
+## 11. What not to do
 
 - **Don't** invent commands. Use the slash commands in [`.claude/commands/`](./.claude/commands/).
 - **Don't** create a top-level `CHANGELOG.md`. Use the per-domain files under [`docs/changelogs/`](./docs/changelogs/).
+- **Don't** ship a feature commit without the matching changelog entry in the same commit (see §10).
 - **Don't** write multi-paragraph docstrings or summary comments. One short line when the *why* is non-obvious.
 - **Don't** add backwards-compat shims for code only this repo uses — delete the old usage and update callers.
 - **Don't** narrate your reasoning in user-facing text. Show results, not deliberation.

@@ -18,6 +18,12 @@
 
 ## Timeline
 
+### 2026-05-19 — Popover auto-portals into the enclosing Sheet (PM-27, bdf8a30)
+**Fixed.** Sub-task assignee/status pickers (and any other `Popover` rendered inside an `IssueDetailPanel` Sheet) couldn't mousewheel-scroll: Radix Sheet's `react-remove-scroll` `preventDefault()`-ed wheel events whose target was portal'd to `<body>` outside the Sheet content tree. `SheetContent` now exposes its DOM node via context; `PopoverContent` reads it and uses it as the portal `container`, so the popover lives inside the Sheet's whitelist. Mousewheel works; scrollbar drag unchanged.
+- New: `packages/web/src/shared/ui/sheet-portal-context.ts` (context + `useSheetPortalContainer` hook).
+- Source: `packages/web/src/shared/ui/sheet.tsx`, `packages/web/src/shared/ui/popover.tsx`.
+- Verified with a Playwright wheel-dispatch probe: `defaultPrevented` flipped from `true` (pre-fix, doc-bubble) to `false`; CommandList `scrollTop` 0 → 52.
+
 ### 2026-05-13 — Filter persistence via URL searchParams
 **Added.** Board / Issues / Timeline pages now sync their filter state (`assignees`, `labels`, `components`, `epicId`, `status`, `priority`, `type`, `search`, plus page-specific toggles like `showArchived`, `groupByEpic`, `viewMode`, `sortBy`/`sortOrder`, `groupBy`) with `useSearchParams`. Reload, browser back/forward, and "Copy URL" share now preserve the view. Search input writes are debounced 300ms with `replace: true` to avoid history spam. `localStorage["issues-view-mode"]` is removed — URL is now the source of truth.
 
