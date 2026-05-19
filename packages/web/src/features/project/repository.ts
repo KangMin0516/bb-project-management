@@ -32,6 +32,7 @@ export const projectRepository = {
   /** Labels. */
   listLabels: projectApi.listLabels,
   createLabel: projectApi.createLabel,
+  removeLabel: projectApi.removeLabel,
   seedLabels: projectApi.seedLabels,
 
   /** Join requests (admin-side). */

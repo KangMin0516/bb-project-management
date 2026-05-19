@@ -96,6 +96,7 @@ export default function SettingsPage() {
       <LabelsSection
         labels={labels.labels}
         onCreate={(data) => labels.create.mutate(data)}
+        onRemove={(id) => labels.remove.mutate(id)}
         onSeed={() => labels.seed.mutate()}
       />
 

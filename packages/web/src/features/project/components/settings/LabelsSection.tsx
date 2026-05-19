@@ -1,14 +1,18 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import type { Label } from '@/features/project/api'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
+import { useToastStore } from '@/shared/lib/toast'
 import SettingsSection from './SettingsSection'
 
 interface LabelsSectionProps {
   labels: Label[] | undefined
   onCreate: (data: { name: string; color: string }) => void
+  onRemove: (labelId: string) => void
   onSeed: () => void
 }
 
-export default function LabelsSection({ labels, onCreate, onSeed }: LabelsSectionProps) {
+export default function LabelsSection({ labels, onCreate, onRemove, onSeed }: LabelsSectionProps) {
   const [name, setName] = useState('')
   const [color, setColor] = useState('#6366f1')
 
@@ -18,18 +22,50 @@ export default function LabelsSection({ labels, onCreate, onSeed }: LabelsSectio
     setName('')
   }
 
+  const handleDelete = async (l: Label) => {
+    const usage = l._count?.issues ?? 0
+    if (usage > 0) {
+      // Block instead of offering a force-delete: cascading would silently
+      // strip the label from every issue and leave audit logs orphaned.
+      useToastStore.getState().addToast(
+        `"${l.name}" is used by ${usage} issue(s). Remove it from those issues first.`,
+        'error',
+      )
+      return
+    }
+    const ok = await confirmDialog({
+      title: `Delete label "${l.name}"?`,
+      description: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    })
+    if (ok) onRemove(l.id)
+  }
+
   return (
     <SettingsSection title="Labels">
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {labels?.map((l) => (
-          <span
-            key={l.id}
-            className="rounded-full px-2.5 py-1 text-xs font-medium"
-            style={{ backgroundColor: l.color + '20', color: l.color }}
-          >
-            {l.name}
-          </span>
-        ))}
+        {labels?.map((l) => {
+          const usage = l._count?.issues ?? 0
+          return (
+            <span
+              key={l.id}
+              className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+              style={{ backgroundColor: l.color + '20', color: l.color }}
+              title={usage > 0 ? `In use by ${usage} issue(s)` : 'Unused — safe to delete'}
+            >
+              {l.name}
+              <button
+                type="button"
+                onClick={() => void handleDelete(l)}
+                aria-label={`Delete ${l.name}`}
+                className="ml-0.5 rounded-full p-0.5 opacity-50 transition hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )
+        })}
         {!labels?.length && (
           <span className="text-sm text-gray-400 dark:text-gray-500">No labels yet</span>
         )}

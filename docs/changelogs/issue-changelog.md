@@ -22,6 +22,13 @@
 
 ## Timeline
 
+### 2026-05-19 — Delete label from Settings (with "in use" guard) (PM-33)
+**Added.** Project Settings → Labels now has a small `×` button on every chip. Clicking confirms via dialog when the label is unused; when it has issues attached it short-circuits to a toast (`"Bug" is used by 5 issue(s). Remove it from those issues first.`) instead of cascading the delete. The FK was `ON DELETE CASCADE`, so without the guard a stray click would have silently stripped the label from every issue and orphaned the activity log.
+- BE: `LabelService.remove` includes `_count.issues` and throws `ConflictException` (409) when in use.
+- FE: `Label` type carries `_count?.issues`; `projectRepository.removeLabel` + `useProjectLabels.remove` mutation invalidates `['labels']` + `['board']`.
+- UI: hover tooltip shows usage count (`"In use by N issue(s)"` / `"Unused — safe to delete"`).
+- Source: `packages/api/src/label/label.service.ts`, `packages/web/src/features/project/api.ts`, `packages/web/src/features/project/repository.ts`, `packages/web/src/features/project/hooks/useProjectLabels.ts`, `packages/web/src/features/project/components/settings/LabelsSection.tsx`, `packages/web/src/pages/SettingsPage.tsx`.
+
 ### 2026-05-19 — Comment + activity avatars use real image instead of initial-only (PM-32)
 **Fixed.** `ActivityTimeline` was rendering its own initials-only `UserAvatar` and a raw `<div>` for the main-row avatar; `CommentItem` had the same pattern. All three call sites now use the shared `@/entities/user/UserAvatar` component (image when present, initials fallback when not). Resolver split in `ActivityTimeline`: `resolveUser` returns `{ name, avatar }`, `resolveUserName` keeps the existing string-only callers happy.
 - Source: `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx`, `packages/web/src/features/issue/components/comment/CommentItem.tsx`.

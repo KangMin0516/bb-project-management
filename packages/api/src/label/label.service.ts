@@ -60,9 +60,20 @@ export class LabelService {
   async remove(projectId: string, labelId: string) {
     const label = await this.prisma.label.findUnique({
       where: { id: labelId },
+      include: { _count: { select: { issues: true } } },
     });
     if (!label || label.projectId !== projectId) {
       throw new NotFoundException('Label not found');
+    }
+
+    // Block delete while still in use. The FK is ON DELETE CASCADE so the
+    // database would silently strip the label from every issue otherwise —
+    // we want the caller to remove it from issues first so the data loss
+    // is deliberate.
+    if (label._count.issues > 0) {
+      throw new ConflictException(
+        `Label "${label.name}" is used by ${label._count.issues} issue(s); remove it from each issue before deleting.`,
+      );
     }
 
     await this.prisma.label.delete({ where: { id: labelId } });

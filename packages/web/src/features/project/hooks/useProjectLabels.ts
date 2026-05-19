@@ -19,11 +19,21 @@ export function useProjectLabels(projectId: string) {
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to create label'), 'error'),
   })
 
+  const remove = useMutation({
+    mutationFn: (labelId: string) => projectRepository.removeLabel(projectId, labelId),
+    onSuccess: () => {
+      // Board cards carry per-label chips, so refresh that cache too.
+      invalidate()
+      queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+    },
+    onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to delete label'), 'error'),
+  })
+
   const seed = useMutation({
     mutationFn: () => projectRepository.seedLabels(projectId),
     onSuccess: invalidate,
     onError: (err: unknown) => useToastStore.getState().addToast(getErrorMessage(err, 'Failed to seed labels'), 'error'),
   })
 
-  return { labels: labelsQuery.data, create, seed }
+  return { labels: labelsQuery.data, create, remove, seed }
 }

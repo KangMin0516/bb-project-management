@@ -30,6 +30,9 @@ export interface Label {
   name: string
   color: string
   projectId: string
+  /** Server returns the issue-count when listing labels; undefined when
+   *  the label was embedded in another response (e.g. issue payload). */
+  _count?: { issues: number }
 }
 
 export interface CreateProjectPayload {
@@ -89,6 +92,8 @@ export const projectApi = {
     api.get<{ data: Label[] }>(`/projects/${projectId}/labels`).then((r) => r.data.data),
   createLabel: (projectId: string, data: { name: string; color?: string }) =>
     api.post<{ data: Label }>(`/projects/${projectId}/labels`, data).then((r) => r.data.data),
+  removeLabel: (projectId: string, labelId: string) =>
+    api.delete(`/projects/${projectId}/labels/${labelId}`),
   seedLabels: (projectId: string) =>
     api.post(`/projects/${projectId}/labels/seed`),
 
