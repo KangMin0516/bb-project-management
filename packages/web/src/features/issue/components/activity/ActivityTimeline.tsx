@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useQueries } from '@tanstack/react-query'
 import {
   CircleDot,
   Signal,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { Activity } from '@/features/issue/api'
 import type { ProjectMember } from '@/features/project/api'
+import { issueRepository } from '@/features/issue/repository'
 import { timeAgo } from '@/shared/lib/time'
 import SourceBadge from '@/shared/ui/SourceBadge'
 import {
@@ -20,7 +22,12 @@ import {
   STATUS_COLORS,
   PRIORITY_LABELS,
   PRIORITY_COLORS,
+  TYPE_ICONS,
 } from '@/shared/config/constants'
+
+/** Minimal info needed to render a resolved parent reference inline. */
+type ParentRef = { number: number; title: string; type: string }
+type ParentMap = Map<string, ParentRef>
 
 const TYPE_LABELS: Record<string, string> = {
   EPIC: 'Epic',
@@ -89,6 +96,7 @@ function UserAvatar({ name }: { name: string }) {
 interface ActivityTimelineProps {
   activities: Activity[]
   members: ProjectMember[]
+  projectId?: string
   projectKey?: string
 }
 
@@ -102,6 +110,7 @@ function formatFieldValue(
   field: string,
   value: string | null,
   members: ProjectMember[],
+  parents: ParentMap,
 ): React.ReactNode {
   if (value === null || value === undefined) return null
 
@@ -129,12 +138,26 @@ function formatFieldValue(
       }
       return <span className="text-xs text-gray-500 dark:text-gray-400">Unassigned</span>
     }
-    case 'parentId':
+    case 'parentId': {
+      const ref = parents.get(value)
+      if (ref) {
+        return (
+          <span
+            className="inline-flex max-w-[220px] items-center gap-1 rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300"
+            title={ref.title}
+          >
+            <span className="shrink-0">{TYPE_ICONS[ref.type] || ''} #{ref.number}</span>
+            <span className="truncate">{ref.title}</span>
+          </span>
+        )
+      }
+      // Fallback while the lookup is in-flight or failed.
       return (
         <span className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-mono text-gray-600 dark:text-gray-500">
           {value.slice(0, 8)}...
         </span>
       )
+    }
     case 'dueDate':
     case 'startDate':
     case 'focusDate':
@@ -174,11 +197,41 @@ function getFieldLabel(field: string): string {
   }
 }
 
-export default function ActivityTimeline({ activities, members, projectKey }: ActivityTimelineProps) {
+export default function ActivityTimeline({ activities, members, projectId, projectKey }: ActivityTimelineProps) {
   const sortedActivities = useMemo(
     () => [...activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [activities],
   )
+
+  // Collect parent UUIDs referenced by parentId-field activities so we can
+  // render "#17 Bugs" instead of a raw UUID truncated to 8 chars.
+  const parentIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const a of activities) {
+      if (a.field !== 'parentId') continue
+      if (a.oldValue) ids.add(a.oldValue)
+      if (a.newValue) ids.add(a.newValue)
+    }
+    return Array.from(ids)
+  }, [activities])
+
+  const parentQueries = useQueries({
+    queries: parentIds.map((id) => ({
+      queryKey: ['issue', projectId, id] as const,
+      queryFn: () => issueRepository.findOne(projectId as string, id),
+      enabled: !!projectId,
+      staleTime: 60_000,
+    })),
+  })
+
+  const parentMap = useMemo<ParentMap>(() => {
+    const map: ParentMap = new Map()
+    parentQueries.forEach((q, idx) => {
+      const data = q.data
+      if (data) map.set(parentIds[idx], { number: data.number, title: data.title, type: data.type })
+    })
+    return map
+  }, [parentQueries, parentIds])
 
   if (sortedActivities.length === 0) return null
 
@@ -190,6 +243,7 @@ export default function ActivityTimeline({ activities, members, projectKey }: Ac
           activity={activity}
           members={members}
           projectKey={projectKey}
+          parents={parentMap}
         />
       ))}
     </div>
@@ -200,10 +254,12 @@ function ActivityItem({
   activity,
   members,
   projectKey: _projectKey,
+  parents,
 }: {
   activity: Activity
   members: ProjectMember[]
   projectKey?: string
+  parents: ParentMap
 }) {
   const { field, oldValue, newValue, user, createdAt } = activity
   const isCreation = field === 'created' || (!oldValue && field === 'status')
@@ -251,7 +307,7 @@ function ActivityItem({
                     {oldValue.length > 40 ? oldValue.slice(0, 40) + '...' : oldValue}
                   </span>
                 ) : (
-                  formatFieldValue(field, oldValue, members)
+                  formatFieldValue(field, oldValue, members, parents)
                 )}
               </span>
             ) : (
@@ -263,7 +319,7 @@ function ActivityItem({
                 {(field === 'assigneeId' || field === 'reviewerAssigneeId') && !resolveUserName(newValue, members) ? (
                   <span className="text-xs text-gray-500 dark:text-gray-400">Unassigned</span>
                 ) : (
-                  formatFieldValue(field, newValue, members)
+                  formatFieldValue(field, newValue, members, parents)
                 )}
               </span>
             ) : (

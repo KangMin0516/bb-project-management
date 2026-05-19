@@ -107,6 +107,7 @@ export default function ActivityTab({
                 key={`a-${item.data.id}`}
                 activities={[item.data]}
                 members={members}
+                projectId={projectId}
               />
             ),
           )}
