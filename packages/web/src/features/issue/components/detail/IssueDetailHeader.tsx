@@ -21,6 +21,7 @@ import { buttonVariants } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/utils'
 import { copyIssueLink } from '@/features/issue/lib/copyIssueLink'
 import type { ShareContext } from '@/shared/types'
+import SourceBadge from '@/shared/ui/SourceBadge'
 
 interface IssueDetailHeaderProps {
   projectId: string
@@ -143,6 +144,7 @@ export default function IssueDetailHeader({
           onClick={() => { setDraftTitle(d.title); setEditingTitle(true) }}
         >
           <span className="font-mono text-base text-gray-400 mr-2 align-middle">#{d.number}</span>
+          <SourceBadge source={d.source} className="mr-2 align-middle" />
           {d.title}
         </h2>
       )}
