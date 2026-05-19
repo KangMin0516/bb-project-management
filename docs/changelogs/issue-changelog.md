@@ -22,6 +22,14 @@
 
 ## Timeline
 
+### 2026-05-19 — CreateIssueModal: parent pre-fill from swimlane "+" + richer Assignee items (PM-42)
+**Fixed.** Clicking "+" on a swimlane lane (e.g. the "Bugs" epic) now pre-fills Parent Issue with that epic instead of leaving it `None`. Threaded `parentId` through `SwimlaneRow → SwimlaneBoardView → BoardPage` (`onAddClick(status, parentId)`); `BoardPage.createModal` state moved from a bare status string to `{ status, parentId }` so the dialog can pre-select. Assignee items now render `UserAvatar` + name + email, so members with similar names are distinguishable. Wheel-scroll on the Assignee dropdown + the Parent Issue Combobox is unblocked by the shared overlay-portal change (see `ui-changelog.md`).
+- Source: `packages/web/src/features/issue/components/CreateIssueModal.tsx`, `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx`, `packages/web/src/features/issue/components/board/SwimlaneRow.tsx`, `packages/web/src/features/issue/components/board/BoardColumn.tsx`, `packages/web/src/pages/BoardPage.tsx`.
+
+### 2026-05-19 — Board columns tighter + drag-scroll cursor honest (PM-43)
+**Changed.** Plain-board column min-width dropped from `300px` to `240px`, matching the swimlane column feel (`w-56`) so a 1440px screen now shows 5 columns instead of 4. Also removed `cursor-grab` from the board scroll container — the card surface is the @hello-pangea/dnd drag-handle, so a mouse drag picks up the card rather than scrolling the board; advertising "grab" was lying. Trackpad swipe and the scrollbar keep working. A real click-to-scroll behaviour would require a dedicated drag-handle column on each card — flagged on PM-43 for a follow-up if the team feels the loss.
+- Source: `packages/web/src/features/issue/components/board/BoardColumn.tsx`, `packages/web/src/pages/BoardPage.tsx`.
+
 ### 2026-05-19 — Multi-field sort stack editor — ClickUp-style chip list (PM-41, Sort Phase 2)
 **Added.** SortMenu's popover is now a chip list editor: every active sort rule renders as a row with its own direction toggle, `↑/↓` precedence buttons, and `×` remove. A `+ Add sort field` button opens an inline picker of unused fields (capped at 4 in the stack — past that, each extra rule barely adds any disambiguation). Trigger compactly shows the primary field + `+N` when more than one rule is stacked. URL codec and BE Prisma `orderBy` already accept the comma-separated stack from Phase 1, so this is a pure UI upgrade.
 

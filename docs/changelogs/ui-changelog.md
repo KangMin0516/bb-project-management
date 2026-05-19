@@ -18,6 +18,11 @@
 
 ## Timeline
 
+### 2026-05-19 — Generalised overlay portal context to Dialog + Select (PM-42)
+**Changed.** The PM-27 fix shipped a `SheetPortalContext` so a `Popover` would render inside the enclosing `Sheet` (otherwise the Sheet's `react-remove-scroll` cancelled wheel events on the popover). Same root cause hit `Select`/`Combobox` opened inside the Create Issue **Dialog** — wheel scroll silently dead. Generalised the context to cover both Sheet and Dialog (`useOverlayPortalContainer`, aliased from the existing `useSheetPortalContainer` for back-compat) and taught `Select` to auto-portal into the container too. Combobox already routes through `Popover`, so it inherits the fix for free.
+- New: `useOverlayPortalContainer` export from `packages/web/src/shared/ui/sheet-portal-context.ts` (same value, clearer name).
+- Source: `packages/web/src/shared/ui/sheet-portal-context.ts`, `packages/web/src/shared/ui/dialog.tsx`, `packages/web/src/shared/ui/select.tsx`.
+
 ### 2026-05-19 — Popover auto-portals into the enclosing Sheet (PM-27, bdf8a30)
 **Fixed.** Sub-task assignee/status pickers (and any other `Popover` rendered inside an `IssueDetailPanel` Sheet) couldn't mousewheel-scroll: Radix Sheet's `react-remove-scroll` `preventDefault()`-ed wheel events whose target was portal'd to `<body>` outside the Sheet content tree. `SheetContent` now exposes its DOM node via context; `PopoverContent` reads it and uses it as the portal `container`, so the popover lives inside the Sheet's whitelist. Mousewheel works; scrollbar drag unchanged.
 - New: `packages/web/src/shared/ui/sheet-portal-context.ts` (context + `useSheetPortalContainer` hook).

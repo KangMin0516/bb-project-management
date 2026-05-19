@@ -25,10 +25,13 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import Combobox from '@/shared/ui/combobox'
+import UserAvatar from '@/entities/user/UserAvatar'
 
 interface CreateIssueModalProps {
   projectId: string
   defaultStatus?: string
+  /** Pre-select Parent Issue (e.g. when "+" is clicked on a swimlane). */
+  defaultParentId?: string
   onClose: () => void
   onCreated?: (issueId: string) => void
 }
@@ -37,7 +40,7 @@ interface CreateIssueModalProps {
 const UNASSIGNED = '__unassigned__'
 const NO_PARENT = '__none__'
 
-export default function CreateIssueModal({ projectId, defaultStatus, onClose, onCreated }: CreateIssueModalProps) {
+export default function CreateIssueModal({ projectId, defaultStatus, defaultParentId, onClose, onCreated }: CreateIssueModalProps) {
   const { open, requestClose } = useDeferredClose(onClose)
 
   const [title, setTitle] = useState('')
@@ -47,7 +50,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
   const [assigneeId, setAssigneeId] = useState('')
   const [labelIds, setLabelIds] = useState<string[]>([])
   const [componentIds, setComponentIds] = useState<string[]>([])
-  const [parentId, setParentId] = useState('')
+  const [parentId, setParentId] = useState(defaultParentId ?? '')
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const queryClient = useQueryClient()
 
@@ -207,7 +210,15 @@ export default function CreateIssueModal({ projectId, defaultStatus, onClose, on
               <SelectContent>
                 <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
                 {members?.map((m) => (
-                  <SelectItem key={m.user.id} value={m.user.id}>{m.user.name}</SelectItem>
+                  <SelectItem key={m.user.id} value={m.user.id}>
+                    <span className="flex items-center gap-2">
+                      <UserAvatar user={m.user} size="sm" />
+                      <span className="flex flex-col leading-tight">
+                        <span className="text-sm">{m.user.name}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{m.user.email}</span>
+                      </span>
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

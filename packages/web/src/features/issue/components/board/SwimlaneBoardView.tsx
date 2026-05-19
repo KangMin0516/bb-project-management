@@ -19,7 +19,10 @@ interface SwimlaneBoardViewProps {
   onEpicClick?: (epic: Issue) => void
   onReorder: (issueId: string, status: string, order: number) => void
   onEpicChange?: (issueId: string, newParentId: string | null) => void
-  onAddClick?: (status: string) => void
+  /** Called when the user clicks "+" on a column inside a swimlane.
+   *  `parentId` is the swimlane's epic id (or null for the No-Epic lane),
+   *  so the Create dialog can pre-fill Parent Issue. */
+  onAddClick?: (status: string, parentId: string | null) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void

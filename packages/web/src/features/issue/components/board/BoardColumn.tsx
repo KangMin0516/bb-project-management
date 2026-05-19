@@ -13,7 +13,8 @@ interface BoardColumnProps {
   projectKey: string
   projectId: string
   onIssueClick: (issue: Issue) => void
-  onAddClick: (status: string) => void
+  /** `parentId` is null on the plain board (no swimlane context). */
+  onAddClick: (status: string, parentId: string | null) => void
   childrenMap?: Map<string, ChildIssue[]>
   expandedIssues?: Set<string>
   onToggleExpand?: (issueId: string) => void
@@ -41,13 +42,13 @@ export default memo(function BoardColumn({
   onEpicChange,
 }: BoardColumnProps) {
   return (
-    <div className="flex h-full min-w-[300px] flex-1 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
+    <div className="flex h-full min-w-[240px] flex-1 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[status])} />
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{STATUS_LABELS[status] || status}</span>
         <button
           type="button"
-          onClick={() => onAddClick(status)}
+          onClick={() => onAddClick(status, null)}
           aria-label={`Add issue to ${STATUS_LABELS[status] || status}`}
           className="rounded-md p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >

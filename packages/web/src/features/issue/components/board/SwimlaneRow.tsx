@@ -18,7 +18,9 @@ interface SwimlaneRowProps {
   onIssueClick: (issue: Issue) => void
   /** Click the Epic title/ID to open its detail panel. */
   onEpicClick?: (epic: Issue) => void
-  onAddClick?: (status: string) => void
+  /** `parentId` = `epic?.id ?? null`, threaded from the swimlane so
+   *  the Create dialog can pre-fill Parent Issue. */
+  onAddClick?: (status: string, parentId: string | null) => void
   childrenMap: Map<string, ChildIssue[]>
   expandedIssues: Set<string>
   onToggleExpand: (issueId: string) => void
@@ -193,7 +195,7 @@ export default memo(function SwimlaneRow({
                     {onAddClick && (
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onAddClick(status) }}
+                        onClick={(e) => { e.stopPropagation(); onAddClick(status, epic?.id ?? null) }}
                         className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-300 transition"
                       >
                         <Plus className="h-3 w-3" />

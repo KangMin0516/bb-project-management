@@ -29,7 +29,9 @@ export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const { filters, setFilters, resetFilters } = useFilterSearchParams()
-  const [createModal, setCreateModal] = useState<string | null>(null)
+  // `{status, parentId}` instead of just status so the "+" on a swimlane
+  // can pre-fill Parent Issue in the Create dialog (PM-42).
+  const [createModal, setCreateModal] = useState<{ status: string; parentId: string | null } | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set())
   // Lifted so the toolbar's Expand all / Collapse all can mutate it.
@@ -251,7 +253,7 @@ export default function BoardPage() {
               onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
               onSwimlaneReorder={(epicId, status, order) => reorder.mutate({ issueId: epicId, status, order })}
               onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
-              onAddClick={setCreateModal}
+              onAddClick={(status, parentId) => setCreateModal({ status, parentId })}
               childrenMap={childrenMap}
               expandedIssues={expandedIssues}
               onToggleExpand={toggleExpand}
@@ -264,7 +266,11 @@ export default function BoardPage() {
             />
           </div>
         ) : (
-          <div ref={dragScrollRef} className="h-full overflow-x-auto cursor-grab">
+          // Drag-scroll cursor removed: card surface is the dnd drag-handle
+          // so a mouse drag picks up the card, not the board. Use trackpad
+          // swipe or the scrollbar to pan horizontally. See PM-43 for a
+          // follow-up to add a dedicated drag-handle column.
+          <div ref={dragScrollRef} className="h-full overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="flex h-full min-w-max gap-4">
                 {STATUSES.map((status) => (
@@ -275,7 +281,7 @@ export default function BoardPage() {
                     projectKey={projectKey}
                     projectId={projectId}
                     onIssueClick={setSelectedIssue}
-                    onAddClick={setCreateModal}
+                    onAddClick={(status, parentId) => setCreateModal({ status, parentId })}
                     childrenMap={childrenMap}
                     expandedIssues={expandedIssues}
                     onToggleExpand={toggleExpand}
@@ -293,7 +299,12 @@ export default function BoardPage() {
       </div>
 
       {createModal && (
-        <CreateIssueModal projectId={projectId} defaultStatus={createModal} onClose={() => setCreateModal(null)} />
+        <CreateIssueModal
+          projectId={projectId}
+          defaultStatus={createModal.status}
+          defaultParentId={createModal.parentId ?? undefined}
+          onClose={() => setCreateModal(null)}
+        />
       )}
 
       {selectedIssue && (
