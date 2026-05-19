@@ -109,9 +109,6 @@ export class OAuthService {
   // ─── Dynamic Client Registration (RFC 7591) ─────────────
 
   async registerClient(input: RegisterClientInput) {
-    if (!input.client_name?.trim()) {
-      throw new BadRequestException('client_name is required');
-    }
     if (
       !Array.isArray(input.redirect_uris) ||
       input.redirect_uris.length === 0
@@ -125,6 +122,15 @@ export class OAuthService {
         );
       }
     }
+
+    // RFC 7591 §2 marks `client_name` as OPTIONAL. Requiring it broke
+    // Claude.ai's MCP connector (PM-44) — ChatGPT happens to send one,
+    // Claude doesn't. Derive a friendly fallback from the redirect_uri
+    // host (e.g. "claude.ai") so the consent screen still shows
+    // something useful.
+    const clientName =
+      input.client_name?.trim() ||
+      this.deriveClientNameFromRedirect(input.redirect_uris[0]);
 
     const authMethod =
       input.token_endpoint_auth_method ?? 'client_secret_basic';
@@ -141,7 +147,7 @@ export class OAuthService {
       data: {
         clientId,
         clientSecret,
-        clientName: input.client_name.slice(0, 200),
+        clientName: clientName.slice(0, 200),
         redirectUris: input.redirect_uris,
         scopes,
         grantTypes: input.grant_types ?? [
@@ -432,6 +438,18 @@ export class OAuthService {
       throw new UnauthorizedException('Invalid client_secret');
     }
     return client;
+  }
+
+  /** Derive a human-friendly client name when the registering client
+   *  didn't send one (RFC 7591 allows omitting `client_name`). Falls
+   *  back to "Anonymous MCP Client" if the redirect URI is unparseable. */
+  private deriveClientNameFromRedirect(uri: string): string {
+    try {
+      const host = new URL(uri).hostname;
+      return host || 'Anonymous MCP Client';
+    } catch {
+      return 'Anonymous MCP Client';
+    }
   }
 
   private isValidRedirectUri(uri: string): boolean {

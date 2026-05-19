@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-19 — OAuth dynamic client registration no longer requires `client_name` (PM-44)
+**Fixed.** The dynamic registration endpoint (`POST /api/oauth/register`, RFC 7591) refused to create a client without `client_name`. Per the spec the field is OPTIONAL, and Claude.ai's MCP connector doesn't send one — so the OAuth bootstrap died before the user even saw a consent screen ("Couldn't reach the MCP server"). ChatGPT's connector happened to send `client_name`, masking the bug. Dropped the guard and added `deriveClientNameFromRedirect` which falls back to the redirect URI's hostname (e.g. `claude.ai`) or `"Anonymous MCP Client"`.
+- Source: `packages/api/src/oauth/oauth.service.ts`.
+
 ### 2026-05-15 — Dual credentials in `ApiKeyGuard` (a0629e0)
 **Changed.** The `ApiKeyGuard` now accepts **either** `X-API-Key: bbpm_<hex>` (long-lived personal key) **or** `Authorization: Bearer bbpm_at_<…>` (short-lived OAuth 2.1 access token). Both paths populate `request.user = { sub, email }` so every downstream `/api/external/*` controller treats them identically. The OAuth side is its own surface — see [`mcp-changelog.md`](./mcp-changelog.md) and [`docs/architecture/backend/mcp-server.md`](../architecture/backend/mcp-server.md). Auth-wise the only change here is that the guard gained a second resolution path.
 - Source: `packages/api/src/api-key/api-key.guard.ts`.
