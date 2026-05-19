@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-19 — Assignee picker becomes a searchable Combobox in CreateIssueModal (PM-42 follow-up)
+**Changed.** Assignee select swapped from Radix `Select` to the same `Combobox` the Parent Issue field uses, so members are searchable by name **or email**. Each option still shows avatar + name + email; the `searchValue` concatenates both so typing the local-part of an email also matches.
+- Source: `packages/web/src/features/issue/components/CreateIssueModal.tsx`.
+
 ### 2026-05-19 — CreateIssueModal: parent pre-fill from swimlane "+" + richer Assignee items (PM-42)
 **Fixed.** Clicking "+" on a swimlane lane (e.g. the "Bugs" epic) now pre-fills Parent Issue with that epic instead of leaving it `None`. Threaded `parentId` through `SwimlaneRow → SwimlaneBoardView → BoardPage` (`onAddClick(status, parentId)`); `BoardPage.createModal` state moved from a bare status string to `{ status, parentId }` so the dialog can pre-select. Assignee items now render `UserAvatar` + name + email, so members with similar names are distinguishable. Wheel-scroll on the Assignee dropdown + the Parent Issue Combobox is unblocked by the shared overlay-portal change (see `ui-changelog.md`).
 - Source: `packages/web/src/features/issue/components/CreateIssueModal.tsx`, `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx`, `packages/web/src/features/issue/components/board/SwimlaneRow.tsx`, `packages/web/src/features/issue/components/board/BoardColumn.tsx`, `packages/web/src/pages/BoardPage.tsx`.

@@ -200,17 +200,16 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">Assignee</label>
-            <Select
+            <Combobox
               value={assigneeId || UNASSIGNED}
-              onValueChange={(v) => setAssigneeId(v === UNASSIGNED ? '' : v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                {members?.map((m) => (
-                  <SelectItem key={m.user.id} value={m.user.id}>
+              onChange={(v) => setAssigneeId(v === UNASSIGNED ? '' : v)}
+              options={[
+                { value: UNASSIGNED, label: 'Unassigned' },
+                ...(members ?? []).map((m) => ({
+                  value: m.user.id,
+                  label: m.user.name,
+                  searchValue: `${m.user.name} ${m.user.email}`,
+                  render: (
                     <span className="flex items-center gap-2">
                       <UserAvatar user={m.user} size="sm" />
                       <span className="flex flex-col leading-tight">
@@ -218,10 +217,13 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                         <span className="text-[10px] text-gray-400 dark:text-gray-500">{m.user.email}</span>
                       </span>
                     </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  ),
+                })),
+              ]}
+              placeholder="Unassigned"
+              searchPlaceholder="Search member..."
+              emptyMessage="No matches"
+            />
           </div>
 
           {type !== 'EPIC' && (
