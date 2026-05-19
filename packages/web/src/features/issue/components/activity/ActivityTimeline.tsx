@@ -17,6 +17,7 @@ import type { ProjectMember } from '@/features/project/api'
 import { issueRepository } from '@/features/issue/repository'
 import { timeAgo } from '@/shared/lib/time'
 import SourceBadge from '@/shared/ui/SourceBadge'
+import UserAvatar from '@/entities/user/UserAvatar'
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -84,15 +85,6 @@ function PriorityBadge({ value }: { value: string }) {
   )
 }
 
-function UserAvatar({ name }: { name: string }) {
-  const initial = name?.charAt(0)?.toUpperCase() || '?'
-  return (
-    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
-      {initial}
-    </span>
-  )
-}
-
 interface ActivityTimelineProps {
   activities: Activity[]
   members: ProjectMember[]
@@ -100,10 +92,17 @@ interface ActivityTimelineProps {
   projectKey?: string
 }
 
-function resolveUserName(userId: string | null, members: ProjectMember[]): string | null {
+function resolveUser(
+  userId: string | null,
+  members: ProjectMember[],
+): { name: string; avatar: string | null } | null {
   if (!userId) return null
   const member = members.find((m) => m.user.id === userId)
-  return member?.user.name || null
+  return member ? { name: member.user.name, avatar: member.user.avatar } : null
+}
+
+function resolveUserName(userId: string | null, members: ProjectMember[]): string | null {
+  return resolveUser(userId, members)?.name ?? null
 }
 
 function formatFieldValue(
@@ -127,12 +126,12 @@ function formatFieldValue(
       )
     case 'assigneeId':
     case 'reviewerAssigneeId': {
-      const name = resolveUserName(value, members)
-      if (name) {
+      const user = resolveUser(value, members)
+      if (user) {
         return (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-            <UserAvatar name={name} />
-            {name}
+            <UserAvatar user={user} size="sm" />
+            {user.name}
           </span>
         )
       }
@@ -268,9 +267,7 @@ function ActivityItem({
 
   return (
     <div className="flex gap-3 py-2.5">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-medium text-gray-600 dark:text-gray-500">
-        {user?.name?.charAt(0)?.toUpperCase() || '?'}
-      </div>
+      <UserAvatar user={user ?? null} size="md" variant="gray" className="shrink-0" />
 
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex flex-wrap items-center gap-1 text-xs">
