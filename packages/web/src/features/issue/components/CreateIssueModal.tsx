@@ -209,6 +209,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                   value: m.user.id,
                   label: m.user.name,
                   searchValue: `${m.user.name} ${m.user.email}`,
+                  // List rows show the full identity (stacked).
                   render: (
                     <span className="flex items-center gap-2">
                       <UserAvatar user={m.user} size="sm" />
@@ -216,6 +217,15 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                         <span className="text-sm">{m.user.name}</span>
                         <span className="text-[10px] text-gray-400 dark:text-gray-500">{m.user.email}</span>
                       </span>
+                    </span>
+                  ),
+                  // Trigger stays compact — avatar + name on one line,
+                  // so the input doesn't grow taller and the content
+                  // hugs the left edge instead of looking centred.
+                  triggerRender: (
+                    <span className="flex items-center gap-2">
+                      <UserAvatar user={m.user} size="sm" />
+                      <span className="text-sm">{m.user.name}</span>
                     </span>
                   ),
                 })),

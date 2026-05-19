@@ -18,6 +18,10 @@
 
 ## Timeline
 
+### 2026-05-19 — Combobox separates trigger and list rendering (PM-42 follow-up)
+**Added.** `ComboboxOption.triggerRender` (optional, falls back to `render` → `label`). Lets a single Combobox show a rich stacked layout in the dropdown (e.g. avatar + name + email on two lines) while keeping the trigger button compact on its 36px row. Without it, the Assignee picker's selected state stretched the trigger to two lines and the inline content drifted into the middle.
+- Source: `packages/web/src/shared/ui/combobox.tsx`, `packages/web/src/features/issue/components/CreateIssueModal.tsx`.
+
 ### 2026-05-19 — Dialog centred without a permanent transform (PM-42 follow-up)
 **Changed.** DialogContent used `translate-x-[-50%] translate-y-[-50%]` for centring, which left a permanent CSS transform on the open dialog. That transform turned the dialog into a containing block for every `position: fixed` descendant — so a Combobox/Select portal'd inside (PM-42) got trapped in the dialog's layout and rendered inline instead of floating above. Swapped centring to `fixed inset-0 m-auto h-fit w-[calc(100%-2rem)] max-w-lg`, which has zero transform at idle, so nested popovers float above the dialog the way users expect.
 - Source: `packages/web/src/shared/ui/dialog.tsx`.

@@ -14,12 +14,17 @@ import {
 
 export interface ComboboxOption {
   value: string
-  /** Text shown in the trigger and the dropdown row. */
+  /** Text shown in the trigger when nothing else is provided. */
   label: string
   /** Text fed to cmdk for fuzzy matching (defaults to `label`). */
   searchValue?: string
-  /** Optional custom row renderer; falls back to `label`. */
+  /** Optional row renderer for the dropdown list. Falls back to `label`. */
   render?: ReactNode
+  /** Optional renderer for the *trigger* when this option is selected.
+   *  Falls back to `render`, then `label`. Use this when the list row is
+   *  rich (e.g. avatar + name + email stacked) but the trigger should
+   *  stay compact on a single 36px-tall input row. */
+  triggerRender?: ReactNode
 }
 
 interface ComboboxProps {
@@ -73,7 +78,7 @@ export default function Combobox({
           )}
         >
           <span className={cn('truncate', !selected && 'text-gray-400 dark:text-gray-500')}>
-            {selected ? selected.render ?? selected.label : placeholder}
+            {selected ? selected.triggerRender ?? selected.render ?? selected.label : placeholder}
           </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </button>
