@@ -54,6 +54,14 @@ export class ExternalUpdateIssueDto {
   @IsUUID()
   parentId?: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Parent issue key, e.g. "PM-17" (null to clear). Resolved to parentId server-side. Must reference an issue in the same project. Ignored when parentId is also provided.',
+  })
+  @IsOptional()
+  @IsString()
+  parentIssueKey?: string | null;
+
   @ApiPropertyOptional({ description: 'Start date ISO 8601 (null to clear)' })
   @IsOptional()
   @ValidateIf((o) => o.startDate !== null)

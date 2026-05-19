@@ -44,6 +44,40 @@ export class ExternalService {
     private uploadService: UploadService,
   ) {}
 
+  /**
+   * Resolve "PM-17"-style key to an issue UUID, asserting the issue
+   * lives in the given project. Used to translate `parentIssueKey`
+   * from external callers (MCP, CLI) into the internal `parentId`.
+   */
+  private async resolveParentIssueKey(
+    projectId: string,
+    projectKey: string,
+    parentIssueKey: string,
+  ): Promise<string> {
+    const match = /^([A-Z0-9_-]+)-(\d+)$/i.exec(parentIssueKey.trim());
+    if (!match) {
+      throw new BadRequestException(
+        `Invalid parentIssueKey "${parentIssueKey}" — expected format "<PROJECT_KEY>-<NUMBER>"`,
+      );
+    }
+    const [, keyPart, numberPart] = match;
+    if (keyPart.toUpperCase() !== projectKey.toUpperCase()) {
+      throw new BadRequestException(
+        `parentIssueKey "${parentIssueKey}" is in a different project — parent must be in the same project as the child.`,
+      );
+    }
+    const parent = await this.prisma.issue.findUnique({
+      where: {
+        projectId_number: { projectId, number: Number(numberPart) },
+      },
+      select: { id: true },
+    });
+    if (!parent) {
+      throw new BadRequestException(`Parent issue ${parentIssueKey} not found`);
+    }
+    return parent.id;
+  }
+
   private async resolveProjectAndIssue(
     projectKey: string,
     issueNumber: number,
@@ -93,6 +127,17 @@ export class ExternalService {
       assigneeId = user.id;
     }
 
+    // Resolve parent — `parentId` (UUID) wins over `parentIssueKey`
+    // (human form like "PM-17") when both are sent.
+    let parentId: string | undefined = dto.parentId;
+    if (parentId === undefined && dto.parentIssueKey) {
+      parentId = await this.resolveParentIssueKey(
+        project.id,
+        dto.projectKey,
+        dto.parentIssueKey,
+      );
+    }
+
     // Resolve labels by name
     let labelIds: string[] | undefined;
     if (dto.labels?.length) {
@@ -122,7 +167,7 @@ export class ExternalService {
       assigneeId,
       dueDate: dto.dueDate,
       startDate: dto.startDate,
-      parentId: dto.parentId,
+      parentId,
       labels: labelIds,
     };
     const { merged, warnings } = this.issueRuleService.applyDefaultsAndValidate(
@@ -348,6 +393,24 @@ export class ExternalService {
       }
     }
 
+    // Resolve parent — `parentId` (UUID, or null to clear) wins over
+    // `parentIssueKey` (human form). Passing `null` for either clears
+    // the parent; passing a key resolves to a UUID in the same project.
+    let parentId: string | null | undefined;
+    if (dto.parentId !== undefined) {
+      parentId = dto.parentId;
+    } else if (dto.parentIssueKey !== undefined) {
+      if (dto.parentIssueKey === null || dto.parentIssueKey === '') {
+        parentId = null;
+      } else {
+        parentId = await this.resolveParentIssueKey(
+          project.id,
+          projectKey,
+          dto.parentIssueKey,
+        );
+      }
+    }
+
     return this.updateIssueUC.execute({
       projectId: project.id,
       issueId: issue.id,
@@ -359,7 +422,7 @@ export class ExternalService {
         status: dto.status,
         priority: dto.priority,
         assigneeId,
-        parentId: dto.parentId,
+        parentId,
         startDate: dto.startDate,
         dueDate: dto.dueDate,
       },
@@ -1212,7 +1275,8 @@ export class ExternalService {
       where: { key: projectKey },
       select: { id: true },
     });
-    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const issue = await this.prisma.issue.findUnique({
       where: {
@@ -1221,7 +1285,9 @@ export class ExternalService {
       select: { id: true, status: true, archivedAt: true },
     });
     if (!issue)
-      throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+      throw new NotFoundException(
+        `Issue ${projectKey}-${issueNumber} not found`,
+      );
 
     const warnings: string[] = [];
     if (issue.archivedAt) {
@@ -1254,7 +1320,8 @@ export class ExternalService {
       where: { key: projectKey },
       select: { id: true },
     });
-    if (!project) throw new NotFoundException(`Project "${projectKey}" not found`);
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const issue = await this.prisma.issue.findUnique({
       where: {
@@ -1263,7 +1330,9 @@ export class ExternalService {
       select: { id: true, archivedAt: true },
     });
     if (!issue)
-      throw new NotFoundException(`Issue ${projectKey}-${issueNumber} not found`);
+      throw new NotFoundException(
+        `Issue ${projectKey}-${issueNumber} not found`,
+      );
 
     if (!issue.archivedAt) {
       return { unarchived: false, alreadyActive: true };
@@ -1303,7 +1372,9 @@ export class ExternalService {
         projectId,
         issueId,
         actorId: userId,
-        source: source as import('../common/source.js').SourceLiteral | undefined,
+        source: source as
+          | import('../common/source.js').SourceLiteral
+          | undefined,
         changes: { labelIds: merged },
       });
     }
@@ -1336,7 +1407,9 @@ export class ExternalService {
         projectId,
         issueId,
         actorId: userId,
-        source: source as import('../common/source.js').SourceLiteral | undefined,
+        source: source as
+          | import('../common/source.js').SourceLiteral
+          | undefined,
         changes: { labelIds: merged },
       });
     }

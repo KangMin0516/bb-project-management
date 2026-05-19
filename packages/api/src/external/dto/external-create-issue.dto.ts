@@ -65,6 +65,14 @@ export class ExternalCreateIssueDto {
   @IsUUID()
   parentId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Parent issue key, e.g. "PM-17". Resolved to parentId server-side. Must reference an issue in the same project. Ignored when parentId is also provided.',
+  })
+  @IsOptional()
+  @IsString()
+  parentIssueKey?: string;
+
   @ApiPropertyOptional({ description: 'Planned start date (ISO 8601)' })
   @IsOptional()
   @IsDateString()
