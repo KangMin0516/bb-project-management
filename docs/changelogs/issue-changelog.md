@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-19 — Multi-field sort stack editor — ClickUp-style chip list (PM-41, Sort Phase 2)
+**Added.** SortMenu's popover is now a chip list editor: every active sort rule renders as a row with its own direction toggle, `↑/↓` precedence buttons, and `×` remove. A `+ Add sort field` button opens an inline picker of unused fields (capped at 4 in the stack — past that, each extra rule barely adds any disambiguation). Trigger compactly shows the primary field + `+N` when more than one rule is stacked. URL codec and BE Prisma `orderBy` already accept the comma-separated stack from Phase 1, so this is a pure UI upgrade.
+- Source: `packages/web/src/shared/ui/SortMenu.tsx` (full rewrite — Phase 1's single-select layout is gone).
+
 ### 2026-05-19 — Remove `isRecheck` toggle from IssueMetadata, RECHECK status is the source of truth (PM-39)
 **Removed.** The IN_PROGRESS-only recheck flag toggle was redundant with the existing `RECHECK` status column on the Board and confused users into thinking an issue could be in two statuses at once (`In Progress` + `Recheck` chip). Took the toggle out entirely; the `isRecheck` column stays on the Issue model for now (no migration needed, no caller reads it on the FE after this change) but can be dropped in a follow-up cleanup if it isn't useful elsewhere.
 - Source: `packages/web/src/features/issue/components/detail/IssueMetadata.tsx`.
