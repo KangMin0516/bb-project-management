@@ -24,6 +24,8 @@
 
 ### 2026-05-19 — Multi-field sort stack editor — ClickUp-style chip list (PM-41, Sort Phase 2)
 **Added.** SortMenu's popover is now a chip list editor: every active sort rule renders as a row with its own direction toggle, `↑/↓` precedence buttons, and `×` remove. A `+ Add sort field` button opens an inline picker of unused fields (capped at 4 in the stack — past that, each extra rule barely adds any disambiguation). Trigger compactly shows the primary field + `+N` when more than one rule is stacked. URL codec and BE Prisma `orderBy` already accept the comma-separated stack from Phase 1, so this is a pure UI upgrade.
+
+**Tweak (same day).** Empty state now renders the field list inline instead of an "Add sort field" placeholder, so a single-field sort is still a one-click choice (matching Phase 1 ergonomics). The chip editor + add-picker only appear once the stack is non-empty.
 - Source: `packages/web/src/shared/ui/SortMenu.tsx` (full rewrite — Phase 1's single-select layout is gone).
 
 ### 2026-05-19 — Remove `isRecheck` toggle from IssueMetadata, RECHECK status is the source of truth (PM-39)

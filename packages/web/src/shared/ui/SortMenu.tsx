@@ -107,11 +107,21 @@ export default function SortMenu({ sortStack, onChange, availableFields = ALL_FI
           Sort by
         </div>
 
-        {sortStack.length === 0 && (
-          <p className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400">
-            No sort applied. Add a field to start.
-          </p>
-        )}
+        {/* Empty state shows the field list inline so a single-field
+            sort is one click, matching the Phase 1 ergonomics. The chip
+            editor + "Add field" picker appears once the stack is non-
+            empty. */}
+        {sortStack.length === 0 &&
+          unusedFields.map((field) => (
+            <button
+              key={field}
+              type="button"
+              onClick={() => addField(field)}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              {FIELD_LABEL[field]}
+            </button>
+          ))}
 
         {sortStack.map((rule, idx) => (
           <SortChip
@@ -126,7 +136,7 @@ export default function SortMenu({ sortStack, onChange, availableFields = ALL_FI
           />
         ))}
 
-        {canAdd && !picking && (
+        {sortStack.length > 0 && canAdd && !picking && (
           <button
             type="button"
             onClick={() => setPicking(true)}
