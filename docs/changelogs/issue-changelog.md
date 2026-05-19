@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-19 — "Recheck" toggle in IssueMetadata no longer looks like a status chip (PM-39)
+**Fixed.** The IN_PROGRESS-only recheck flag toggle rendered as a flat gray pill labelled "Recheck", indistinguishable from another status badge — users reading the panel thought the issue was in two statuses at once. The button now has a dashed-border outline, a `RotateCw` icon, a verb-form label ("Flag recheck" off / "Recheck ✓" on), and an explanatory `title` tooltip so it reads as an action toggle.
+- Source: `packages/web/src/features/issue/components/detail/IssueMetadata.tsx`.
+
 ### 2026-05-19 — Sort issues on Board / Lists / Timeline, ClickUp-style scaffold (PM-34, PM-35→38)
 **Added.** All three views now expose a `<SortMenu>` next to the filter chips. Phase 1 ships single-field selection but the wire format is the multi-field stack that Phase 2 will expand to. URL is shared (`?sort=field:dir,…`) so column-header click on Lists and the menu pick on Board stay in sync, and refresh / share-link keeps the chosen sort.
 - BE: `QueryIssueDto.sort` parses `field:dir,…` into a Prisma `orderBy` array (`nulls: 'last'` for date fields). Legacy `sortBy`/`sortOrder` kept as fallback. Board endpoint (`findByStatus`) also accepts `sort` so each column orders consistently. Enum order relies on the Postgres declaration order — `priority desc` puts HIGH first, `status asc` follows the workflow (no custom collator).

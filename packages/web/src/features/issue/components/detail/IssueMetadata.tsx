@@ -1,3 +1,4 @@
+import { RotateCw } from 'lucide-react'
 import type { IssueDetail, Issue, UpdateIssuePayload } from '@/features/issue/api'
 import type { ProjectMember, Label } from '@/features/project/api'
 import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, STATUS_COLORS, PRIORITY_COLORS, PRIORITY_DOT_COLORS, TYPE_ICONS } from '@/shared/config/constants'
@@ -66,14 +67,18 @@ export default function IssueMetadata({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onUpdate({ isRecheck: !d.isRecheck }) }}
+                title={d.isRecheck ? 'Unmark as needing recheck' : 'Flag this issue for recheck after merge'}
                 className={cn(
-                  'rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                  // Dashed border + verb label so this reads as an
+                  // action toggle, not another status chip. See PM-39.
                   d.isRecheck
-                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600',
+                    ? 'border border-orange-300 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                    : 'border border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-200',
                 )}
               >
-                Recheck {d.isRecheck ? '✓' : ''}
+                <RotateCw className="h-3 w-3" />
+                {d.isRecheck ? 'Recheck ✓' : 'Flag recheck'}
               </button>
             )}
           </div>
