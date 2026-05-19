@@ -42,7 +42,7 @@ export default memo(function BoardColumn({
   onEpicChange,
 }: BoardColumnProps) {
   return (
-    <div className="flex h-full min-w-[240px] flex-1 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
+    <div className="flex h-full w-[260px] shrink-0 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <div className={cn('h-2.5 w-2.5 rounded-full', STATUS_COLORS[status])} />
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{STATUS_LABELS[status] || status}</span>
