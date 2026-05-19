@@ -22,9 +22,9 @@
 
 ## Timeline
 
-### 2026-05-19 — Activity log avatars use real image instead of initial-only (PM-32)
-**Fixed.** `ActivityTimeline` was rendering its own initials-only `UserAvatar` and a raw `<div>` for the main-row avatar, ignoring `user.avatar` even though the API has shipped it for a while. Both call sites now use the shared `@/entities/user/UserAvatar` component (image when present, initials fallback when not). Resolver split: `resolveUser` returns `{ name, avatar }`, `resolveUserName` keeps the existing string-only callers happy.
-- Source: `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx`.
+### 2026-05-19 — Comment + activity avatars use real image instead of initial-only (PM-32)
+**Fixed.** `ActivityTimeline` was rendering its own initials-only `UserAvatar` and a raw `<div>` for the main-row avatar; `CommentItem` had the same pattern. All three call sites now use the shared `@/entities/user/UserAvatar` component (image when present, initials fallback when not). Resolver split in `ActivityTimeline`: `resolveUser` returns `{ name, avatar }`, `resolveUserName` keeps the existing string-only callers happy.
+- Source: `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx`, `packages/web/src/features/issue/components/comment/CommentItem.tsx`.
 
 ### 2026-05-19 — Filter issues by source on Board / Lists / Timeline (PM-31)
 **Added.** Filters panel + dropdown row now have a **Source** section (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM), so a PM can isolate "everything an agent created" without scrolling. Single-value selection is pushed to the server (`GET /api/projects/:projectId/issues?source=MCP`); multi-value falls back to the client filter, same pattern as Status/Priority/Type.

@@ -5,6 +5,7 @@ import MarkdownEditor from '@/shared/ui/markdown/MarkdownEditor'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import { timeAgo } from '@/shared/lib/time'
 import SourceBadge from '@/shared/ui/SourceBadge'
+import UserAvatar from '@/entities/user/UserAvatar'
 
 interface CommentItemProps {
   comment: Comment
@@ -38,9 +39,7 @@ export default function CommentItem({ comment, currentUserId, onUpdate, onDelete
 
   return (
     <div className="flex gap-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700">
-        {comment.user.name.charAt(0).toUpperCase()}
-      </div>
+      <UserAvatar user={comment.user} size="md" className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{comment.user.name}</span>
