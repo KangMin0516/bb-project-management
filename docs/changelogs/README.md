@@ -26,6 +26,7 @@ Per-domain changelogs for the `bb-pm` (BB Project Management) monorepo. Each fil
 | [`mcp-changelog.md`](./mcp-changelog.md)                     | **MCP server**         | OAuth 2.1 Authorization Server, dual `X-API-Key`/`Bearer` guard, source-of-write tagging, `/external/*` additions for MCP agents |
 | [`dashboard-changelog.md`](./dashboard-changelog.md)         | **Dashboards**         | Global, project, team dashboards, KPI cards, focus issues, member tasks |
 | [`timeline-changelog.md`](./timeline-changelog.md)           | **Timeline view**      | Gantt-style timeline, EPIC grouping, scroll sync, CANCELED filtering |
+| [`calendar-changelog.md`](./calendar-changelog.md)           | **Calendar view**      | Month grid pinned by `dueDate`, +N more overflow popover, shared filter toolbar |
 | [`ui-changelog.md`](./ui-changelog.md)                       | **Frontend cross-cutting** | Dark mode, keyboard shortcuts + command palette, API docs page, breadcrumbs, accessibility |
 
 ---
