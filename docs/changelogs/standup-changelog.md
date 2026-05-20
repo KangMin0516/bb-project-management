@@ -23,6 +23,18 @@
 
 ## Timeline
 
+### 2026-05-20 — Always DM every non-away member, regardless of assignment (765de33)
+**Changed.** Previously, `startReportForUser` short-circuited (no DM, no report row) when the resolved system user had zero non-DONE/CANCELED issues AND zero issues marked DONE today. This silently hid the standup from anyone without active assignments, surfacing as "bot không hỏi tới em" complaints (e.g. Mai Nguyễn, Bao Quoc, DINH THI KIM THOAI on 2026-05-20). New behaviour: every non-away member of the config gets DM'd; the issue-list block still only renders when Slack → user mapping succeeds. Removed the now-unused `memberHasIssuesToday` helper.
+- Source: `packages/api/src/standup/standup.service.ts` (`startReportForUser`).
+
+### 2026-05-20 — Make manual re-trigger safe (skip members with any report today) (765de33)
+**Changed.** `triggerStandup` used to skip only members with an `ACTIVE` report. That meant calling `POST /api/standup/configs/:id/trigger` twice in one day re-DM'd anyone already in `ANSWERED`/`UNANSWERED`/`CANCELED` — spam. Now it skips any member who already has a row in `standup_reports` whose `createdAt >= start-of-today` in the config timezone. Use case: after fixing an issue mid-morning, you can re-trigger to DM only the members who were missed, without bothering the ones who already reported. Added the `startOfTodayInTimezone` + `tzOffsetAt` helpers at the bottom of `standup.service.ts` (DST-safe, same single-pass shape as `scheduledTodayInTz` in the scheduler).
+- Source: `packages/api/src/standup/standup.service.ts` (`triggerStandup`, file-level helpers).
+
+### 2026-05-20 — Confirm dialog before manual trigger (765de33)
+**Added.** The ▶ "Trigger now" button on the standup config row now opens a `confirmDialog()` before firing the trigger mutation. The dialog explains the action — DM every non-away member who hasn't reported today, with the current member count — so an admin doesn't accidentally fan out 15+ Slack DMs by mis-clicking. Cancel/Esc no-ops the mutation; "Trigger" proceeds to the existing flow and toast.
+- Source: `packages/web/src/features/standup/components/ConfigRow.tsx`.
+
 ### 2026-04-23 — Today's completed issues in standup DM list (c267374)
 **Added.** The "Your Issues" block at the start of a DM now appends `✅ DONE TODAY` items (issues the user marked DONE since UTC midnight). Helps remind them what they shipped before they answer "what did you do".
 - Source: `packages/api/src/standup/standup.service.ts:973`.
