@@ -3,6 +3,7 @@ import type { ProjectMember, Label } from '@/features/project/api'
 import { STATUSES, STATUS_LABELS, STATUS_BADGE_COLORS, STATUS_COLORS, PRIORITY_COLORS, PRIORITY_DOT_COLORS, TYPE_ICONS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import InlineField from '@/shared/ui/atoms/InlineField'
+import DatePopover from '@/shared/ui/DatePopover'
 import {
   Select,
   SelectContent,
@@ -175,8 +176,8 @@ export default function IssueMetadata({
         )}
       </InlineField>
 
-      <DateField label="Start Date" value={d.startDate} onChange={(v) => onUpdate({ startDate: v })} />
-      <DateField label="Due Date" value={d.dueDate} onChange={(v) => onUpdate({ dueDate: v })} />
+      <DateField label="Start Date" fieldId="start-date" value={d.startDate} onChange={(v) => onUpdate({ startDate: v })} />
+      <DateField label="Due Date" fieldId="due-date" value={d.dueDate} onChange={(v) => onUpdate({ dueDate: v })} />
 
       {d.type !== 'EPIC' && (
         <InlineField
@@ -230,28 +231,37 @@ export default function IssueMetadata({
   )
 }
 
-/** Date row with calendar input + clear-button affordance. */
-function DateField({ label, value, onChange }: { label: string; value: string | null; onChange: (next: string | null) => void }) {
+/** Date row using the shared popover-based picker. Single commit when the
+ *  user clicks a day or "Clear" — no per-segment activity spam from the
+ *  legacy native <input type="date"> path. */
+function DateField({
+  label,
+  fieldId,
+  value,
+  onChange,
+}: {
+  label: string
+  fieldId: string
+  value: string | null
+  onChange: (next: string | null) => void
+}) {
   const display = value
-    ? <span className="text-gray-700">{new Date(value).toLocaleDateString()}</span>
+    ? <span className="text-gray-700 dark:text-gray-300">{new Date(value).toLocaleDateString()}</span>
     : <span className="text-gray-400 italic">{`No ${label.toLowerCase()}`}</span>
 
   return (
-    <InlineField label={label} display={display}>
-      <div className="flex items-center gap-1">
-        <input
-          type="date"
-          value={value ? value.slice(0, 10) : ''}
-          onChange={(e) => onChange(e.target.value ? `${e.target.value}T00:00:00.000Z` : null)}
-          className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-          autoFocus
-        />
-        {value && (
-          <button onClick={() => onChange(null)} className="text-gray-400 hover:text-gray-600 text-sm px-1">
-            ✕
+    <div className="flex items-center gap-2 py-1.5">
+      <span className="w-20 shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
+      <div className="flex-1">
+        <DatePopover value={value} onChange={onChange}>
+          <button
+            data-field-trigger={fieldId}
+            className="flex w-full items-center justify-between rounded px-1.5 py-0.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition -mx-1.5"
+          >
+            {display}
           </button>
-        )}
+        </DatePopover>
       </div>
-    </InlineField>
+    </div>
   )
 }
