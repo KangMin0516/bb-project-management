@@ -25,6 +25,15 @@
 
 ## Timeline
 
+### 2026-05-20 — Fix 413 on attachment uploads + client-side image compression
+**Fixed + Added.** Two coupled changes for the attachment upload pipeline:
+
+1. **Nginx body limit.** `packages/web/nginx.conf` was missing `client_max_body_size`, so the reverse proxy was rejecting any upload above its 1 MB default with a 413 before NestJS even saw it — even though the API allowed up to 50 MB. Set the directive to `50m` to match `ATTACHMENT_MAX_SIZE`, and turned off `proxy_request_buffering` plus raised `proxy_read_timeout` to 120s so large multipart bodies stream through instead of being fully buffered on disk first.
+2. **Client-side prepare step.** New `packages/web/src/shared/lib/prepareUpload.ts` runs before every upload call site (issue attachment, TipTap inline image, avatar). For compressible image MIMEs (`jpeg/png/webp/heic/heif`) it re-encodes via `browser-image-compression` at max 1920×1920 / ~1.5 MB target (avatar variant: 512×512 / ~0.5 MB) using a web worker. For everything else (videos, PDFs, ...) it only validates the size against the 50 MB / 5 MB cap and surfaces a `FileTooLargeError` with a localised message so the user gets a real toast instead of a generic Axios failure. Videos are *not* transcoded in-browser — ffmpeg.wasm was rejected as too heavy a bundle add for the current upload volume.
+
+GIF and SVG are intentionally left uncompressed (animation / vector loss). If compression itself fails the original file is still attempted so we don't make uploads strictly worse on edge inputs.
+- Source: `packages/web/nginx.conf`, `packages/web/src/shared/lib/prepareUpload.ts`, `packages/web/src/features/issue/hooks/useIssueMutations.ts`, `packages/web/src/shared/ui/editor/TipTapEditor.tsx`, `packages/web/src/features/auth/api.ts`, `packages/web/package.json` (added `browser-image-compression`).
+
 ### 2026-04-17 — Avatar cache TTL extended to 30 days (400e106)
 **Changed.** `/api/upload/avatar/:userId` proxy now sets `Cache-Control: public, max-age=2592000, immutable`. Avatars stop flickering on every dashboard re-render. Trade-off: a profile picture change takes up to 30 days to propagate to other users' browsers; mitigation is a hash-busting query string when we know an avatar just changed.
 - Source: `packages/api/src/upload/upload.controller.ts`.
