@@ -59,7 +59,14 @@ export default function ConfigRow({
           <span className="text-xs text-gray-500 dark:text-gray-400">On</span>
         </label>
         <button
-          onClick={(e) => { e.stopPropagation(); onTrigger() }}
+          onClick={async (e) => {
+            e.stopPropagation()
+            if (await confirmDialog({
+              title: `Trigger "${config.name}" now?`,
+              description: `Sends a Slack DM to every non-away member of this config who hasn't already submitted a report today (${config.members.length} members total). Members who already reported today will be skipped.`,
+              confirmLabel: 'Trigger',
+            })) onTrigger()
+          }}
           disabled={isTriggering}
           className="rounded border border-gray-300 dark:border-gray-600 p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
           title="Trigger now"

@@ -58,26 +58,31 @@ export class StandupService {
       );
     }
 
-    // Batch-check for existing active reports to avoid N+1 queries
+    // Batch-check for any report already created today (in the config's
+    // timezone). Skipping any-status-today makes manual re-trigger safe
+    // for partial reruns — only members without a row for today get DM'd.
     const eligibleSlackIds = config.members
       .filter((m) => !m.isAway)
       .map((m) => m.slackUserId);
-    const activeReports = await this.prisma.standupReport.findMany({
+    const startOfTodayInTz = startOfTodayInTimezone(config.timezone);
+    const reportsToday = await this.prisma.standupReport.findMany({
       where: {
         configId: config.id,
         slackUserId: { in: eligibleSlackIds },
-        status: 'ACTIVE',
+        createdAt: { gte: startOfTodayInTz },
       },
       select: { slackUserId: true },
     });
-    const activeSlackIds = new Set(activeReports.map((r) => r.slackUserId));
+    const reportedTodaySlackIds = new Set(
+      reportsToday.map((r) => r.slackUserId),
+    );
 
     for (const member of config.members) {
       if (member.isAway) continue;
 
-      if (activeSlackIds.has(member.slackUserId)) {
-        this.logger.warn(
-          `Skipping ${member.slackUserId} — already has active report`,
+      if (reportedTodaySlackIds.has(member.slackUserId)) {
+        this.logger.log(
+          `Skipping ${member.slackUserId} — already has a report for today`,
         );
         continue;
       }
@@ -112,24 +117,13 @@ export class StandupService {
     },
     member: { slackUserId: string; username: string | null },
   ) {
-    // Resolve the system user first so we can short-circuit the entire DM
-    // flow for members who have no issues today. Members whose Slack
-    // identity can't be mapped fall through to the legacy behaviour
-    // (greet + ask questions, no issue list) — we can't decide what's
-    // empty for them.
+    // Resolve the system user so we can attach the issue list later.
+    // Members whose Slack identity can't be mapped still get greeted +
+    // asked the questions — they just won't get an issue list.
     const mappedUserId = await this.mapSlackUserToSystemUser(
       member.slackUserId,
       client,
     );
-    if (mappedUserId) {
-      const hasIssues = await this.memberHasIssuesToday(mappedUserId);
-      if (!hasIssues) {
-        this.logger.log(
-          `Skipping standup DM to ${member.slackUserId} — no active or completed-today issues`,
-        );
-        return;
-      }
-    }
 
     // Create report with all answers pre-created
     const report = await this.prisma.standupReport.create({
@@ -793,36 +787,6 @@ export class StandupService {
     }
   }
 
-  /**
-   * Cheap counts-only check used by `startReportForUser` to skip
-   * members who have nothing to report. Mirrors the date logic in
-   * `sendIssueListBlock` so the two stay consistent.
-   */
-  private async memberHasIssuesToday(userId: string): Promise<boolean> {
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setUTCHours(23, 59, 59, 999);
-
-    const [activeCount, completedTodayCount] = await Promise.all([
-      this.prisma.issue.count({
-        where: {
-          assigneeId: userId,
-          status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
-        },
-      }),
-      this.prisma.issue.count({
-        where: {
-          assigneeId: userId,
-          status: IssueStatus.DONE,
-          updatedAt: { gte: todayStart, lte: todayEnd },
-        },
-      }),
-    ]);
-
-    return activeCount > 0 || completedTodayCount > 0;
-  }
-
   // ─── Issue List Block for DM ────────────────────────────
 
   private async sendIssueListBlock(
@@ -921,4 +885,52 @@ export class StandupService {
       ],
     });
   }
+}
+
+/** UTC instant representing 00:00:00 of "today" in the given timezone. */
+function startOfTodayInTimezone(timeZone: string): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const utcGuess = new Date(
+    Date.UTC(
+      parseInt(lookup.year, 10),
+      parseInt(lookup.month, 10) - 1,
+      parseInt(lookup.day, 10),
+      0,
+      0,
+      0,
+    ),
+  );
+  const offsetMs = tzOffsetAt(utcGuess, timeZone);
+  return new Date(utcGuess.getTime() - offsetMs);
+}
+
+function tzOffsetAt(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(instant);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const localUtcMs = Date.UTC(
+    parseInt(lookup.year, 10),
+    parseInt(lookup.month, 10) - 1,
+    parseInt(lookup.day, 10),
+    parseInt(lookup.hour, 10) % 24,
+    parseInt(lookup.minute, 10),
+    parseInt(lookup.second, 10),
+  );
+  return localUtcMs - instant.getTime();
 }
