@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-20 — IssueDetailHeader keeps action icons anchored right (d3ea14d)
+**Fixed.** Header used `flex justify-between` with `<SourceBadge>` as the left child. When an issue had no non-WEB source (no MCP / Slack / Webhook tag), `SourceBadge` returned `null` and the flex container collapsed to a single child — `justify-between` falls back to flex-start, so the action icons (branch, copy link, expand, delete, close) slid to the left edge, above a left-aligned breadcrumb. Switched to `flex` + `ml-auto` on the icon group so the buttons stay on the right regardless of whether the SourceBadge renders.
+- Source: `packages/web/src/features/issue/components/detail/IssueDetailHeader.tsx`.
+
 ### 2026-05-19 — Assignee picker becomes a searchable Combobox in CreateIssueModal (PM-42 follow-up)
 **Changed.** Assignee select swapped from Radix `Select` to the same `Combobox` the Parent Issue field uses, so members are searchable by name **or email**. Each option still shows avatar + name + email; the `searchValue` concatenates both so typing the local-part of an email also matches.
 - Source: `packages/web/src/features/issue/components/CreateIssueModal.tsx`.

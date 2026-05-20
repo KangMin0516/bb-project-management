@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-20 — Deep-link gate: non-members see "Request to Join" instead of a silent empty board (d3ea14d)
+**Added.** When a user opens any `/projects/:projectId/*` deep link (Slack notification, MCP-generated URL, copied issue link) for a project they aren't a member of, the page used to render as if it were empty: the board fell through to "No issues found", the header lost the project name, and the issue panel (`?open=...`) silently failed because every `/projects/:projectId/issues/*` request 403'd at the `ProjectMemberGuard`. New behaviour: a `ProjectRouteGate` layout route wraps the 8 project subroutes (`/`, `/board`, `/lists`, `/issues`, `/specs`, `/timeline`, `/credentials`, `/settings`) and reads the cached `projects-all` query to decide. Non-members get a centered `NotMemberPlaceholder` card with the project name + key, an explanation, and the existing tri-state `JoinRequestPrompt`. Hitting "Request to Join" calls `POST /projects/:id/join-requests` which already fans out a Slack DM to every project ADMIN/PM (via `MessagingPort` → `SlackAdapter` — no change needed there). Missing project shows a "Project not found" card with a back link. Superusers bypass exactly like the server-side `ProjectMemberGuard`.
+- Source: `packages/web/src/app/router/index.tsx`, `packages/web/src/app/router/ProjectRouteGate.tsx`, `packages/web/src/features/project/hooks/useProjectAccess.ts`, `packages/web/src/features/project/components/NotMemberPlaceholder.tsx`.
+
 ### 2026-04-21 — Project join-request flow (a967958)
 **Added.** Users can now discover all projects (not just ones they're a member of) and request to join. `project_join_requests` table tracks `PENDING | APPROVED | REJECTED` with a free-text `message` (≤500 char) on request and `rejection_reason` on rejection. Approving the request creates a `project_members` row with `DEVELOPER` role. Resolved-by user is recorded for audit.
 - Migration: bundled with this commit — adds `project_join_requests` table with `(requester_id, project_id)` unique, `(project_id, status)` index.
