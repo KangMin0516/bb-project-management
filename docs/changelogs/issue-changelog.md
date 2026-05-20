@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-20 — Move DueBadge to bottom row to unbreak IssueCard header (aa00790, PM-54)
+**Fixed.** Card header on the Board had 5 chips fighting for space inside a 224px swimlane column: TypeIcon + KEY-NUMBER + `EpicChip` (`max-w-[120px]` truncate) + `SourceBadge` + `DueBadge` (`ml-auto`). When all three conditional chips were present (near-due deadline + Epic + non-WEB source — e.g. PM-52 with dueDate 5/22, Epic "Bugs", source MCP), the EpicChip got squeezed to "B..." and the header looked broken. Moved `DueBadge` out of the header into the bottom metadata-pill row, right after PRIORITY. Header now reads `🐛 PM-52 ⚡Bugs ✨MCP` with the Epic name in full; bottom row reads `MEDIUM D-1 Bug` with the due chip living next to its pill cousins.
+- Source: `packages/web/src/features/issue/components/board/IssueCard.tsx`.
+
 ### 2026-05-20 — Swimlane column cap with Show more / Show less (e232adf, PM-49)
 **Added.** Group-by-Epic Board mode capped each (epic × status) cell at 5 visible cards. Anything beyond renders a `Show N more` button that flips to `Show less` when expanded. Thu's complaint: epics with 15+ items in the Done column (or any long-tail status) stretched the swimlane into a wall — users had to scroll past one fat epic to reach the next. Now every column starts compact and only the cells the user explicitly opens grow. Row-local state (`expandedColumns: Set<string>` keyed by status) so each swimlane manages its own. Drag-and-drop indices stay correct because `SwimlaneBoardView.handleDragEnd` always operates on the full underlying list via `calculateDropOrder` — slicing only affects rendering, not order math.
 - Source: `packages/web/src/features/issue/components/board/SwimlaneRow.tsx`.
