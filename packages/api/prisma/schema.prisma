@@ -185,6 +185,7 @@ model Issue {
 
   @@unique([projectId, number])
   @@index([projectId, status])
+  @@index([projectId, dueDate])
   @@index([assigneeId])
   @@index([reviewerAssigneeId])
   @@index([parentId])

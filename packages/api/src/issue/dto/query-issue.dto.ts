@@ -6,6 +6,7 @@ import {
   IsInt,
   IsIn,
   IsBoolean,
+  IsISO8601,
   Min,
   Max,
 } from 'class-validator';
@@ -103,4 +104,22 @@ export class QueryIssueDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeArchived?: boolean = false;
+
+  @ApiPropertyOptional({
+    description:
+      'ISO 8601 timestamp. Restricts results to issues with `dueDate >= this`. Used by the Calendar view to fetch only the visible month range — avoids the silent data-loss path where a 200-row default cap hides deadlines past the first page.',
+    example: '2026-05-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  dueDateFrom?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'ISO 8601 timestamp. Restricts results to issues with `dueDate <= this`. Pair with `dueDateFrom` for the Calendar month range query.',
+    example: '2026-05-31T23:59:59.999Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  dueDateTo?: string;
 }

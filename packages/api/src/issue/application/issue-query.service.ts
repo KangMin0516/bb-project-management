@@ -93,7 +93,19 @@ export class IssueQueryService {
       page = 1,
       limit = 50,
       includeArchived = false,
+      dueDateFrom,
+      dueDateTo,
     } = query;
+
+    // Compose the dueDate range filter conditionally. Calendar passes
+    // both sides; other callers may pass one or neither.
+    const dueDateRange = (() => {
+      if (!dueDateFrom && !dueDateTo) return undefined;
+      const range: { gte?: Date; lte?: Date } = {};
+      if (dueDateFrom) range.gte = new Date(dueDateFrom);
+      if (dueDateTo) range.lte = new Date(dueDateTo);
+      return range;
+    })();
 
     const where = {
       projectId,
@@ -103,6 +115,7 @@ export class IssueQueryService {
       ...(type && { type }),
       ...(source && { source }),
       ...(assigneeId && { assigneeId }),
+      ...(dueDateRange && { dueDate: dueDateRange }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' as const } },
