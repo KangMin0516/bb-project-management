@@ -124,11 +124,6 @@ export default memo(function IssueCard({
             </span>
           )}
           <SourceBadge source={issue.source} />
-          {dueBadge && (
-            <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium', dueBadge.className)}>
-              {dueBadge.text}
-            </span>
-          )}
         </div>
         <p className={cn('font-medium leading-snug break-words text-gray-900 dark:text-gray-100', compact ? 'mb-1.5 text-xs' : 'mb-2 text-sm')}>{issue.title}</p>
 
@@ -172,6 +167,16 @@ export default memo(function IssueCard({
             >
               {issue.priority}
             </span>
+            {dueBadge && (
+              <span
+                className={cn(
+                  'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                  dueBadge.className,
+                )}
+              >
+                {dueBadge.text}
+              </span>
+            )}
             {issue.labels.slice(0, 2).map((l) => (
               <span
                 key={l.label.id}
