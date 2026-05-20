@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 
 const AppLayout = lazy(() => import('@/widgets/AppLayout/AppLayout'))
+const ProjectRouteGate = lazy(() => import('@/app/router/ProjectRouteGate'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'))
 const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'))
@@ -67,14 +68,16 @@ export function AppRouter() {
           <Route path="/api-docs" element={<ApiDocsPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
-          <Route path="/projects/:projectId" element={<DashboardPage />} />
-          <Route path="/projects/:projectId/board" element={<BoardPage />} />
-          <Route path="/projects/:projectId/lists" element={<IssuesPage />} />
-          <Route path="/projects/:projectId/issues" element={<IssuesPage />} />
-          <Route path="/projects/:projectId/specs" element={<SpecificationsPage />} />
-          <Route path="/projects/:projectId/timeline" element={<TimelinePage />} />
-          <Route path="/projects/:projectId/credentials" element={<CredentialsPage />} />
-          <Route path="/projects/:projectId/settings" element={<SettingsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectRouteGate />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="board" element={<BoardPage />} />
+            <Route path="lists" element={<IssuesPage />} />
+            <Route path="issues" element={<IssuesPage />} />
+            <Route path="specs" element={<SpecificationsPage />} />
+            <Route path="timeline" element={<TimelinePage />} />
+            <Route path="credentials" element={<CredentialsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
         </Route>
       </Route>
 
