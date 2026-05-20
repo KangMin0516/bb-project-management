@@ -191,8 +191,21 @@ export class StandupService {
     });
 
     // We already mapped above — send the issue list when applicable.
+    // Issue list is informational; its failure (Slack 3000-char limit
+    // on a single mrkdwn section, transient network error, DB blip)
+    // must NOT block the first question. Bug 2026-05-20: a user with
+    // many issues had their issue-list block exceed Slack's limit,
+    // chat.postMessage threw, and the user only saw the greeting —
+    // no Q1, leaving them in limbo. Catch + warn instead.
     if (mappedUserId) {
-      await this.sendIssueListBlock(client, dmChannelId, mappedUserId);
+      try {
+        await this.sendIssueListBlock(client, dmChannelId, mappedUserId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to send issue list to ${member.slackUserId}; continuing to first question`,
+          err instanceof Error ? err.stack ?? err.message : String(err),
+        );
+      }
     }
 
     // Send first question
@@ -869,7 +882,7 @@ export class StandupService {
     }
 
     parts.push("\n🎯 = Today's Focus  ✅ = Completed Today");
-    const text = parts.join('\n');
+    const text = truncateForSlackSection(parts, allIssues.length);
 
     await client.chat.postMessage({
       channel: dmChannelId,
@@ -885,6 +898,35 @@ export class StandupService {
       ],
     });
   }
+}
+
+/**
+ * Slack `section.text.text` rejects payloads > 3000 chars with
+ * `invalid_blocks`. Trim whole lines from the tail until we're under
+ * the limit, then append a "(N more)" indicator so the user knows
+ * the list was cut. Keeps the legend line as a suffix on whatever
+ * survives.
+ */
+function truncateForSlackSection(parts: string[], totalIssues: number): string {
+  const MAX = 2900; // 100 char buffer under Slack's 3000 limit
+  const text = parts.join('\n');
+  if (text.length <= MAX) return text;
+
+  // Walk from start, accumulate lines until we'd exceed the budget.
+  // Reserve room for the truncation footer so the final message fits.
+  const FOOTER_TEMPLATE = '\n\n_… and N more — see BBPM for the full list_';
+  const budget = MAX - FOOTER_TEMPLATE.length - 10;
+  let acc = '';
+  let kept = 0;
+  for (const line of parts) {
+    if (acc.length + line.length + 1 > budget) break;
+    acc = acc ? `${acc}\n${line}` : line;
+    // Only count actual issue rows toward "kept" (lines starting with
+    // an emoji prefix), not project headers or section dividers.
+    if (/^(✅|🎯|      )\s/.test(line)) kept += 1;
+  }
+  const remaining = totalIssues - kept;
+  return `${acc}\n\n_… and ${remaining} more — see BBPM for the full list_`;
 }
 
 /** UTC instant representing 00:00:00 of "today" in the given timezone. */
