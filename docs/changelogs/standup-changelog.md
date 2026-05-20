@@ -23,6 +23,15 @@
 
 ## Timeline
 
+### 2026-05-20 — Issue-list failure no longer kills the first question (fae09bb)
+**Fixed.** Reported the same evening: Văn Thương Đào (and other heavy users) got the night-standup greeting but never saw Q1 "What have you completed since yesterday?". Root cause: `sendIssueListBlock` builds a single Slack `section.text.text` payload from the user's active + done-today issues. With ~38 issues and project/status grouping, the body exceeded Slack's 3000-char limit on a section's mrkdwn text. `chat.postMessage` threw `invalid_blocks`, `startReportForUser` propagated the throw to the `triggerStandup` loop's catch, and the per-user flow ended after the greeting — Q1 was never posted. The report row was already ACTIVE with `currentQuestionOrder=0`, so when the user replied from habit, `processMessage` correctly saved the Q1 answer and sent Q2, masking the bug from the DB side.
+
+Two fixes layered:
+1. `startReportForUser` now wraps `sendIssueListBlock` in try/catch — issue list is informational, its failure must not block the question flow. Logs a warn with stack trace and continues to Q1.
+2. New `truncateForSlackSection` helper caps the text at 2900 chars (100-char buffer under Slack's 3000), trimming whole lines from the tail and appending `_… and N more — see BBPM for the full list_` so the user knows the list was cut. Keeps the section block format identical when under the limit.
+
+- Source: `packages/api/src/standup/standup.service.ts` (`startReportForUser`, `sendIssueListBlock`, file-level `truncateForSlackSection`).
+
 ### 2026-05-20 — Always DM every non-away member, regardless of assignment (765de33)
 **Changed.** Previously, `startReportForUser` short-circuited (no DM, no report row) when the resolved system user had zero non-DONE/CANCELED issues AND zero issues marked DONE today. This silently hid the standup from anyone without active assignments, surfacing as "bot không hỏi tới em" complaints (e.g. Mai Nguyễn, Bao Quoc, DINH THI KIM THOAI on 2026-05-20). New behaviour: every non-away member of the config gets DM'd; the issue-list block still only renders when Slack → user mapping succeeds. Removed the now-unused `memberHasIssuesToday` helper.
 - Source: `packages/api/src/standup/standup.service.ts` (`startReportForUser`).
