@@ -3,12 +3,12 @@ import { issueRepository } from '@/features/issue/repository'
 import { projectRepository } from '@/features/project/repository'
 
 /**
- * Calendar pulls up to 500 issues — far more than the 50-item default
- * paginated list, but bounded so a single tenant with 5000 open issues
- * doesn't melt the browser. Same shape as `useTimelineData`; both views
- * are date-driven and benefit from seeing the full project at once.
+ * Calendar pulls the same 200-issue batch as Timeline. The backend caps
+ * the list endpoint at `@Max(200)` on `limit` ([query-issue.dto.ts]) —
+ * an earlier draft passed 500 here and silently got 400'd, leaving the
+ * grid empty even when issues had `dueDate` set.
  */
-const CALENDAR_LIMIT = 500
+const CALENDAR_LIMIT = 200
 
 export function useCalendarData(projectId: string) {
   const projectQuery = useQuery({
