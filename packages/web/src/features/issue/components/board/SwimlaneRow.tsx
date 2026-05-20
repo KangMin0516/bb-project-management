@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useRef } from 'react'
+import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
@@ -7,6 +7,18 @@ import UserAvatar from '@/entities/user/UserAvatar'
 import { cn } from '@/shared/lib/utils'
 import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/shared/config/constants'
 import { ChevronRight, ChevronDown, Plus, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+
+/**
+ * Visible-card cap per (epic × status) cell in swimlane mode. Keeps
+ * tall epics (e.g. Done columns with 15+ items) from stretching the
+ * swimlane into a wall. Toggle reveals the rest with "Show N more" /
+ * "Show less" (PM-49).
+ *
+ * Bumping this requires no other change — drag-and-drop indices stay
+ * correct because `calculateDropOrder` in `SwimlaneBoardView` always
+ * operates on the full underlying list, not the rendered slice.
+ */
+const MAX_VISIBLE_PER_COLUMN = 5
 
 interface SwimlaneRowProps {
   epic: Issue | null
@@ -83,6 +95,17 @@ export default memo(function SwimlaneRow({
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
 
   const droppablePrefix = epic ? epic.id : '__no_epic__'
+
+  // Per-column expand state. Key = status; row-local because each
+  // epic's cap is independent and the state has no cross-row meaning.
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(() => new Set())
+  const toggleColumn = useCallback((status: string) => {
+    setExpandedColumns((prev) => {
+      const next = new Set(prev)
+      if (next.has(status)) next.delete(status); else next.add(status)
+      return next
+    })
+  }, [])
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -183,6 +206,11 @@ export default memo(function SwimlaneRow({
           {STATUSES.map((status) => {
             const columnIssues = issues[status] || []
             const droppableId = `${droppablePrefix}:${status}`
+            const isExpanded = expandedColumns.has(status)
+            const overflow = columnIssues.length - MAX_VISIBLE_PER_COLUMN
+            const visibleIssues = isExpanded || overflow <= 0
+              ? columnIssues
+              : columnIssues.slice(0, MAX_VISIBLE_PER_COLUMN)
             return (
               <div key={status} className="flex w-56 shrink-0 flex-col border-r border-gray-100 dark:border-gray-700 last:border-r-0">
                 <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-100 dark:border-gray-700">
@@ -215,7 +243,7 @@ export default memo(function SwimlaneRow({
                       )}
                       style={{ minHeight: 48 }}
                     >
-                      {columnIssues.map((issue, index) => (
+                      {visibleIssues.map((issue, index) => (
                         <Draggable key={issue.id} draggableId={issue.id} index={index}>
                           {(provided, snapshot) => (
                             <div
@@ -243,6 +271,15 @@ export default memo(function SwimlaneRow({
                         </Draggable>
                       ))}
                       {provided.placeholder}
+                      {overflow > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleColumn(status)}
+                          className="w-full rounded border border-dashed border-gray-200 dark:border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 hover:text-primary-600 dark:hover:bg-gray-700 dark:hover:text-primary-400"
+                        >
+                          {isExpanded ? 'Show less' : `Show ${overflow} more`}
+                        </button>
+                      )}
                     </div>
                   )}
                 </Droppable>
