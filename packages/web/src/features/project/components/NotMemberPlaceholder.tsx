@@ -48,11 +48,11 @@ export default function NotMemberPlaceholder({ project }: NotMemberPlaceholderPr
         </div>
 
         <Link
-          to="/projects"
+          to="/"
           className="mt-6 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
         >
           <ArrowLeft className="h-3 w-3" />
-          Back to projects
+          Back to home
         </Link>
       </div>
     </div>

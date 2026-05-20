@@ -42,11 +42,11 @@ export default function ProjectRouteGate() {
             This project no longer exists or has been deleted.
           </p>
           <Link
-            to="/projects"
+            to="/"
             className="mt-5 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             <ArrowLeft className="h-3 w-3" />
-            Back to projects
+            Back to home
           </Link>
         </div>
       </div>
