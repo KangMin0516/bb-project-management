@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-20 — Swimlane column cap with Show more / Show less (e232adf, PM-49)
+**Added.** Group-by-Epic Board mode capped each (epic × status) cell at 5 visible cards. Anything beyond renders a `Show N more` button that flips to `Show less` when expanded. Thu's complaint: epics with 15+ items in the Done column (or any long-tail status) stretched the swimlane into a wall — users had to scroll past one fat epic to reach the next. Now every column starts compact and only the cells the user explicitly opens grow. Row-local state (`expandedColumns: Set<string>` keyed by status) so each swimlane manages its own. Drag-and-drop indices stay correct because `SwimlaneBoardView.handleDragEnd` always operates on the full underlying list via `calculateDropOrder` — slicing only affects rendering, not order math.
+- Source: `packages/web/src/features/issue/components/board/SwimlaneRow.tsx`.
+
 ### 2026-05-20 — `dueDateFrom` / `dueDateTo` query params + `[projectId, dueDate]` index (4942c75, PM-53, Schema: `20260520092215_add_issue_due_date_index`)
 **Added.** `QueryIssueDto` accepts two new optional ISO-8601 timestamps. `IssueQueryService.findAll` composes them into a `where.dueDate.gte / lte` filter when either is present. Calendar uses these to fetch only the issues with deadlines in the visible month grid — fixing the silent data-loss path where `limit=200` (cap) would return the first 200 status-sorted rows and miss any deadlines beyond that. Backed by a new composite index `@@index([projectId, dueDate])` on `issues` so the range scan stays cheap on large projects. Migration is additive — safe to run on live tenants.
 - Source: `packages/api/src/issue/dto/query-issue.dto.ts`, `packages/api/src/issue/application/issue-query.service.ts`, `packages/api/prisma/schema.prisma`.
