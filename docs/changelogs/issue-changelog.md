@@ -22,6 +22,10 @@
 
 ## Timeline
 
+### 2026-05-20 — `dueDateFrom` / `dueDateTo` query params + `[projectId, dueDate]` index (4942c75, PM-53, Schema: `20260520092215_add_issue_due_date_index`)
+**Added.** `QueryIssueDto` accepts two new optional ISO-8601 timestamps. `IssueQueryService.findAll` composes them into a `where.dueDate.gte / lte` filter when either is present. Calendar uses these to fetch only the issues with deadlines in the visible month grid — fixing the silent data-loss path where `limit=200` (cap) would return the first 200 status-sorted rows and miss any deadlines beyond that. Backed by a new composite index `@@index([projectId, dueDate])` on `issues` so the range scan stays cheap on large projects. Migration is additive — safe to run on live tenants.
+- Source: `packages/api/src/issue/dto/query-issue.dto.ts`, `packages/api/src/issue/application/issue-query.service.ts`, `packages/api/prisma/schema.prisma`.
+
 ### 2026-05-20 — IssueDetailHeader keeps action icons anchored right (d3ea14d)
 **Fixed.** Header used `flex justify-between` with `<SourceBadge>` as the left child. When an issue had no non-WEB source (no MCP / Slack / Webhook tag), `SourceBadge` returned `null` and the flex container collapsed to a single child — `justify-between` falls back to flex-start, so the action icons (branch, copy link, expand, delete, close) slid to the left edge, above a left-aligned breadcrumb. Switched to `flex` + `ml-auto` on the icon group so the buttons stay on the right regardless of whether the SourceBadge renders.
 - Source: `packages/web/src/features/issue/components/detail/IssueDetailHeader.tsx`.

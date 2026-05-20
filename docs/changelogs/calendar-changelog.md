@@ -16,6 +16,18 @@
 
 ## Timeline
 
+### 2026-05-20 — Phase 4: Server-side month-range query + empty-state banner (a54ea8b, PM-53)
+**Changed.** Calendar no longer fetches the project's first 200 issues and filters client-side — it fetches **only the issues whose `dueDate` falls inside the visible month grid**. `useCalendarData(projectId, cursorMonth)` now derives the grid's first/last cell and passes them as `dueDateFrom` / `dueDateTo` to the backend (see `issue-changelog.md` for the new DTO fields + the `[projectId, dueDate]` index). The React Query key includes a month key so navigating prev / next refetches the new slice. Fixes the silent data-loss path where a project with thousands of issues could hide all of its deadlines past the 200-row cap.
+
+**Added.** New `EmptyMonthBanner` shown above the grid when no chips would render:
+- Project has no deadlines this month → "No deadlines in May 2026. Browse other months with ← → or set a Due Date on the issue detail panel."
+- All deadlines this month filtered out → amber banner with `Clear filters` action so the user isn't stuck.
+
+- Source: `packages/web/src/features/calendar/hooks/useCalendarData.ts`, `packages/web/src/features/calendar/components/EmptyMonthBanner.tsx`, `packages/web/src/pages/CalendarPage.tsx`.
+- Ticket: [PM-53](https://pm.burningbros.kr/projects/PM/board?open=e16ad77f-e5db-49c0-98ff-cd8d16b88e39) (TASK, parent PM-16 Feature request).
+- Phase 2 still deferred: Week / Day view toggle, "No deadline" lane, weekend collapse.
+- Phase 3 still deferred: drag-to-reschedule, ICS export, multi-project overlay.
+
 ### 2026-05-20 — Cap Calendar issue fetch at 200 (9c5e287, PM-51 follow-up)
 **Fixed.** Calendar page rendered an empty grid even when issues had `dueDate` set. Root cause: `useCalendarData` passed `limit=500` to `GET /api/projects/:projectId/issues`, but `QueryIssueDto` enforces `@Max(200)`. Backend's ValidationPipe rejected with `400 { "message": ["limit must not be greater than 200"] }`, React Query stored the error, `data` stayed `undefined`, and `issues: data?.items ?? []` became `[]`. No issue ever made it to `groupIssuesByDueDay`, so every DayCell got an empty array — looking exactly like a "no issues with deadlines" empty state but actually a contract violation. Capped the constant at 200 to match Timeline's existing pattern (the BE enforces the same limit there).
 - Source: `packages/web/src/features/calendar/hooks/useCalendarData.ts`.
