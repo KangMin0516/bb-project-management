@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
+  Calendar,
   ChartGantt,
   ChevronDown,
   FileText,
@@ -188,6 +189,7 @@ export default function AppLayout() {
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/lists`, icon: List, label: 'Lists' },
+        { to: `/projects/${projectId}/calendar`, icon: Calendar, label: 'Calendar' },
         { to: `/projects/${projectId}/timeline`, icon: ChartGantt, label: 'Timeline' },
         { to: `/projects/${projectId}/credentials`, icon: Shield, label: 'Credentials' },
         { to: `/projects/${projectId}/settings`, icon: Settings, label: 'Settings' },

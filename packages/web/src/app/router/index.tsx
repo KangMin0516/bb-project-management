@@ -18,6 +18,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const CredentialsPage = lazy(() => import('@/pages/CredentialsPage'))
 const SpecificationsPage = lazy(() => import('@/pages/SpecificationsPage'))
 const TimelinePage = lazy(() => import('@/pages/TimelinePage'))
+const CalendarPage = lazy(() => import('@/pages/CalendarPage'))
 const StandupSettingsPage = lazy(() => import('@/pages/StandupSettingsPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
 const IssueRulesPage = lazy(() => import('@/pages/IssueRulesPage'))
@@ -74,6 +75,7 @@ export function AppRouter() {
             <Route path="lists" element={<IssuesPage />} />
             <Route path="issues" element={<IssuesPage />} />
             <Route path="specs" element={<SpecificationsPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="credentials" element={<CredentialsPage />} />
             <Route path="settings" element={<SettingsPage />} />
