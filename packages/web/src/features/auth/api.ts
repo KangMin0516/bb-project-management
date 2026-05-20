@@ -1,4 +1,5 @@
 import api from '@/shared/api/client'
+import { prepareForUpload } from '@/shared/lib/prepareUpload'
 
 export interface LoginPayload {
   email: string
@@ -53,9 +54,10 @@ export const authApi = {
     api.patch<{ data: { message: string } }>('/auth/change-password', data).then((r) => r.data.data),
   updateProfile: (data: UpdateProfilePayload) =>
     api.patch<{ data: UserProfile }>('/auth/profile', data).then((r) => r.data.data),
-  uploadAvatar: (file: File) => {
+  uploadAvatar: async (file: File) => {
+    const prepared = await prepareForUpload(file, { kind: 'avatar' })
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', prepared)
     return api.post<{ data: { url: string } }>('/upload/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data.data)

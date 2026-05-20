@@ -11,6 +11,8 @@ import { common, createLowlight } from 'lowlight'
 import TipTapToolbar from './TipTapToolbar'
 
 import { useToastStore } from '@/shared/lib/toast'
+import { prepareForUpload } from '@/shared/lib/prepareUpload'
+import { getErrorMessage } from '@/shared/lib/error'
 import './editor.css'
 import { issueRepository } from '@/features/issue/repository'
 
@@ -241,12 +243,13 @@ export default function TipTapEditor({
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return
     try {
-      const result = await issueRepository.uploadFile(file)
+      const prepared = await prepareForUpload(file)
+      const result = await issueRepository.uploadFile(prepared)
       if (result.url) {
         editor.chain().focus().setImage({ src: result.url }).run()
       }
-    } catch {
-      useToastStore.getState().addToast('Image upload failed', 'error')
+    } catch (err) {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Image upload failed'), 'error')
     }
   }, [editor])
 

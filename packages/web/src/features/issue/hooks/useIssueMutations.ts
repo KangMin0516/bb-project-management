@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type UpdateIssuePayload, type CreateIssuePayload } from '@/features/issue/api'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { prepareForUpload } from '@/shared/lib/prepareUpload'
 import { issueRepository } from '@/features/issue/repository'
 
 /**
@@ -41,7 +42,10 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
   })
 
   const uploadAttachment = useMutation({
-    mutationFn: (file: File) => issueRepository.uploadFile(file, { issueId }),
+    mutationFn: async (file: File) => {
+      const prepared = await prepareForUpload(file)
+      return issueRepository.uploadFile(prepared, { issueId })
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] }),
     onError: (err: unknown) => {
       useToastStore.getState().addToast(getErrorMessage(err, 'Failed to upload file'), 'error')
