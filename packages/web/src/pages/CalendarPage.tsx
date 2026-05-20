@@ -5,6 +5,7 @@ import { useFilteredIssues } from '@/features/timeline/hooks/useFilteredIssues'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { toggleSet } from '@/shared/ui/filterState'
 import CalendarHeader from '@/features/calendar/components/CalendarHeader'
+import EmptyMonthBanner from '@/features/calendar/components/EmptyMonthBanner'
 import MonthGrid from '@/features/calendar/components/MonthGrid'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import type { Issue } from '@/features/issue/api'
@@ -24,7 +25,10 @@ export default function CalendarPage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const { filters, setFilters, resetFilters } = useFilterSearchParams()
 
-  const { project, issues: allIssues, isLoading } = useCalendarData(projectId ?? '')
+  const { project, issues: allIssues, total, isLoading } = useCalendarData(
+    projectId ?? '',
+    cursorMonth,
+  )
   const filteredIssues = useFilteredIssues(allIssues, filters)
 
   const assignedMembers = useMemo(() => {
@@ -77,18 +81,27 @@ export default function CalendarPage() {
         hasFilters={hasFilters}
       />
 
-      <div className="flex-1 min-h-0 overflow-auto p-4">
+      <div className="flex flex-1 min-h-0 flex-col overflow-auto p-4">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
         ) : (
-          <MonthGrid
-            cursorMonth={cursorMonth}
-            issues={filteredIssues}
-            projectKey={project?.key}
-            onSelectIssue={setSelectedIssue}
-          />
+          <>
+            <EmptyMonthBanner
+              cursorMonth={cursorMonth}
+              total={total}
+              filteredCount={filteredIssues.length}
+              hasFilters={hasFilters}
+              onClearFilters={resetFilters}
+            />
+            <MonthGrid
+              cursorMonth={cursorMonth}
+              issues={filteredIssues}
+              projectKey={project?.key}
+              onSelectIssue={setSelectedIssue}
+            />
+          </>
         )}
       </div>
 
