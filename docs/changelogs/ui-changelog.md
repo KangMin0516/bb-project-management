@@ -18,6 +18,14 @@
 
 ## Timeline
 
+### 2026-05-20 — DatePopover primitive replaces native `<input type="date">` (2bf8a2f, PM-52)
+**Added.** New shared primitive `shared/ui/DatePopover.tsx`: button trigger + Radix Popover with month-grid calendar (Mo-Su), Prev/Next month chevrons, "Today" + "Clear" affordances, ring-highlight on today, primary-fill on selected day. Replaced the native `<input type="date">` in `IssueMetadata.tsx`'s `DateField` (used for Start Date + Due Date on the issue detail panel).
+
+**Fixed.** Native `<input type="date">` fired `onChange` on every segment update (year / month / day), so each keystroke triggered an API PATCH and a new `activity` row — typing a single date produced 3+ activity entries and polluted the audit log. `DatePopover` commits exactly once per user action (click a day, click Today, click Clear) → 1 PATCH, 1 activity row per real change.
+
+Reuses the existing `Popover` Radix primitive — no new dependency (no `react-day-picker`, no `date-fns`). Calendar lib helpers (`getMonthGrid`, weekday math) inlined locally; can be extracted later if a third caller needs them.
+- Source: `packages/web/src/shared/ui/DatePopover.tsx`, `packages/web/src/features/issue/components/detail/IssueMetadata.tsx`.
+
 ### 2026-05-19 — Combobox separates trigger and list rendering (PM-42 follow-up)
 **Added.** `ComboboxOption.triggerRender` (optional, falls back to `render` → `label`). Lets a single Combobox show a rich stacked layout in the dropdown (e.g. avatar + name + email on two lines) while keeping the trigger button compact on its 36px row. Without it, the Assignee picker's selected state stretched the trigger to two lines and the inline content drifted into the middle.
 - Source: `packages/web/src/shared/ui/combobox.tsx`, `packages/web/src/features/issue/components/CreateIssueModal.tsx`.
