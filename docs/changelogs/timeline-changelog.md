@@ -15,6 +15,10 @@
 
 ## Timeline
 
+### 2026-05-21 — Exclude DOMAIN from Calendar + Timeline planning views (PM-56 follow-up)
+**Changed.** `useFilteredIssues` (shared by Calendar and Timeline) now hides `DOMAIN` (Module) rows by default — they're organisational containers, not work items, and shouldn't appear as Timeline bars / Calendar chips. Verified Timeline page renders 0 DOMAIN rows on the PITB project. Users who explicitly add `DOMAIN` to the `type` filter still see them (opt-in).
+- Source: `packages/web/src/features/timeline/hooks/useFilteredIssues.ts`.
+
 ### 2026-05-12 — Hide CANCELED by default (d2f3ed0)
 **Changed.** Timeline (along with Board and Lists) now filters out `CANCELED` issues by default. Toggle to include them via the toolbar.
 - Source: `packages/web/src/pages/TimelinePage.tsx`.
