@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-21 — Public share-link JWT + `ShareAuthGuard` (PM-60 PR1)
+**Added.** A second JWT lane parallel to the user-session JWT, signed by `JWT_SHARE_SECRET` (separate env var) with `kind: "share"` claims. `ShareJwtStrategy` (passport-jwt name `share-jwt`) only validates payloads where `kind === 'share'`; `ShareAuthGuard` wraps `AuthGuard('share-jwt')`. The main `JwtStrategy` was patched to reject `kind === 'share'` explicitly — defense-in-depth so a share token cannot escalate into a user session even in the (impossible) case where someone reused `JWT_SECRET` as `JWT_SHARE_SECRET`. Public passcode-unlock endpoint mounts `@Throttle({ ttl: 60_000, limit: 5 })` and the unlock use case enforces a configurable lockout (`SHARE_LINK_PASSCODE_FAIL_THRESHOLD`, default 20; `SHARE_LINK_LOCKOUT_MINUTES`, default 60). Wrong-passcode and unknown-token both return 401 with the same message so attackers can't enumerate tokens; locked links return 423 with `retryAfterSeconds`; revoked/expired return 410.
+- Source: `packages/api/src/share-link/strategies/share-jwt.strategy.ts`, `packages/api/src/share-link/guards/share-auth.guard.ts`, `packages/api/src/share-link/application/unlock-share-link.use-case.ts`, `packages/api/src/share-link/share-link.public.controller.ts`, `packages/api/src/auth/strategies/jwt.strategy.ts`, `.env.example`.
+
 ### 2026-05-19 — Nginx forwards `/.well-known/*` to the NestJS backend (PM-44 follow-up #2)
 **Fixed.** The previous PM-44 commit excluded `.well-known/*` from NestJS's global `/api` prefix so the handlers existed at host-root paths, but the production nginx config only proxied `/api/*` to the backend — every other path fell through the SPA catch-all (`try_files $uri /index.html`), so Claude.ai's discovery probe at `https://pm.burningbros.kr/.well-known/oauth-authorization-server/api` got the React `index.html` instead of JSON and gave up with "Couldn't reach the MCP server". Added a `location /.well-known/` proxy block.
 - Source: `packages/web/nginx.conf`.

@@ -52,6 +52,7 @@ model User {
   oauthAuthCodes            OAuthAuthCode[]
   oauthAccessTokens         OAuthAccessToken[]
   oauthRefreshTokens        OAuthRefreshToken[]
+  createdShareLinks         ShareLink[]          @relation("CreatedShareLinks")
 
   @@map("users")
 }
@@ -75,6 +76,7 @@ model Project {
   reportConfig      DailyReportConfig?
   githubIntegration GitHubIntegration?
   joinRequests      ProjectJoinRequest[]
+  shareLinks        ShareLink[]
 
   @@map("projects")
 }
@@ -928,3 +930,39 @@ model OutboxEvent {
   @@index([deliveredAt], map: "idx_outbox_cleanup")
   @@map("outbox_events")
 }
+
+// ─── Share Link (public passcode-gated read links) ─────────
+
+enum ShareScope {
+  TIMELINE
+  BOARD
+  CALENDAR
+  LISTS
+}
+
+model ShareLink {
+  id             String       @id @default(uuid())
+  token          String       @unique @db.VarChar(32)
+  passcodeHash   String       @map("passcode_hash")
+  scopes         ShareScope[] @default([TIMELINE])
+
+  expiresAt      DateTime?    @map("expires_at")
+  revokedAt      DateTime?    @map("revoked_at")
+  lastAccessedAt DateTime?    @map("last_accessed_at")
+  accessCount    Int          @default(0) @map("access_count")
+  failedAttempts Int          @default(0) @map("failed_attempts")
+  lockedUntil    DateTime?    @map("locked_until")
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  projectId      String       @map("project_id")
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdById    String       @map("created_by_id")
+  createdBy      User         @relation("CreatedShareLinks", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@map("share_links")
+}
+

@@ -22,6 +22,14 @@
 
 ## Timeline
 
+### 2026-05-21 — Public timeline endpoint + `ShareLink` model (PM-60 PR1)
+**Added.** New module `packages/api/src/share-link/` exposes a Timeline view of any project under a passcode-gated public URL. The model `ShareLink` (table `share_links`, migration `20260521100415_add_share_link`) stores `token` (32 hex, unique), bcrypt-hashed `passcodeHash`, `scopes ShareScope[]` (Phase 1 only `TIMELINE`), optional `expiresAt`, and the brute-force counters (`failedAttempts`, `lockedUntil`). One Project can have many ShareLinks (PM creates one per external client), each `createdBy` a user — relations cascade on Project delete, restrict on User delete (auditing).
+
+Clean-Architecture layout matches `IssueModule`: `domain/share-link.entity.ts` carries the lockout state machine (`canUnlock`, `recordFailure`) as pure functions; `application/ports/share-link.repository.ts` is the port; `infrastructure/share-link.prisma.repository.ts` is the Prisma impl; five use cases (`create`, `unlock`, `revoke`, `rotate-passcode`, `get-public-timeline`) sit between. The public read path goes through `IssueQueryService.findAll` (reused from internal Timeline) then maps every row through `toPublicTimelineIssue` — a hand-curated whitelist with `id`, `number`, `title`, `type`, `status`, `priority`, `startDate`, `dueDate`, `parentId`, `assignee: {name, avatar}` (**no email, no userId**) and `labels: {name, color}`. Description, comments, activities, attachments, reviewer, source, `_count` are dropped at the boundary — derived from `IssueQueryService` shapes is rejected so a new internal field doesn't silently become public.
+
+Admin controller `share-link.controller.ts` (mounted at `/api/projects/:projectId/share-links`, behind `ProjectMemberGuard` + `RolesGuard(ADMIN, PM)`) handles create/list/revoke/rotate; hard-delete is `ADMIN` only. Public controller `share-link.public.controller.ts` (`/api/public/share/:token/*`, `@Public()` + `ShareAuthGuard` on reads, `@Throttle 5/min/IP` on unlock) re-fetches the link row on every read and re-checks revoke/expiry — a valid share JWT is necessary but not sufficient, so revoke takes effect immediately rather than waiting for JWT TTL.
+- Source: `packages/api/prisma/schema.prisma`, `packages/api/prisma/migrations/20260521100415_add_share_link/`, `packages/api/src/share-link/**`, `packages/api/src/app.module.ts`.
+
 ### 2026-05-21 — `hasDueDate` filter on issue list query (PM-58)
 **Added.** `QueryIssueDto.hasDueDate?: boolean` and the matching branch in `IssueQueryService.findAll`:
 - `hasDueDate=false` → `where.dueDate: { equals: null }`
