@@ -16,10 +16,12 @@ type ErrorState =
   | { kind: 'locked'; retryAfter?: number }
 
 /**
- * Public, unauthenticated landing for `/share/:token`. Outside the
- * AuthGuard so external clients never see a login screen.
+ * Public, unauthenticated landing for `/s/:token`. Outside the
+ * AuthGuard so external clients never see a login screen. (Prefix is
+ * `/s/`, not `/share/`, to dodge the nginx rewrite that proxies
+ * `/share/*` to the OG-unfurl backend controller.)
  *
- * Self-redirects to `/share/:token/timeline` if a valid JWT already
+ * Self-redirects to `/s/:token/timeline` if a valid JWT already
  * exists in sessionStorage — keeps the form from re-appearing on a
  * page reload during the JWT lifetime.
  */
@@ -58,7 +60,7 @@ export default function SharePasscodePage() {
     // current navigation isn't a kick-out from there (avoid bouncing
     // back into the broken state).
     if (!reasonFromNav && readShareJwt(token))
-      navigate(`/share/${token}/timeline`, { replace: true })
+      navigate(`/s/${token}/timeline`, { replace: true })
   }, [token, navigate, reasonFromNav])
 
   if (!token) {
@@ -82,7 +84,7 @@ export default function SharePasscodePage() {
     try {
       const result = await sharePublicApi.unlock(token!, passcode)
       writeShareJwt(token!, result.shareJwt)
-      navigate(`/share/${token!}/timeline`, { replace: true })
+      navigate(`/s/${token!}/timeline`, { replace: true })
     } catch (err) {
       const status = axios.isAxiosError(err) ? err.response?.status : undefined
       const body = axios.isAxiosError(err)

@@ -63,9 +63,12 @@ export function AppRouter() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
       {/* Public share-link routes — outside AuthGuard. Clients without
-          a BB PM account land here from /share/:token URLs. */}
-      <Route path="/share/:token" element={<SharePasscodePage />} />
-      <Route path="/share/:token/timeline" element={<SharedTimelinePage />} />
+          a BB PM account land here. Prefix is `/s/` (not `/share/`) to
+          avoid the production nginx rewrite that proxies `/share/*` to
+          the OG-unfurl backend controller — that path collides with
+          this feature's token. */}
+      <Route path="/s/:token" element={<SharePasscodePage />} />
+      <Route path="/s/:token/timeline" element={<SharedTimelinePage />} />
 
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>

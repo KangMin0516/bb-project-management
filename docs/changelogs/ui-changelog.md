@@ -18,6 +18,19 @@
 
 ## Timeline
 
+### 2026-05-21 — Public share-link FE route moves from `/share/:token` to `/s/:token` (PM-60 PR2 follow-up)
+**Fixed.** PR2 used `/share/:token` for the public passcode + timeline routes. That collided with the production nginx config (`packages/web/nginx.conf:41`), which rewrites every `/share/*` to `/api/share/*` and proxies to the backend so the existing OG-unfurl `ShareController` can answer Slack/Twitter crawlers on `/share/PITB-12`. Hitting `https://pm.burningbros.kr/share/<32-hex-token>` in prod therefore returned `{ "success": false, "statusCode": 404, "message": "Invalid issue key" }` — the OG controller tried to parse the token as `KEY-NUMBER`.
+
+Renamed the FE routes to `/s/:token` and `/s/:token/timeline`. nginx's `location ~ ^/share/` regex no longer matches, so the request falls through to `location / { try_files $uri /index.html; }` and the SPA picks it up. The OG unfurl route is unchanged; the `/api/public/share/*` BE endpoints are also unchanged (they go through `location /api {}` which is matched before the `^/share/` regex).
+
+Updated all three navigation surfaces:
+- `packages/web/src/app/router/index.tsx` — `Route path` changed.
+- `packages/web/src/features/share-link/pages/{SharePasscodePage,SharedTimelinePage}.tsx` — every `navigate(\`/share/${token}\`...)` rewritten to `/s/`.
+- `packages/api/src/share-link/share-link.controller.ts` `buildUrl()` — generated URLs now contain `/s/`, so the dialog and `GET /share-links` list both hand out the working shape.
+
+Documented in [`docs/architecture/backend/public-share-link.md` §threat model row 12](../architecture/backend/public-share-link.md) so the next contributor doesn't reintroduce the collision.
+- Source: `packages/web/src/app/router/index.tsx`, `packages/web/src/features/share-link/pages/SharePasscodePage.tsx`, `packages/web/src/features/share-link/pages/SharedTimelinePage.tsx`, `packages/api/src/share-link/share-link.controller.ts`.
+
 ### 2026-05-21 — Public timeline share link UI (PM-60 PR2)
 **Added.** Web surface for the passcode-gated Timeline share feature shipped in PR1.
 

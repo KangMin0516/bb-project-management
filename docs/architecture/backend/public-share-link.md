@@ -204,7 +204,7 @@ PM   web                       api                     db
 ```
 client browser                api                       db
  │                              │                          │
- │ GET /share/<token>           │ (FE route, no API hit)   │
+ │ GET /s/<token>               │ (FE route, no API hit)   │
  │ form passcode                │                          │
  │ POST /public/share/:token    │ ThrottlerGuard 5/min/IP  │
  │ /unlock {passcode}           │ ──────────────→          │
@@ -364,7 +364,7 @@ whitelist fields. This means:
 ### 8.3 Redirect semantics
 
 When the public timeline gets a 401 or 410, `SharedTimelinePage`
-navigates back to `/share/:token` carrying a `location.state.reason`
+navigates back to `/s/:token` carrying a `location.state.reason`
 so the passcode page can show *why*:
 
 | Path | State reason | Banner shown |
@@ -394,7 +394,7 @@ during PR2.
 | 9 | Data leak via internal endpoints | Public surface is a separate controller (`/api/public/share/*`); internal endpoints unchanged; mapper is a hand-curated whitelist, not derived from internal includes | `share-link.public.controller.ts`, `toPublicTimelineIssue` |
 | 10 | Stale link forgotten | Default 90-day expiry, `expiresAt` enforced at every read; PM can opt for "No expiry" but the UI hints at the risk | `CreateShareLinkDto`, ShareLinkDialog |
 | 11 | Operator misconfig (`JWT_SHARE_SECRET` defaults to dev value) | `:?must be set` in `docker-compose.prod.yml`; module also throws on missing env at boot | docker compose, `ShareJwtStrategy` constructor |
-| 12 | Naming collision with existing `share/` module (OG unfurl at `/share/PITB-12`) | New module is `share-link/`; new route prefix is `/api/public/share/*`; FE route `/share/:token` has 32-hex token which can never collide with `PITB-12` style keys | module + route naming |
+| 12 | Naming collision with existing `share/` module (OG unfurl at `/share/PITB-12`) — production nginx rewrites every `/share/*` to `/api/share/*` and proxies to the backend, so the share-link FE route can't sit under `/share/`. Discovered the hard way: 32-hex token returns 404 "Invalid issue key" from the OG controller. | FE route prefix changed to `/s/:token` (and `/s/:token/timeline`) so it falls through nginx's regex to the SPA. The OG unfurl route stays as-is. BE endpoints under `/api/public/share/*` are unaffected — those go through `location /api {}` which is matched before the `^/share/` regex. | `app/router/index.tsx`, `share-link.controller.ts` `buildUrl`, `nginx.conf` (unchanged) |
 
 ---
 

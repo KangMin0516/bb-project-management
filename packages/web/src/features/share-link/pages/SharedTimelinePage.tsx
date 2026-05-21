@@ -58,7 +58,7 @@ export default function SharedTimelinePage() {
 
   useEffect(() => {
     if (!token) return
-    if (!readShareJwt(token)) navigate(`/share/${token}`, { replace: true })
+    if (!readShareJwt(token)) navigate(`/s/${token}`, { replace: true })
   }, [token, navigate])
 
   const projectQuery = useQuery({
@@ -108,7 +108,7 @@ export default function SharedTimelinePage() {
 
   function logout() {
     if (token) clearShareJwt(token)
-    navigate(`/share/${token}`, { replace: true })
+    navigate(`/s/${token}`, { replace: true })
   }
 
   // If either query 401'd / 410'd, bounce back to passcode form — the
@@ -120,12 +120,12 @@ export default function SharedTimelinePage() {
     if (!err || !token) return
     const status = axios.isAxiosError(err) ? err.response?.status : undefined
     if (status === 401) {
-      navigate(`/share/${token}`, {
+      navigate(`/s/${token}`, {
         replace: true,
         state: { reason: 'session-expired' },
       })
     } else if (status === 410) {
-      navigate(`/share/${token}`, {
+      navigate(`/s/${token}`, {
         replace: true,
         state: { reason: 'gone' },
       })

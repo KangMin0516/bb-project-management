@@ -142,6 +142,9 @@ export class ShareLinkController {
       'FRONTEND_URL',
       'http://localhost:5173',
     );
-    return `${base.replace(/\/$/, '')}/share/${token}`;
+    // Prefix is `/s/` (not `/share/`) so the prod nginx rewrite that
+    // proxies `/share/*` to the OG-unfurl backend doesn't intercept
+    // this URL. The FE owns the `/s/:token` route.
+    return `${base.replace(/\/$/, '')}/s/${token}`;
   }
 }
