@@ -14,6 +14,15 @@ export function localDayKey(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+/**
+ * Droppable id for a day cell — prefixed so it can't collide with the
+ * unscheduled panel's droppable. Mirror of the DnD lib's id convention. PM-58.
+ */
+export const DAY_DROPPABLE_PREFIX = 'day:'
+export function dayCellDroppableId(date: Date): string {
+  return `${DAY_DROPPABLE_PREFIX}${localDayKey(date)}`
+}
+
 export function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }

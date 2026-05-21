@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Droppable } from '@hello-pangea/dnd'
 import type { Issue } from '@/features/issue/api'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
-import { isSameMonth, isToday } from '@/features/calendar/lib'
+import { dayCellDroppableId, isSameMonth, isToday } from '@/features/calendar/lib'
 import { cn } from '@/shared/lib/utils'
 import IssueChip from '@/features/calendar/components/IssueChip'
 
@@ -30,28 +31,33 @@ export default function DayCell({
   const overflowCount = issues.length - visible.length
 
   return (
-    <div
-      className={cn(
-        'flex min-h-[110px] flex-col gap-1 border-b border-r border-gray-200 dark:border-gray-700 p-1.5',
-        !inMonth && 'bg-gray-50 dark:bg-gray-900/40',
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <span
+    <Droppable droppableId={dayCellDroppableId(date)}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
           className={cn(
-            'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-medium',
-            today
-              ? 'bg-primary-600 text-white'
-              : inMonth
-                ? 'text-gray-700 dark:text-gray-300'
-                : 'text-gray-400 dark:text-gray-600',
+            'flex min-h-[110px] flex-col gap-1 border-b border-r border-gray-200 dark:border-gray-700 p-1.5 transition-colors',
+            !inMonth && 'bg-gray-50 dark:bg-gray-900/40',
+            snapshot.isDraggingOver && 'bg-primary-50/70 ring-2 ring-inset ring-primary-300 dark:bg-primary-900/30 dark:ring-primary-700',
           )}
         >
-          {date.getDate()}
-        </span>
-      </div>
+          <div className="flex items-center justify-between">
+            <span
+              className={cn(
+                'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-medium',
+                today
+                  ? 'bg-primary-600 text-white'
+                  : inMonth
+                    ? 'text-gray-700 dark:text-gray-300'
+                    : 'text-gray-400 dark:text-gray-600',
+              )}
+            >
+              {date.getDate()}
+            </span>
+          </div>
 
-      <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5">
         {visible.map((issue) => (
           <IssueChip
             key={issue.id}
@@ -61,41 +67,48 @@ export default function DayCell({
           />
         ))}
 
-        {overflowCount > 0 && (
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger asChild>
-              <button
-                className="rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                onClick={(e) => e.stopPropagation()}
-              >
-                +{overflowCount} more
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-2">
-              <div className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-200">
-                {issues.length} issue{issues.length === 1 ? '' : 's'} due{' '}
-                {date.toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </div>
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
-                {issues.map((issue) => (
-                  <IssueChip
-                    key={issue.id}
-                    issue={issue}
-                    projectKey={projectKey}
-                    onClick={() => {
-                      setPopoverOpen(false)
-                      onSelectIssue(issue)
-                    }}
-                  />
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-    </div>
+            {overflowCount > 0 && (
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    +{overflowCount} more
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-2">
+                  <div className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-200">
+                    {issues.length} issue{issues.length === 1 ? '' : 's'} due{' '}
+                    {date.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </div>
+                  <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                    {issues.map((issue) => (
+                      <IssueChip
+                        key={issue.id}
+                        issue={issue}
+                        projectKey={projectKey}
+                        onClick={() => {
+                          setPopoverOpen(false)
+                          onSelectIssue(issue)
+                        }}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+          {/* The dnd lib still expects a placeholder slot inside the
+              droppable's DOM tree even when we don't reorder anything
+              in place — it uses it to measure drop boundaries. Keep it
+              rendered but visually collapsed (height 0). */}
+          <div style={{ display: 'none' }}>{provided.placeholder}</div>
+        </div>
+      )}
+    </Droppable>
   )
 }
