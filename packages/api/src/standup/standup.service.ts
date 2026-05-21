@@ -203,7 +203,7 @@ export class StandupService {
       } catch (err) {
         this.logger.warn(
           `Failed to send issue list to ${member.slackUserId}; continuing to first question`,
-          err instanceof Error ? err.stack ?? err.message : String(err),
+          err instanceof Error ? (err.stack ?? err.message) : String(err),
         );
       }
     }
@@ -923,7 +923,7 @@ function truncateForSlackSection(parts: string[], totalIssues: number): string {
     acc = acc ? `${acc}\n${line}` : line;
     // Only count actual issue rows toward "kept" (lines starting with
     // an emoji prefix), not project headers or section dividers.
-    if (/^(✅|🎯|      )\s/.test(line)) kept += 1;
+    if (/^(✅|🎯| {6})\s/.test(line)) kept += 1;
   }
   const remaining = totalIssues - kept;
   return `${acc}\n\n_… and ${remaining} more — see BBPM for the full list_`;

@@ -1,8 +1,13 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { IssueRuleService, type ResolvedIssueRule } from './issue-rule.service.js';
+import {
+  IssueRuleService,
+  type ResolvedIssueRule,
+} from './issue-rule.service.js';
 import { IssueType } from '../../generated/prisma/enums.js';
 
-const mkRule = (overrides: Partial<ResolvedIssueRule> = {}): ResolvedIssueRule => ({
+const mkRule = (
+  overrides: Partial<ResolvedIssueRule> = {},
+): ResolvedIssueRule => ({
   issueType: IssueType.BUG,
   titlePattern: null,
   descriptionTemplate: null,
@@ -55,9 +60,7 @@ describe('IssueRuleService.applyDefaultsAndValidate', () => {
     const { warnings } = svc().applyDefaultsAndValidate(rule, {
       title: 'No prefix',
     });
-    expect(warnings).toEqual([
-      expect.stringContaining('Title doesn'),
-    ]);
+    expect(warnings).toEqual([expect.stringContaining('Title doesn')]);
   });
 
   it('accepts title that matches the /regex/ pattern', () => {
@@ -96,7 +99,9 @@ describe('IssueRuleService.resolveEnforcedLabels', () => {
     // Project already has "Bug" (capitalised). Rule says "bug".
     // The lookup must find the existing row instead of creating a
     // second one.
-    const findMany = jest.fn(async () => [{ id: 'lbl-bug-existing', name: 'Bug' }]);
+    const findMany = jest.fn(async () => [
+      { id: 'lbl-bug-existing', name: 'Bug' },
+    ]);
     const create = jest.fn();
     const prisma = {
       label: { findMany, create },

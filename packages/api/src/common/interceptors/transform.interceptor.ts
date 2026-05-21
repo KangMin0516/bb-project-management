@@ -26,19 +26,20 @@ export const RawResponse = (): MethodDecorator & ClassDecorator =>
   SetMetadata(RAW_RESPONSE_KEY, true);
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, T | ApiResponse<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  T | ApiResponse<T>
+> {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<T | ApiResponse<T>> {
-    const isRaw = this.reflector.getAllAndOverride<boolean>(
-      RAW_RESPONSE_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const isRaw = this.reflector.getAllAndOverride<boolean>(RAW_RESPONSE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (isRaw) {
       return next.handle();
