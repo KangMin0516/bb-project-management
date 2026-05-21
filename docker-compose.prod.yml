@@ -6,6 +6,7 @@
 #
 # Required environment variables in .env:
 #   - JWT_SECRET
+#   - JWT_SHARE_SECRET
 #   - ADMIN_PASSWORD
 #   - POSTGRES_PASSWORD
 # =============================================================================
@@ -53,6 +54,10 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bbpm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bbpm_db}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1h}
+      - JWT_SHARE_SECRET=${JWT_SHARE_SECRET:?JWT_SHARE_SECRET must be set}
+      - SHARE_JWT_EXPIRES_IN=${SHARE_JWT_EXPIRES_IN:-2h}
+      - SHARE_LINK_PASSCODE_FAIL_THRESHOLD=${SHARE_LINK_PASSCODE_FAIL_THRESHOLD:-20}
+      - SHARE_LINK_LOCKOUT_MINUTES=${SHARE_LINK_LOCKOUT_MINUTES:-60}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@burningb.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
       - API_PORT=3000

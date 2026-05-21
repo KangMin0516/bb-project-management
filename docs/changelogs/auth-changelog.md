@@ -23,6 +23,10 @@
 
 ## Timeline
 
+### 2026-05-21 — Wire share-link env vars through `docker-compose.prod.yml` (PM-60 PR1 follow-up)
+**Fixed.** PR1 added `JWT_SHARE_SECRET` (and three tunables) to `.env.example` but `docker-compose.prod.yml` enumerates the app service's `environment:` block explicitly, so adding the var to the host `.env` alone left it invisible inside the container. Prod boot crashed in `ShareJwtStrategy` with `JWT_SHARE_SECRET environment variable is required` and the app container went unhealthy. Added the four share env keys to the compose block; `JWT_SHARE_SECRET` is `:?must be set` (hard-required) and the three tunables fall back to the same defaults as the use case.
+- Source: `docker-compose.prod.yml`.
+
 ### 2026-05-21 — Public share-link JWT + `ShareAuthGuard` (PM-60 PR1)
 **Added.** A second JWT lane parallel to the user-session JWT, signed by `JWT_SHARE_SECRET` (separate env var) with `kind: "share"` claims. `ShareJwtStrategy` (passport-jwt name `share-jwt`) only validates payloads where `kind === 'share'`; `ShareAuthGuard` wraps `AuthGuard('share-jwt')`. The main `JwtStrategy` was patched to reject `kind === 'share'` explicitly — defense-in-depth so a share token cannot escalate into a user session even in the (impossible) case where someone reused `JWT_SECRET` as `JWT_SHARE_SECRET`. Public passcode-unlock endpoint mounts `@Throttle({ ttl: 60_000, limit: 5 })` and the unlock use case enforces a configurable lockout (`SHARE_LINK_PASSCODE_FAIL_THRESHOLD`, default 20; `SHARE_LINK_LOCKOUT_MINUTES`, default 60). Wrong-passcode and unknown-token both return 401 with the same message so attackers can't enumerate tokens; locked links return 423 with `retryAfterSeconds`; revoked/expired return 410.
 - Source: `packages/api/src/share-link/strategies/share-jwt.strategy.ts`, `packages/api/src/share-link/guards/share-auth.guard.ts`, `packages/api/src/share-link/application/unlock-share-link.use-case.ts`, `packages/api/src/share-link/share-link.public.controller.ts`, `packages/api/src/auth/strategies/jwt.strategy.ts`, `.env.example`.
