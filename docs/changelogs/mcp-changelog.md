@@ -86,6 +86,13 @@ the rest of `/api/external/*`.
 
 ## Timeline
 
+### 2026-05-21 — `DOMAIN` enum + two new agent tools (PR1: BE only; MCP server schema follow-up)
+**Changed.** Backend support for two new MCP tools landed on the API + external surface:
+- `get_project_table_of_content(projectKey)` → wraps `GET /api/external/projects/:projectKey/table-of-content`. Returns the project's `Domain → Epic` outline so agents can answer "what modules / scope does this project have" without paging hundreds of issues.
+- `bulk_set_epic_module(projectKey, epicIds, domainId | null)` → wraps `PATCH /api/external/projects/:projectKey/issues/bulk-set-module`. Re-parents many Epics under a Module in a single transaction; `domainId = null` unparents.
+
+Existing `create_issue` / `update_issue` / `list_issues` tools accept `type: 'DOMAIN'` once their schemas in `bbpm-internal-mcp` are updated — the API already accepts it because the Prisma `IssueType` enum gained the value. **Schema work in `bbpm-internal-mcp` is the only remaining step** for the MCP server to expose these to agents. Plan: [`docs/plans/table-of-content-domain-level.md`](../plans/table-of-content-domain-level.md).
+
 ### 2026-05-18 — Phase 1+2+3+4: full external API surface for `bbpm-internal-mcp` v0.5→v0.8
 
 Four BB-PM commits + four MCP package versions shipped in one push.

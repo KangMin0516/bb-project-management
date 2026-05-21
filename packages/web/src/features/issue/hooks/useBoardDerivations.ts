@@ -48,7 +48,11 @@ export function useBoardDerivations(board: Record<string, Issue[]> | undefined) 
               : null,
           })
           childrenMap.set(issue.parentId, list)
-        } else {
+        } else if (issue.type !== 'DOMAIN') {
+          // DOMAINs are organisational rows (Modules) and don't belong
+          // in the kanban status columns. Keep them in `allIssuesById`
+          // so the TOC sidebar can still resolve a Module-row click
+          // into a full Issue for the detail panel.
           parents.push(issue)
         }
 

@@ -30,6 +30,8 @@ interface SwimlaneBoardViewProps {
   onChildStatusToggle: (child: ChildIssue) => void
   /** Only show swimlanes whose epic owner is in this set. Empty = no filter. */
   epicOwnersFilter?: Set<string>
+  /** Only show swimlanes whose epic.parentId equals this Module id. Null = no filter. */
+  domainFilter?: string | null
   /** Available epics for the inline "change Epic" chip on cards. */
   epics?: Issue[]
   /** Lifted collapse state — toolbar Expand/Collapse all needs to mutate it. */
@@ -54,6 +56,7 @@ export default function SwimlaneBoardView({
   onChildClick,
   onChildStatusToggle,
   epicOwnersFilter,
+  domainFilter,
   epics,
   collapsedEpics,
   onCollapseToggle,
@@ -146,12 +149,19 @@ export default function SwimlaneBoardView({
     // Filter by epic owner (swimlane-level). Lanes without an owner —
     // unassigned epics or the "No Epic" bucket — are hidden when the
     // filter is active.
-    const filtered = epicOwnersFilter && epicOwnersFilter.size > 0
+    let filtered = epicOwnersFilter && epicOwnersFilter.size > 0
       ? lanes.filter((l) => l.epic?.assigneeId && epicOwnersFilter.has(l.epic.assigneeId))
       : lanes
 
+    // Module (DOMAIN) filter: when set, keep only swimlanes whose Epic
+    // has parentId === domainFilter. "No Epic" lane is dropped too —
+    // it can't belong to a Module.
+    if (domainFilter) {
+      filtered = filtered.filter((l) => l.epic?.parentId === domainFilter)
+    }
+
     return { swimlanes: filtered }
-  }, [board, epicOwnersFilter])
+  }, [board, epicOwnersFilter, domainFilter])
 
   const handleDragEnd = useCallback((result: DropResult) => {
     const { destination, source, draggableId, type } = result

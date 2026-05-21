@@ -259,8 +259,10 @@ export class Issue {
 
 function hierarchyMessage(code: HierarchyError): string {
   switch (code) {
-    case 'EPIC_CANNOT_HAVE_PARENT':
-      return 'EPIC cannot have a parent issue';
+    case 'DOMAIN_CANNOT_HAVE_PARENT':
+      return 'DOMAIN cannot have a parent issue';
+    case 'EPIC_PARENT_MUST_BE_DOMAIN':
+      return 'EPIC parent must be a DOMAIN';
     case 'SUB_TASK_REQUIRES_PARENT':
       return 'SUB_TASK must have a parent issue';
     case 'PARENT_CANNOT_BE_SUB_TASK':

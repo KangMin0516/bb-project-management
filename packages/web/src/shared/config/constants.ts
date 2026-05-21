@@ -47,10 +47,25 @@ export const PRIORITY_DOT_COLORS: Record<string, string> = {
 }
 
 export const TYPE_ICONS: Record<string, string> = {
+  DOMAIN: '📁',
   EPIC: '⚡',
   TASK: '✅',
   BUG: '🐛',
   SUB_TASK: '📎',
+}
+
+/**
+ * Human-facing label for each issue type. The enum value `DOMAIN`
+ * surfaces as "Module" everywhere a user reads it — see
+ * `docs/plans/table-of-content-domain-level.md` Risk #8 for the
+ * rationale (avoids confusion with "domain layer" in clean-arch).
+ */
+export const TYPE_LABELS: Record<string, string> = {
+  DOMAIN: 'Module',
+  EPIC: 'Epic',
+  TASK: 'Task',
+  BUG: 'Bug',
+  SUB_TASK: 'Sub-task',
 }
 
 export const SPEC_STATUS_COLORS: Record<string, string> = {

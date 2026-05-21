@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { NotificationModule } from '../notification/notification.module.js';
 import { IssueLinkModule } from '../issue-link/issue-link.module.js';
 import { BulkDeleteIssueUseCase } from './application/bulk-delete-issue.use-case.js';
+import { BulkSetParentUseCase } from './application/bulk-set-parent.use-case.js';
 import { BulkUpdateIssueUseCase } from './application/bulk-update-issue.use-case.js';
 import { CreateIssueUseCase } from './application/create-issue.use-case.js';
 import { IssueQueryService } from './application/issue-query.service.js';
@@ -33,12 +34,15 @@ import { IssueController } from './issue.controller.js';
     RemoveIssueUseCase,
     BulkUpdateIssueUseCase,
     BulkDeleteIssueUseCase,
+    BulkSetParentUseCase,
   ],
   exports: [
     CreateIssueUseCase,
     UpdateIssueUseCase,
     ReorderIssueUseCase,
     RemoveIssueUseCase,
+    BulkSetParentUseCase,
+    IssueQueryService,
   ],
 })
 export class IssueModule {}

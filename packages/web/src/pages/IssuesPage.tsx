@@ -100,6 +100,9 @@ export default function IssuesPage() {
           <BulkActionBar
             projectId={projectId}
             selectedIds={selection.selectedIds}
+            selectedTypes={displayItems
+              .filter((i) => selection.selectedIds.has(i.id))
+              .map((i) => i.type)}
             members={memberList.map((m) => ({ id: m.id, name: m.name, avatar: m.avatar }))}
             onClear={selection.clear}
           />

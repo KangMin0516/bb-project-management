@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IssueLinkService } from '../issue-link/issue-link.service.js';
 import { BulkDeleteIssueUseCase } from './application/bulk-delete-issue.use-case.js';
+import { BulkSetParentUseCase } from './application/bulk-set-parent.use-case.js';
 import { BulkUpdateIssueUseCase } from './application/bulk-update-issue.use-case.js';
 import { CreateIssueUseCase } from './application/create-issue.use-case.js';
 import { IssueQueryService } from './application/issue-query.service.js';
@@ -21,6 +22,7 @@ import { ReorderIssueUseCase } from './application/reorder-issue.use-case.js';
 import { UpdateIssueUseCase } from './application/update-issue.use-case.js';
 import type { IssueStatusLiteral } from './application/ports/issue.repository.js';
 import { BulkDeleteIssueDto } from './dto/bulk-delete-issue.dto.js';
+import { BulkSetParentDto } from './dto/bulk-set-parent.dto.js';
 import { BulkUpdateIssueDto } from './dto/bulk-update-issue.dto.js';
 import { CreateIssueDto } from './dto/create-issue.dto.js';
 import { QueryIssueDto } from './dto/query-issue.dto.js';
@@ -28,11 +30,14 @@ import { ReorderIssueDto } from './dto/reorder-issue.dto.js';
 import { UpdateIssueDto } from './dto/update-issue.dto.js';
 import {
   CurrentUser,
+  Roles,
   Source,
   type JwtPayload,
 } from '../common/decorators/index.js';
 import type { SourceLiteral } from '../common/source.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { ProjectRole } from '../../generated/prisma/enums.js';
 
 /**
  * Issue endpoints — fully migrated. Every route resolves to a Use
@@ -51,6 +56,7 @@ export class IssueController {
     private readonly removeIssue: RemoveIssueUseCase,
     private readonly bulkUpdateIssue: BulkUpdateIssueUseCase,
     private readonly bulkDeleteIssue: BulkDeleteIssueUseCase,
+    private readonly bulkSetParent: BulkSetParentUseCase,
     private readonly query: IssueQueryService,
     private readonly issueLinkService: IssueLinkService,
   ) {}
@@ -99,6 +105,11 @@ export class IssueController {
     return this.query.findByStatus(projectId, includeArchived === 'true', sort);
   }
 
+  @Get('table-of-content')
+  tableOfContent(@Param('projectId') projectId: string) {
+    return this.query.findTableOfContent(projectId);
+  }
+
   @Get('dependencies')
   dependencies(@Param('projectId') projectId: string) {
     return this.issueLinkService.findProjectDependencies(projectId);
@@ -127,6 +138,24 @@ export class IssueController {
     return this.bulkDeleteIssue.execute({
       projectId,
       issueIds: dto.issueIds,
+    });
+  }
+
+  @Patch('bulk-set-parent')
+  @UseGuards(RolesGuard)
+  @Roles(ProjectRole.ADMIN, ProjectRole.PM)
+  bulkSetParentEndpoint(
+    @Param('projectId') projectId: string,
+    @Body() dto: BulkSetParentDto,
+    @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
+  ) {
+    return this.bulkSetParent.execute({
+      projectId,
+      actorId: user.sub,
+      issueIds: dto.issueIds,
+      parentId: dto.parentId,
+      source,
     });
   }
 

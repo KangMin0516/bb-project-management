@@ -35,6 +35,15 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 
 ## Timeline
 
+### 2026-05-21 — `DOMAIN` issue type + Table of Content + bulk-set-module endpoints (PR1: BE)
+**Added.** The shared `IssueType` enum now includes `DOMAIN`, so external `create_issue` / `update_issue` / `list_issues` accept `type=DOMAIN` for free via the regenerated Prisma client (no DTO change needed). Two new endpoints scoped to MCP / agent callers:
+- `GET /api/external/projects/:projectKey/table-of-content` — returns the project's `Domain → Epic` outline plus an `orphanEpics` bucket for Epics that haven't been assigned a Module yet. Lets agents reason about scope without paging the full issue list.
+- `PATCH /api/external/projects/:projectKey/issues/bulk-set-module` — body `{ epicIds: string[], domainId: string | null }`. Re-parents many Epics under a Module (or unparents when `domainId` is null) in one transaction. Validates every input is an `EPIC` in `projectKey`, and the target is a `DOMAIN` in the same project; rejects 400 on type mismatch / cross-project mix.
+
+Both delegate to internal use cases (`IssueQueryService.findTableOfContent`, `BulkSetParentUseCase`). Plan: [`docs/plans/table-of-content-domain-level.md`](../plans/table-of-content-domain-level.md). The MCP server (`bbpm-internal-mcp` npm package) needs a follow-up to wire `get_project_table_of_content` and `bulk_set_epic_module` tools to these routes.
+- Controller: `packages/api/src/external/external.controller.ts`.
+- Service: `packages/api/src/external/external.service.ts`.
+
 ### 2026-05-19 — `parentIssueKey` accepted on create + update (PM-29, f102150)
 **Added.** External create/update endpoints now accept a human-friendly `parentIssueKey` (e.g. `"PM-17"`) alongside the existing UUID `parentId`. The MCP `create_issue` tool already advertised this field, but the API rejected it with `400 property parentIssueKey should not exist` — agents had to fall back to manual UI clicks to attach issues to an epic. `ExternalService.resolveParentIssueKey()` parses `<KEY>-<NUMBER>`, asserts the parent lives in the same project as the child, and forwards the resolved UUID to the use case. `parentId` still wins when both are sent (backward-compat). On update, `parentIssueKey: null | ""` clears the parent. `UpdateIssueUseCase` already has cycle detection + hierarchy validation, so no new guards needed.
 - DTOs: `packages/api/src/external/dto/external-create-issue.dto.ts`, `packages/api/src/external/dto/external-update-issue.dto.ts`.

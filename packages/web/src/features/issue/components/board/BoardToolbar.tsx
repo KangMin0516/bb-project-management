@@ -1,8 +1,15 @@
-import { Archive, Rows3, ChevronsUpDown, FoldVertical } from 'lucide-react'
+import { Archive, FolderOpen, Rows3, ChevronsUpDown, FoldVertical } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
 import { FiltersPopover, ClearFiltersButton, SearchInput } from '@/shared/ui/FilterBar'
 import SortMenu from '@/shared/ui/SortMenu'
 import { cn } from '@/shared/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import type { FilterState } from '@/shared/ui/filterState'
 interface BoardToolbarProps {
   filters: FilterState
@@ -17,6 +24,8 @@ interface BoardToolbarProps {
   boardLabels: { id: string; name: string; color: string }[]
   boardComponents: { id: string; name: string }[]
   boardEpics: Issue[]
+  /** Modules (DOMAIN) defined in the project — drives the Module filter chip. */
+  boardModules?: { id: string; title: string }[]
   epicOwners: { id: string; name: string; avatar: string | null }[]
   hasFilters: boolean
   showArchived: boolean
@@ -40,6 +49,7 @@ export default function BoardToolbar({
   boardLabels,
   boardComponents,
   boardEpics,
+  boardModules,
   epicOwners,
   hasFilters,
   showArchived,
@@ -49,6 +59,8 @@ export default function BoardToolbar({
   onExpandAll,
   onCollapseAll,
 }: BoardToolbarProps) {
+  const moduleOptions = boardModules ?? []
+  const MODULE_ALL = '__all__'
   return (
     <div className="flex flex-wrap items-center gap-2">
       <SearchInput value={filters.search} onChange={(v) => setFilters({ search: v })} />
@@ -89,6 +101,38 @@ export default function BoardToolbar({
         label="Group: Epic"
         activeColor="primary"
       />
+      {moduleOptions.length > 0 && (
+        <Select
+          value={filters.domainId ?? MODULE_ALL}
+          onValueChange={(v) => setFilters({ domainId: v === MODULE_ALL ? null : v })}
+        >
+          <SelectTrigger
+            className={cn(
+              'flex h-auto w-auto items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium shadow-none transition focus:ring-0 [&>svg]:h-3.5 [&>svg]:w-3.5',
+              filters.domainId
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700',
+            )}
+          >
+            <FolderOpen
+              className={cn(
+                'h-3.5 w-3.5',
+                filters.domainId ? 'text-indigo-500' : 'text-gray-500 dark:text-gray-400',
+              )}
+            />
+            <span className="text-gray-500 dark:text-gray-400">Module:</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={MODULE_ALL}>All</SelectItem>
+            {moduleOptions.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {groupByEpic && (
         <>
           <button

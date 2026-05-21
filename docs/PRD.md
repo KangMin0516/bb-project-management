@@ -154,10 +154,17 @@ project-management/
 
 #### Issue hierarchy
 ```
-Epic
- └── Task
-      └── Sub-task
+Domain (Module)
+ └── Epic
+      └── Task
+           └── Sub-task
 ```
+
+> `DOMAIN` was added 2026-05-21 as a top-level grouping above Epic — see
+> [`docs/plans/table-of-content-domain-level.md`](./plans/table-of-content-domain-level.md).
+> The enum is `DOMAIN` in code/API/DB; the UI labels it "Module" to avoid
+> confusion with the "domain layer" in clean-architecture. Epics may
+> exist without a Domain parent (backward-compat with pre-feature data).
 
 ### 4.3 Workflow (unified)
 

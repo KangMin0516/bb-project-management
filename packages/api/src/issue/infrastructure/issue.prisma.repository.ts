@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { ISSUE_INCLUDE } from '../application/issue-query.service.js';
 import type {
   BulkIssueRow,
+  BulkParentTargetRow,
   ChildIssue,
   CreateIssuePayload,
   IssueRepository,
@@ -98,7 +99,7 @@ export class IssuePrismaRepository implements IssueRepository {
 
   async fetchParentType(
     parentId: string,
-  ): Promise<'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK' | null> {
+  ): Promise<'DOMAIN' | 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK' | null> {
     const parent = await this.prisma.issue.findUnique({
       where: { id: parentId },
       select: { type: true },
@@ -433,6 +434,63 @@ export class IssuePrismaRepository implements IssueRepository {
       where: { id: { in: ids }, projectId },
     });
     return result.count;
+  }
+
+  // ─── Domain / Table-of-Content (Phase 4) ──────────────────
+
+  async findIssueProjectAndType(
+    id: string,
+  ): Promise<{ projectId: string; type: IssueTypeLiteral } | null> {
+    return this.prisma.issue.findUnique({
+      where: { id },
+      select: { projectId: true, type: true },
+    });
+  }
+
+  async findMinimalForParentBulk(
+    projectId: string,
+    ids: string[],
+  ): Promise<BulkParentTargetRow[]> {
+    if (ids.length === 0) return [];
+    return this.prisma.issue.findMany({
+      where: { id: { in: ids }, projectId },
+      select: {
+        id: true,
+        type: true,
+        parentId: true,
+        number: true,
+        title: true,
+      },
+    });
+  }
+
+  async bulkSetParent(
+    rows: BulkParentTargetRow[],
+    newParentId: string | null,
+    actorId: string,
+    source?: string,
+  ): Promise<void> {
+    if (rows.length === 0) return;
+    const changed = rows.filter((r) => r.parentId !== newParentId);
+    if (changed.length === 0) return;
+
+    const src = source ?? 'WEB';
+    await this.prisma.$transaction([
+      this.prisma.issue.updateMany({
+        where: { id: { in: changed.map((r) => r.id) } },
+        data: { parentId: newParentId },
+      }),
+      this.prisma.activity.createMany({
+        data: changed.map((r) => ({
+          issueId: r.id,
+          userId: actorId,
+          field: 'parentId',
+          oldValue: r.parentId,
+          newValue: newParentId,
+          source: src,
+        })),
+      }),
+    ]);
   }
 }
 

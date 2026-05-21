@@ -32,6 +32,8 @@ interface CreateIssueModalProps {
   defaultStatus?: string
   /** Pre-select Parent Issue (e.g. when "+" is clicked on a swimlane). */
   defaultParentId?: string
+  /** Pre-select Type (e.g. when Table of Content "+ Add Module" is clicked). */
+  defaultType?: 'DOMAIN' | 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK'
   onClose: () => void
   onCreated?: (issueId: string) => void
 }
@@ -40,13 +42,13 @@ interface CreateIssueModalProps {
 const UNASSIGNED = '__unassigned__'
 const NO_PARENT = '__none__'
 
-export default function CreateIssueModal({ projectId, defaultStatus, defaultParentId, onClose, onCreated }: CreateIssueModalProps) {
+export default function CreateIssueModal({ projectId, defaultStatus, defaultParentId, defaultType, onClose, onCreated }: CreateIssueModalProps) {
   const { open, requestClose } = useDeferredClose(onClose)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('MEDIUM')
-  const [type, setType] = useState('TASK')
+  const [type, setType] = useState<string>(defaultType ?? 'TASK')
   const [assigneeId, setAssigneeId] = useState('')
   const [labelIds, setLabelIds] = useState<string[]>([])
   const [componentIds, setComponentIds] = useState<string[]>([])
@@ -94,11 +96,19 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
 
   const parentOptions = useMemo(() => {
     if (!issuesData?.items) return []
-    if (type === 'SUB_TASK') {
-      // Sub-task can pick any non-SUB_TASK as parent
-      return issuesData.items.filter((i) => i.type !== 'SUB_TASK')
+    if (type === 'DOMAIN') {
+      // DOMAIN is top-level — never has a parent.
+      return []
     }
-    // TASK/BUG can only pick EPIC as parent
+    if (type === 'EPIC') {
+      // EPIC's only valid parent is a DOMAIN (4-level hierarchy).
+      return issuesData.items.filter((i) => i.type === 'DOMAIN')
+    }
+    if (type === 'SUB_TASK') {
+      // Sub-task can pick any non-SUB_TASK / non-DOMAIN as parent.
+      return issuesData.items.filter((i) => i.type !== 'SUB_TASK' && i.type !== 'DOMAIN')
+    }
+    // TASK/BUG can only pick EPIC as parent.
     return issuesData.items.filter((i) => i.type === 'EPIC')
   }, [issuesData, type])
 
@@ -179,6 +189,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                   <SelectItem value="TASK">Task</SelectItem>
                   <SelectItem value="BUG">Bug</SelectItem>
                   <SelectItem value="EPIC">Epic</SelectItem>
+                  <SelectItem value="DOMAIN">Module</SelectItem>
                   <SelectItem value="SUB_TASK">Sub-task</SelectItem>
                 </SelectContent>
               </Select>
@@ -236,7 +247,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
             />
           </div>
 
-          {type !== 'EPIC' && (
+          {type !== 'EPIC' && type !== 'DOMAIN' && (
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">
                 Parent Issue{type === 'SUB_TASK' ? ' *' : ''}
@@ -255,6 +266,29 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                 placeholder="Select parent..."
                 searchPlaceholder={type === 'SUB_TASK' ? 'Search issue...' : 'Search epic...'}
                 emptyMessage="No matches"
+              />
+            </div>
+          )}
+
+          {type === 'EPIC' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Parent Module
+              </label>
+              <Combobox
+                value={parentId || NO_PARENT}
+                onChange={(v) => setParentId(v === NO_PARENT ? '' : v)}
+                options={[
+                  { value: NO_PARENT, label: 'None (unassigned)' },
+                  ...parentOptions.map((issue) => ({
+                    value: issue.id,
+                    label: `📁 ${issue.title}`,
+                    searchValue: issue.title,
+                  })),
+                ]}
+                placeholder="Select module..."
+                searchPlaceholder="Search module..."
+                emptyMessage="No modules yet"
               />
             </div>
           )}

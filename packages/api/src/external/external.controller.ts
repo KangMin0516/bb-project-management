@@ -313,10 +313,7 @@ export class ExternalController {
   }
 
   @Delete('attachments/:id')
-  deleteAttachment(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  deleteAttachment(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.externalService.deleteAttachment(id, user.sub);
   }
 
@@ -359,6 +356,35 @@ export class ExternalController {
   @Get('projects/:projectKey/labels')
   listLabels(@Param('projectKey') projectKey: string) {
     return this.externalService.listLabels(projectKey);
+  }
+
+  /**
+   * MCP `get_project_table_of_content` — Domain → Epic outline of the
+   * project. See [`docs/plans/table-of-content-domain-level.md`](../../../docs/plans/table-of-content-domain-level.md).
+   */
+  @Get('projects/:projectKey/table-of-content')
+  getTableOfContent(@Param('projectKey') projectKey: string) {
+    return this.externalService.getTableOfContent(projectKey);
+  }
+
+  /**
+   * MCP `bulk_set_epic_module` — bulk-assign Module (DOMAIN) to a
+   * list of Epics. `domainId` null unparents the Epics.
+   */
+  @Patch('projects/:projectKey/issues/bulk-set-module')
+  bulkSetEpicModule(
+    @Param('projectKey') projectKey: string,
+    @Body() body: { epicIds: string[]; domainId: string | null },
+    @CurrentUser() user: JwtPayload,
+    @Source() source: SourceLiteral,
+  ) {
+    return this.externalService.bulkSetEpicModule(
+      projectKey,
+      body.epicIds ?? [],
+      body.domainId ?? null,
+      user.sub,
+      source,
+    );
   }
 
   @Get('issues/:projectKey/:issueNumber/comments')

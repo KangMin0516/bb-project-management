@@ -22,6 +22,27 @@
 
 ## Timeline
 
+### 2026-05-21 — `hasDueDate` filter on issue list query (PM-58)
+**Added.** `QueryIssueDto.hasDueDate?: boolean` and the matching branch in `IssueQueryService.findAll`:
+- `hasDueDate=false` → `where.dueDate: { equals: null }`
+- `hasDueDate=true` → `where.dueDate: { not: null }`
+- omitted → unconstrained (backward-compat)
+
+Mutually exclusive with `dueDateFrom` / `dueDateTo` (range wins if somehow both arrive). Drives the new Calendar "Unscheduled" panel — the FE queries every active dueDate-less ticket once and narrows the status set client-side (no need to expand the DTO to multi-status just for this view; cap of 200 rows is comfortable).
+- Source: `packages/api/src/issue/dto/query-issue.dto.ts`, `packages/api/src/issue/application/issue-query.service.ts`.
+
+### 2026-05-21 — Dedupe symmetric RELATES_TO rows in Linked Issues panel (PM-57)
+**Fixed.** Linking issue A → B with `RELATES_TO` showed the target B as **two identical rows** in the "Linked Issues" section of A's detail panel, and the counter read `(2)` for a single logical relationship. Clicking delete on one of the two rows removed both (data-correct, UX confusing — looked like "delete one, lose both"). Only `RELATES_TO` was affected; asymmetric pairs (`BLOCKS` / `IS_BLOCKED_BY`, `DUPLICATES` / `IS_DUPLICATED_BY`) rendered correctly under two distinct groups already.
+
+Root cause: `IssueLinkService.create` (`packages/api/src/issue-link/issue-link.service.ts:71`) stores both directions of every link inside one transaction. For symmetric types, `REVERSE_TYPE[RELATES_TO] = RELATES_TO`, so both rows ended up with the same `(type, issueId-pair)`. `findByIssue` returned them as one row in `sourceLinks` and the mirrored one in `targetLinks`. The frontend `useLinkedIssuesDisplay` hook flipped the inbound row's type via `getInverseLinkType` (no-op for RELATES_TO) and then emitted both into the display list, hence the duplicate.
+
+Fixed at the frontend dedupe layer per the bug ticket's Option A — minimal blast radius, no schema / API change. The hook now keeps a `Map<"${type}::${issueId}", display>` and ignores the second hit. Asymmetric types are unaffected because `getInverseLinkType` differentiates inbound (e.g. BLOCKS) from outbound (IS_BLOCKED_BY), so the composite key stays unique. Deletion still works via either linkId — the service deletes both directions atomically.
+- Source: `packages/web/src/features/issue/hooks/useLinkedIssuesDisplay.ts`.
+
+### 2026-05-21 — Add `DOMAIN` issue type + Table of Content view (PR1: BE, schema `20260521024422_add_domain_issue_type`)
+**Added.** New top-level grouping above Epic. The 4-level tree is now `Domain → Epic → Task/Bug → Sub-task`. Driven by the *Table of Content* feature (plan: [`docs/plans/table-of-content-domain-level.md`](../plans/table-of-content-domain-level.md)) — projects had grown to 30+ flat Epics on the Board (Dhuman, PITB), and PMs were maintaining the module list in a Google Sheet. The enum is named `DOMAIN` in code/DB/API; the UI labels it "Module" so it doesn't collide with the "domain layer" in clean-architecture. **Hierarchy validation:** `EPIC_CANNOT_HAVE_PARENT` was replaced by `EPIC_PARENT_MUST_BE_DOMAIN` — an Epic without a parent is still valid (backward-compat), but an Epic with a non-`DOMAIN` parent now 400s. `DOMAIN_CANNOT_HAVE_PARENT` is the analogous top-level rule. **New endpoints:** `GET /api/projects/:projectId/issues/table-of-content` returns `{ domains: [{ id, title, epics: [{ id, title, status, taskCount, doneCount }] }], orphanEpics: [...] }`. `PATCH /api/projects/:projectId/issues/bulk-set-parent` (PM↑) batch-re-parents Epics under a Module — used by the upcoming Web bulk-assign UI. **No data backfill** — migration adds the enum value only; PMs assign Modules manually after the FE ships.
+- Source: `packages/api/prisma/schema.prisma`, `packages/api/prisma/migrations/20260521024422_add_domain_issue_type/migration.sql`, `packages/api/src/issue/domain/issue-type.vo.ts`, `packages/api/src/issue/domain/issue.entity.ts`, `packages/api/src/issue/application/create-issue.use-case.ts`, `packages/api/src/issue/application/update-issue.use-case.ts`, `packages/api/src/issue/application/bulk-set-parent.use-case.ts`, `packages/api/src/issue/application/issue-query.service.ts`, `packages/api/src/issue/application/ports/issue.repository.ts`, `packages/api/src/issue/infrastructure/issue.prisma.repository.ts`, `packages/api/src/issue/issue.controller.ts`, `packages/api/src/issue/issue.module.ts`, `packages/api/src/issue/dto/bulk-set-parent.dto.ts`.
+
 ### 2026-05-20 — Move DueBadge to bottom row to unbreak IssueCard header (aa00790, PM-54)
 **Fixed.** Card header on the Board had 5 chips fighting for space inside a 224px swimlane column: TypeIcon + KEY-NUMBER + `EpicChip` (`max-w-[120px]` truncate) + `SourceBadge` + `DueBadge` (`ml-auto`). When all three conditional chips were present (near-due deadline + Epic + non-WEB source — e.g. PM-52 with dueDate 5/22, Epic "Bugs", source MCP), the EpicChip got squeezed to "B..." and the header looked broken. Moved `DueBadge` out of the header into the bottom metadata-pill row, right after PRIORITY. Header now reads `🐛 PM-52 ⚡Bugs ✨MCP` with the Epic name in full; bottom row reads `MEDIUM D-1 Bug` with the due chip living next to its pill cousins.
 - Source: `packages/web/src/features/issue/components/board/IssueCard.tsx`.

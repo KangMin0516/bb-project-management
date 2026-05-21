@@ -52,7 +52,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
   // back to open instead of waiting for the pending unmount.
   useEffect(() => { reopen() }, [issue.id, reopen])
 
-  const { detail, members, projectLabels, projectComponents, epics } = useIssueDetailData(
+  const { detail, members, projectLabels, projectComponents, epics, modules } = useIssueDetailData(
     projectId,
     issue.id,
     issue.type === 'EPIC',
@@ -129,6 +129,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
             projectLabels={projectLabels}
             projectComponents={projectComponents}
             epics={epics}
+            modules={modules}
             onUpdate={(data) => update.mutate(data)}
             onAssigneeChange={handleAssigneeChange}
             onReviewerChange={handleReviewerChange}

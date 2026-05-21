@@ -13,7 +13,7 @@ function makeRepo(overrides: Partial<IssueRepository> = {}): IssueRepository {
 }
 
 describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
-  it('rejects EPIC with a parent', async () => {
+  it('rejects EPIC under a TASK (parent must be DOMAIN)', async () => {
     const repo = makeRepo({ fetchParentType: jest.fn(async () => 'TASK') });
     const uc = new CreateIssueUseCase(repo);
     await expect(
@@ -25,6 +25,34 @@ describe('CreateIssueUseCase — hierarchy invariants (I-C1..I-C3)', () => {
         parentId: 'parent-1',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects DOMAIN with a parent', async () => {
+    const repo = makeRepo({ fetchParentType: jest.fn(async () => 'DOMAIN') });
+    const uc = new CreateIssueUseCase(repo);
+    await expect(
+      uc.execute({
+        projectId: 'p',
+        creatorId: 'u',
+        title: 't',
+        type: 'DOMAIN' as const,
+        parentId: 'parent-1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts EPIC under a DOMAIN', async () => {
+    const repo = makeRepo({ fetchParentType: jest.fn(async () => 'DOMAIN') });
+    const uc = new CreateIssueUseCase(repo);
+    await expect(
+      uc.execute({
+        projectId: 'p',
+        creatorId: 'u',
+        title: 't',
+        type: 'EPIC' as const,
+        parentId: 'd-1',
+      }),
+    ).resolves.toBeDefined();
   });
 
   it('rejects SUB_TASK without a parent', async () => {

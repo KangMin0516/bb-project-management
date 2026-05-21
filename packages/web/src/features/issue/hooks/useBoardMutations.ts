@@ -13,7 +13,12 @@ export function useBoardMutations(projectId: string) {
   // so we use setQueriesData / queryFilter so both archived/unarchived caches stay
   // in sync regardless of which one is currently mounted.
   const boardKeyPrefix = ['board', projectId] as const
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: boardKeyPrefix })
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: boardKeyPrefix })
+    // TOC sidebar reads per-Epic counts + Module ↔ Epic links — a drag
+    // that re-parents a Task / Epic shifts both, so refresh it too.
+    queryClient.invalidateQueries({ queryKey: ['toc', projectId] })
+  }
 
   /**
    * Apply (issueId, status, order) and optionally parentId to the board

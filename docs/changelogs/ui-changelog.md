@@ -18,6 +18,38 @@
 
 ## Timeline
 
+### 2026-05-21 — Calendar drag-to-schedule: Unscheduled panel + droppable day cells (PM-58)
+**Added.** Right-rail companion panel on `/projects/:projectId/calendar` that lists every active ticket without a `dueDate` (status ∈ `{BACKLOG, TODO, IN_PROGRESS}`, archived excluded). Dragging a row onto any `DayCell` patches the issue's `dueDate` to that day's local midnight; the chip then appears on the calendar. Mutation runs through the existing `PATCH /issues/:id` flow so all the standard side effects (activity row, undo path, Slack DM on assignee change) still fire.
+
+UX notes:
+- Panel collapses to a 36px chevron via `?unscheduled=0` URL param (mirrors `?toc=` on the Board).
+- Sort: `priority` (HIGH → LOW) then `updatedAt desc`.
+- Rows inherit the page's filter chips (Priority / Type / Source / Assignee / Status / Search). Status is intersected with the implicit active set so the panel never shows REVIEW_QA / RECHECK / DONE / CANCELED even when the user opens the Status filter wide.
+- During drag, all calendar cells (including prev/next-month padding) get a `bg-primary-50` + `ring-primary-300` highlight so the drop target is unambiguous.
+- Drop success toast: `Scheduled for {weekday, month day}`. Error path rolls back via React-Query's onError + a toast.
+- React-Query invalidation keyed on `['issues', projectId]` so the month grid AND the unscheduled query refresh together.
+
+PMs asked for a single planning surface so a weekly triage doesn't bounce between Board, detail panel, and DatePopover.
+- Source: `packages/web/src/features/calendar/components/UnscheduledPanel.tsx` (new), `packages/web/src/features/calendar/hooks/useUnscheduledIssues.ts` (new), `packages/web/src/features/calendar/hooks/useCalendarDnd.ts` (new), `packages/web/src/features/calendar/components/DayCell.tsx`, `packages/web/src/features/calendar/lib.ts`, `packages/web/src/pages/CalendarPage.tsx`.
+
+### 2026-05-21 — Board TOC sidebar (Module → Epic → Task)
+**Added.** Left rail on `/projects/:projectId/board` that shows the same Module → Epic outline as the standalone TOC page, **plus** a third level for Task / Bug children of each Epic. Rows are rendered minimally — a coloured **status dot** (from `STATUS_BAR_COLORS`) replaces the BACKLOG/TODO/... text badge, and the assignee is shown as an **avatar only** (no name, no email) using `UserAvatar size="xs"`. Click any row (Epic or Task/Bug) → opens `IssueDetailPanel` for that issue. Module headers and Epic rows additionally toggle their own expand/collapse state. Collapse the whole rail to a 36px chevron with the header button; persisted via `?toc=0/1` URL param so reload keeps the user's choice (matches the existing `?swimlane=` / `?archived=` codec).
+
+PMs asked for a dense, side-by-side "where am I in this project" view that doesn't replace the kanban — the swimlane Epic header (full chip + counter + status badge) is **unchanged**. The sidebar reads the existing `useQuery(['toc', projectId])` already prefetched for the Module filter chip, so no extra network calls.
+- Source: `packages/web/src/features/issue/components/board/BoardTocSidebar.tsx` (new), `packages/web/src/pages/BoardPage.tsx`.
+
+### 2026-05-21 — Table of Content page + Module filter + bulk-assign UI (PR2: Web for the DOMAIN feature)
+**Added.** Front-end half of the Module (DOMAIN) feature shipped in the issue-changelog PR1 entry. Three user-facing surfaces:
+- **`/projects/:projectId/table-of-content` page** (`packages/web/src/pages/TableOfContentPage.tsx`): outline view of `Domain → Epic` with per-Epic task/done counts and progress bars. `+ Add Module` in the header, `+ Add Epic` inline per Module. An "Unassigned Epics" amber-tinted section lets PMs assign Modules one by one via an inline `Move to module…` dropdown — backed by `bulkSetParent([epicId], domainId)`. Empty state CTA guides first-time use. Sidebar entry between Specs and Board (icon: `ListTree`).
+- **Board Module filter chip** (`BoardToolbar.tsx` + `SwimlaneBoardView.tsx`): inline `Module:` select. When set, swimlanes are filtered to `epic.parentId === domainId`; "No Epic" lane is also dropped because it can't belong to a Module. The chip only appears when the project has Modules (sourced from `GET /issues/table-of-content`). State persists via the new `?domain=<uuid>` URL param in the shared filter codec.
+- **CreateIssueModal**: `Module` option added to the Type select. When type=DOMAIN the parent field is hidden (Modules are top-level). When type=EPIC a "Parent Module" Combobox lists available Modules with `📁` icons and a `None (unassigned)` fallback. TASK/BUG/SUB_TASK behaviour unchanged.
+- **Issues page bulk-assign Module**: `BulkActionBar.tsx` gains a "Module" dropdown that is only enabled when every selected issue is type `EPIC`. Tooltip explains why it's disabled otherwise. Calls `bulkSetParent` (PM↑) and toast-confirms the count.
+
+**Breadcrumb already works for free**: `IssueDetailHeader.tsx` renders `parent.parent → parent → current`, and `IssueQueryService.findOne` already selects the grandparent. A Task under an Epic under a Module now shows `📁 #N Module / ⚡ #N Epic / ✅ #N Task` with no code change.
+
+Plan: [`docs/plans/table-of-content-domain-level.md`](../plans/table-of-content-domain-level.md). Skipped from §5 of the plan: per-card Module badge on `IssueCard` — would require plumbing the Module map through `BoardColumn`/`SwimlaneRow`/`IssueCard`, and the TOC page + breadcrumb already cover the navigation need at much lower delta. Tracked as deferred suggestion.
+- Source: `packages/web/src/pages/TableOfContentPage.tsx`, `packages/web/src/features/issue/api.ts`, `packages/web/src/features/issue/repository.ts`, `packages/web/src/features/issue/components/CreateIssueModal.tsx`, `packages/web/src/features/issue/components/BulkActionBar.tsx`, `packages/web/src/features/issue/components/board/BoardToolbar.tsx`, `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx`, `packages/web/src/pages/BoardPage.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/widgets/AppLayout/AppLayout.tsx`, `packages/web/src/app/router/index.tsx`, `packages/web/src/shared/ui/filterState.ts`, `packages/web/src/shared/lib/filter-codec.ts`, `packages/web/src/shared/config/constants.ts`.
+
 ### 2026-05-20 — DatePopover primitive replaces native `<input type="date">` (2bf8a2f, PM-52)
 **Added.** New shared primitive `shared/ui/DatePopover.tsx`: button trigger + Radix Popover with month-grid calendar (Mo-Su), Prev/Next month chevrons, "Today" + "Clear" affordances, ring-highlight on today, primary-fill on selected day. Replaced the native `<input type="date">` in `IssueMetadata.tsx`'s `DateField` (used for Start Date + Due Date on the issue detail panel).
 

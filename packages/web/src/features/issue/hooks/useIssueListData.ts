@@ -32,7 +32,12 @@ export function useIssueListData({ projectId, listParams }: UseIssueListDataOpti
     enabled,
   })
 
-  const invalidateList = () => queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+  const invalidateList = () => {
+    queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+    // TOC sidebar / page depend on Module ↔ Epic parent links — any
+    // list-side change (Epic re-parent inline, delete, …) can shift them.
+    queryClient.invalidateQueries({ queryKey: ['toc', projectId] })
+  }
 
   const epicChange = useMutation({
     mutationFn: ({ issueId, parentId }: { issueId: string; parentId: string | null }) =>

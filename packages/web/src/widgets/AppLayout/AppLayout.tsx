@@ -24,6 +24,7 @@ import {
   LayoutDashboard,
   List,
   ListChecks,
+  ListTree,
   LogOut,
   MessageCircle,
   Monitor,
@@ -187,6 +188,7 @@ export default function AppLayout() {
     ? [
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
+        { to: `/projects/${projectId}/table-of-content`, icon: ListTree, label: 'Table of Content' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/lists`, icon: List, label: 'Lists' },
         { to: `/projects/${projectId}/calendar`, icon: Calendar, label: 'Calendar' },

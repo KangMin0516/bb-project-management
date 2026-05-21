@@ -4,7 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BulkSetParentUseCase } from '../issue/application/bulk-set-parent.use-case.js';
 import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.js';
+import { IssueQueryService } from '../issue/application/issue-query.service.js';
 import { UpdateIssueUseCase } from '../issue/application/update-issue.use-case.js';
 import { SpecificationService } from '../specification/specification.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
@@ -37,6 +39,8 @@ export class ExternalService {
     private prisma: PrismaService,
     private createIssueUC: CreateIssueUseCase,
     private updateIssueUC: UpdateIssueUseCase,
+    private bulkSetParentUC: BulkSetParentUseCase,
+    private issueQueryService: IssueQueryService,
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
     private commentService: CommentService,
@@ -1636,6 +1640,48 @@ export class ExternalService {
       where: { projectId: project.id },
       select: { id: true, name: true, color: true },
       orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * MCP `get_project_table_of_content` — returns the project's
+   * Domain → Epic outline plus an "orphan epics" bucket so the agent
+   * can reason about scope without fetching every Issue.
+   */
+  async getTableOfContent(projectKey: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.issueQueryService.findTableOfContent(project.id);
+  }
+
+  /**
+   * MCP `bulk_set_epic_module` — re-parent a batch of Epics to a new
+   * Module (DOMAIN), or unparent them when `domainId` is null. Returns
+   * `{ updated }` matching the BulkSetParentUseCase output shape.
+   */
+  async bulkSetEpicModule(
+    projectKey: string,
+    epicIds: string[],
+    domainId: string | null,
+    actorId: string,
+    source?: string,
+  ): Promise<{ updated: number }> {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.bulkSetParentUC.execute({
+      projectId: project.id,
+      actorId,
+      issueIds: epicIds,
+      parentId: domainId,
+      source: source as import('../common/source.js').SourceLiteral | undefined,
     });
   }
 }

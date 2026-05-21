@@ -68,7 +68,8 @@ export class CreateIssueUseCase {
     const type = cmd.type ?? IssueType.TASK;
     const parentId = cmd.parentId ?? null;
 
-    let parentType: 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK' | null = null;
+    let parentType: 'DOMAIN' | 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK' | null =
+      null;
     if (parentId) {
       parentType = await this.repo.fetchParentType(parentId);
       if (!parentType) {
@@ -178,14 +179,17 @@ export class CreateIssueUseCase {
 
 function hierarchyMessage(
   code:
-    | 'EPIC_CANNOT_HAVE_PARENT'
+    | 'DOMAIN_CANNOT_HAVE_PARENT'
+    | 'EPIC_PARENT_MUST_BE_DOMAIN'
     | 'SUB_TASK_REQUIRES_PARENT'
     | 'PARENT_CANNOT_BE_SUB_TASK'
     | 'CANNOT_BE_OWN_PARENT',
 ): string {
   switch (code) {
-    case 'EPIC_CANNOT_HAVE_PARENT':
-      return 'EPIC cannot have a parent issue';
+    case 'DOMAIN_CANNOT_HAVE_PARENT':
+      return 'DOMAIN cannot have a parent issue';
+    case 'EPIC_PARENT_MUST_BE_DOMAIN':
+      return 'EPIC parent must be a DOMAIN';
     case 'SUB_TASK_REQUIRES_PARENT':
       return 'SUB_TASK must have a parent issue';
     case 'PARENT_CANNOT_BE_SUB_TASK':

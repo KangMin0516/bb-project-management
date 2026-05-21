@@ -14,10 +14,24 @@ const baseInput = {
 };
 
 describe('validateTypeWithParent (I-C1 / I-C2 / I-C3 / I-U2)', () => {
-  it('rejects EPIC with a parent', () => {
-    expect(validateTypeWithParent('EPIC', 'parent-1', 'TASK')).toBe(
-      'EPIC_CANNOT_HAVE_PARENT',
+  it('rejects DOMAIN with a parent', () => {
+    expect(validateTypeWithParent('DOMAIN', 'p-1', 'DOMAIN')).toBe(
+      'DOMAIN_CANNOT_HAVE_PARENT',
     );
+  });
+
+  it('rejects EPIC under a TASK (parent must be DOMAIN)', () => {
+    expect(validateTypeWithParent('EPIC', 'parent-1', 'TASK')).toBe(
+      'EPIC_PARENT_MUST_BE_DOMAIN',
+    );
+  });
+
+  it('accepts EPIC under a DOMAIN', () => {
+    expect(validateTypeWithParent('EPIC', 'd-1', 'DOMAIN')).toBeNull();
+  });
+
+  it('accepts EPIC without a parent (legacy / unassigned)', () => {
+    expect(validateTypeWithParent('EPIC', null, null)).toBeNull();
   });
 
   it('rejects SUB_TASK without a parent', () => {

@@ -9,7 +9,9 @@ import { componentApi } from '@/features/project/component-api'
  * already use so optimistic updates from the board / list flow through.
  *
  * @param skipEpics  Pass true when the open issue is itself an epic — we
- *                   don't need the epic dropdown on epics.
+ *                   don't need the epic dropdown on epics. (Module options
+ *                   are still fetched for the Epic detail panel so an
+ *                   Epic can be re-parented to a Module.)
  */
 export function useIssueDetailData(projectId: string, issueId: string, skipEpics: boolean) {
   const detailQuery = useQuery({
@@ -38,11 +40,19 @@ export function useIssueDetailData(projectId: string, issueId: string, skipEpics
     enabled: !skipEpics,
   })
 
+  // Modules (DOMAIN parents) — used by the Epic's "Module" parent
+  // picker. Shares the TOC cache key with BoardPage / TableOfContentPage.
+  const tocQuery = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId),
+  })
+
   return {
     detail: detailQuery.data,
     members: membersQuery.data,
     projectLabels: labelsQuery.data,
     projectComponents: componentsQuery.data,
     epics: epicsQuery.data,
+    modules: tocQuery.data?.domains ?? [],
   }
 }

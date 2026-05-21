@@ -28,6 +28,9 @@ export interface FilterState {
   labels: Set<string>
   components: Set<string>
   epicId: string | null
+  /** Module (DOMAIN) filter — only show swimlanes / rows whose Epic
+   *  has this parent. Independent of `epicId` (which filters single Epic). */
+  domainId: string | null
   /** Owners (assignees) of the Epics — only meaningful in swimlane mode. */
   epicOwners: Set<string>
   status: Set<string>
@@ -46,6 +49,7 @@ export const INITIAL_FILTER: FilterState = {
   labels: new Set(),
   components: new Set(),
   epicId: null,
+  domainId: null,
   epicOwners: new Set(),
   status: new Set(),
   priority: new Set(),
@@ -61,6 +65,7 @@ export function hasActiveFilters(f: FilterState): boolean {
     f.labels.size > 0 ||
     f.components.size > 0 ||
     !!f.epicId ||
+    !!f.domainId ||
     f.epicOwners.size > 0 ||
     f.status.size > 0 ||
     f.priority.size > 0 ||

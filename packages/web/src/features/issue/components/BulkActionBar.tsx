@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
 import {
   STATUSES,
@@ -8,7 +8,7 @@ import {
   PRIORITY_LABELS,
   PRIORITY_DOT_COLORS,
 } from '@/shared/config/constants'
-import { X, Trash2, ChevronDown } from 'lucide-react'
+import { FolderOpen, X, Trash2, ChevronDown } from 'lucide-react'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
@@ -30,17 +30,31 @@ interface BulkActionMember {
 interface BulkActionBarProps {
   projectId: string
   selectedIds: Set<string>
+  /** Types of currently-selected items — drives whether the "Set Module"
+   *  action is enabled (PM↑, EPIC-only). */
+  selectedTypes?: string[]
   members: BulkActionMember[]
   onClear: () => void
 }
 
-export default function BulkActionBar({ projectId, selectedIds, members, onClear }: BulkActionBarProps) {
+export default function BulkActionBar({ projectId, selectedIds, selectedTypes, members, onClear }: BulkActionBarProps) {
   const queryClient = useQueryClient()
   const count = selectedIds.size
+  const allEpics = !!selectedTypes && selectedTypes.length > 0 && selectedTypes.every((t) => t === 'EPIC')
+
+  // Fetch modules only when the selection is Epic-only — keeps the
+  // dropdown empty / disabled otherwise.
+  const { data: toc } = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId),
+    enabled: allEpics,
+  })
+  const modules = toc?.domains ?? []
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
     queryClient.invalidateQueries({ queryKey: ['board', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['toc', projectId] })
     onClear()
   }
 
@@ -61,7 +75,19 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
     },
   })
 
-  const isPending = bulkUpdateMutation.isPending || bulkDeleteMutation.isPending
+  const bulkSetModuleMutation = useMutation({
+    mutationFn: (parentId: string | null) =>
+      issueRepository.bulkSetParent(projectId, [...selectedIds], parentId),
+    onSuccess: (res) => {
+      useToastStore.getState().addToast(`Moved ${res.updated} epic(s) to Module`, 'success')
+      invalidate()
+    },
+    onError: (err: unknown) => {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Set Module failed'), 'error')
+    },
+  })
+
+  const isPending = bulkUpdateMutation.isPending || bulkDeleteMutation.isPending || bulkSetModuleMutation.isPending
 
   return (
     <div className="flex items-center gap-3 rounded-lg bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 px-4 py-2">
@@ -109,6 +135,25 @@ export default function BulkActionBar({ projectId, selectedIds, members, onClear
         }
       />
 
+      <BulkDropdown
+        label="Module"
+        disabled={isPending || !allEpics}
+        title={allEpics ? undefined : 'Module bulk-assign only works when all selected issues are Epics'}
+        options={[
+          {
+            value: '__unparent__',
+            label: 'No module',
+            leading: <FolderOpen className="h-3.5 w-3.5 text-gray-400" />,
+          },
+          ...modules.map((m) => ({
+            value: m.id,
+            label: m.title,
+            leading: <FolderOpen className="h-3.5 w-3.5 text-indigo-500" />,
+          })),
+        ]}
+        onSelect={(v) => bulkSetModuleMutation.mutate(v === '__unparent__' ? null : v)}
+      />
+
       <button
         onClick={async () => {
           if (await confirmDialog({
@@ -146,16 +191,19 @@ function BulkDropdown({
   options,
   onSelect,
   disabled,
+  title,
 }: {
   label: string
   options: BulkDropdownOption[]
   onSelect: (value: string) => void
   disabled?: boolean
+  title?: string
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         disabled={disabled}
+        title={title}
         className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition"
       >
         {label}

@@ -45,13 +45,12 @@ const SORTABLE_FIELDS = new Set([
   'status',
   'order',
 ]);
-const NULLABLE_DATE_FIELDS = new Set([
-  'dueDate',
-  'startDate',
-  'focusDate',
-]);
+const NULLABLE_DATE_FIELDS = new Set(['dueDate', 'startDate', 'focusDate']);
 
-type OrderByEntry = Record<string, 'asc' | 'desc' | { sort: 'asc' | 'desc'; nulls: 'last' | 'first' }>;
+type OrderByEntry = Record<
+  string,
+  'asc' | 'desc' | { sort: 'asc' | 'desc'; nulls: 'last' | 'first' }
+>;
 
 /**
  * Parse `?sort=priority:desc,dueDate:asc` into a Prisma orderBy array.
@@ -95,16 +94,25 @@ export class IssueQueryService {
       includeArchived = false,
       dueDateFrom,
       dueDateTo,
+      hasDueDate,
     } = query;
 
-    // Compose the dueDate range filter conditionally. Calendar passes
-    // both sides; other callers may pass one or neither.
-    const dueDateRange = (() => {
-      if (!dueDateFrom && !dueDateTo) return undefined;
-      const range: { gte?: Date; lte?: Date } = {};
-      if (dueDateFrom) range.gte = new Date(dueDateFrom);
-      if (dueDateTo) range.lte = new Date(dueDateTo);
-      return range;
+    // Compose the dueDate filter. `hasDueDate` is mutually exclusive
+    // with the range form — Calendar's "Unscheduled" panel sends
+    // `hasDueDate=false`; the month grid sends `dueDateFrom/To`. If both
+    // arrived somehow, range wins (it's the more specific signal).
+    const dueDateFilter = (() => {
+      if (dueDateFrom || dueDateTo) {
+        const range: { gte?: Date; lte?: Date } = {};
+        if (dueDateFrom) range.gte = new Date(dueDateFrom);
+        if (dueDateTo) range.lte = new Date(dueDateTo);
+        return range;
+      }
+      // Parse the string-form param into a real null filter. See DTO
+      // comment for why this isn't a boolean.
+      if (hasDueDate === 'false') return { equals: null };
+      if (hasDueDate === 'true') return { not: null };
+      return undefined;
     })();
 
     const where = {
@@ -115,7 +123,7 @@ export class IssueQueryService {
       ...(type && { type }),
       ...(source && { source }),
       ...(assigneeId && { assigneeId }),
-      ...(dueDateRange && { dueDate: dueDateRange }),
+      ...(dueDateFilter && { dueDate: dueDateFilter }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' as const } },
@@ -129,7 +137,7 @@ export class IssueQueryService {
     const orderBy =
       parseSortParam(sort) ??
       (sortBy
-        ? [{ [sortBy]: (sortOrder || 'desc') as 'asc' | 'desc' }]
+        ? [{ [sortBy]: sortOrder || 'desc' }]
         : [{ status: 'asc' as const }, { order: 'asc' as const }]);
 
     const [items, total] = await Promise.all([
@@ -195,6 +203,101 @@ export class IssueQueryService {
     );
 
     return grouped;
+  }
+
+  /**
+   * Table of Content — flat tree of Domains and their Epics, plus a
+   * separate bucket for Epics that don't have a Domain parent yet
+   * (migration backward-compat). Counts are aggregated on Task/Bug/
+   * Sub-task children of each Epic, irrespective of nesting depth.
+   *
+   * Two queries:
+   *   1. Fetch all DOMAIN + EPIC rows for the project.
+   *   2. groupBy descendant counts on parentId.
+   */
+  async findTableOfContent(projectId: string): Promise<{
+    domains: Array<{
+      id: string;
+      title: string;
+      epics: Array<{
+        id: string;
+        title: string;
+        status: IssueStatus;
+        taskCount: number;
+        doneCount: number;
+      }>;
+    }>;
+    orphanEpics: Array<{
+      id: string;
+      title: string;
+      status: IssueStatus;
+      taskCount: number;
+      doneCount: number;
+    }>;
+  }> {
+    const rows = await this.prisma.issue.findMany({
+      where: {
+        projectId,
+        archivedAt: null,
+        type: { in: [IssueType.DOMAIN, IssueType.EPIC] },
+      },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        status: true,
+        parentId: true,
+        order: true,
+      },
+      orderBy: [{ type: 'asc' }, { order: 'asc' }, { title: 'asc' }],
+    });
+
+    const epics = rows.filter((r) => r.type === IssueType.EPIC);
+    const domains = rows.filter((r) => r.type === IssueType.DOMAIN);
+
+    // Count children (any type) grouped by parentId. Aggregated in one
+    // SQL call to avoid N+1; computed counts are 0 for epics with no
+    // children.
+    const epicIds = epics.map((e) => e.id);
+    const counts =
+      epicIds.length > 0
+        ? await this.prisma.issue.groupBy({
+            by: ['parentId', 'status'],
+            where: {
+              parentId: { in: epicIds },
+              archivedAt: null,
+            },
+            _count: { _all: true },
+          })
+        : [];
+
+    const totalByEpic = new Map<string, number>();
+    const doneByEpic = new Map<string, number>();
+    for (const c of counts) {
+      if (!c.parentId) continue;
+      const n = c._count._all;
+      totalByEpic.set(c.parentId, (totalByEpic.get(c.parentId) ?? 0) + n);
+      if (c.status === 'DONE') {
+        doneByEpic.set(c.parentId, (doneByEpic.get(c.parentId) ?? 0) + n);
+      }
+    }
+
+    const epicView = (e: (typeof epics)[number]) => ({
+      id: e.id,
+      title: e.title,
+      status: e.status,
+      taskCount: totalByEpic.get(e.id) ?? 0,
+      doneCount: doneByEpic.get(e.id) ?? 0,
+    });
+
+    return {
+      domains: domains.map((d) => ({
+        id: d.id,
+        title: d.title,
+        epics: epics.filter((e) => e.parentId === d.id).map(epicView),
+      })),
+      orphanEpics: epics.filter((e) => e.parentId === null).map(epicView),
+    };
   }
 
   async findOne(projectId: string, issueId: string) {

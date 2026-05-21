@@ -26,6 +26,8 @@ interface IssueMetadataProps {
   projectLabels: Label[] | undefined
   projectComponents: { id: string; name: string }[] | undefined
   epics: Issue[] | undefined
+  /** Project's Modules (DOMAIN parents) — drives the Epic's parent picker. */
+  modules?: Array<{ id: string; title: string }>
   onUpdate: (data: UpdateIssuePayload) => void
   onAssigneeChange: (id: string) => void
   onReviewerChange: (id: string) => void
@@ -42,6 +44,7 @@ export default function IssueMetadata({
   projectLabels,
   projectComponents,
   epics,
+  modules,
   onUpdate,
   onAssigneeChange,
   onReviewerChange,
@@ -179,7 +182,42 @@ export default function IssueMetadata({
       <DateField label="Start Date" fieldId="start-date" value={d.startDate} onChange={(v) => onUpdate({ startDate: v })} />
       <DateField label="Due Date" fieldId="due-date" value={d.dueDate} onChange={(v) => onUpdate({ dueDate: v })} />
 
-      {d.type !== 'EPIC' && (
+      {d.type === 'EPIC' && (
+        <InlineField
+          label="Module"
+          display={
+            d.parent
+              ? <span className="text-gray-700">📁 {d.parent.title}</span>
+              : <span className="text-gray-400 italic">No module</span>
+          }
+        >
+          {(close) => (
+            <Combobox
+              defaultOpen
+              value={d.parentId || NO_PARENT}
+              onChange={(v) => {
+                onUpdate({ parentId: v === NO_PARENT ? null : v })
+                close()
+              }}
+              onOpenChange={(open) => { if (!open) close() }}
+              options={[
+                { value: NO_PARENT, label: 'No module (unassigned)' },
+                ...(modules ?? []).map((m) => ({
+                  value: m.id,
+                  label: `📁 ${m.title}`,
+                  searchValue: m.title,
+                })),
+              ]}
+              placeholder="Select module..."
+              searchPlaceholder="Search module..."
+              emptyMessage="No modules yet"
+              className="h-8"
+            />
+          )}
+        </InlineField>
+      )}
+
+      {d.type !== 'EPIC' && d.type !== 'DOMAIN' && (
         <InlineField
           label={d.type === 'SUB_TASK' ? 'Parent' : 'Epic'}
           display={

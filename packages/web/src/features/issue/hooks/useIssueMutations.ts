@@ -19,6 +19,15 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     queryClient.invalidateQueries({ queryKey: ['board', projectId] })
     queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
     queryClient.invalidateQueries({ queryKey: ['issue', projectId, issueId] })
+    // TOC depends on Module ↔ Epic parent links + per-Epic task counts;
+    // any issue update (parent, status, archive, …) can shift those.
+    queryClient.invalidateQueries({ queryKey: ['toc', projectId] })
+    // Calendar's Unscheduled panel reflects `dueDate IS NULL` issues —
+    // setting / clearing dueDate from the detail panel flips visibility
+    // there. The prefix invalidate above would normally cover this but
+    // we refetchQueries explicitly so an inactive observer still picks
+    // up the change once the user re-opens the Calendar (PM-58).
+    queryClient.refetchQueries({ queryKey: ['issues', projectId, 'unscheduled'] })
   }
 
   const update = useMutation({
@@ -34,6 +43,7 @@ export function useIssueMutations(projectId: string, issueId: string, onDeleted?
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['toc', projectId] })
       onDeleted?.()
     },
     onError: (err: unknown) => {

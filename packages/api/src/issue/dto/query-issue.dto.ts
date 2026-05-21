@@ -46,7 +46,8 @@ export class QueryIssueDto {
 
   @ApiPropertyOptional({
     enum: ISSUE_SOURCES,
-    description: 'Origin of the row (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM)',
+    description:
+      'Origin of the row (WEB / MCP / SLACK / WEBHOOK / API / SYSTEM)',
   })
   @IsOptional()
   @IsIn(ISSUE_SOURCES)
@@ -64,7 +65,8 @@ export class QueryIssueDto {
 
   @ApiPropertyOptional({
     enum: ['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'],
-    description: 'Legacy single-field sort. Prefer `sort=field:dir,…` for multi-field.',
+    description:
+      'Legacy single-field sort. Prefer `sort=field:dir,…` for multi-field.',
   })
   @IsOptional()
   @IsIn(['number', 'title', 'status', 'priority', 'createdAt', 'dueDate'])
@@ -122,4 +124,13 @@ export class QueryIssueDto {
   @IsOptional()
   @IsISO8601()
   dueDateTo?: string;
+
+  @ApiPropertyOptional({
+    enum: ['true', 'false'],
+    description:
+      'When `false`, return only issues with `dueDate IS NULL`. When `true`, only issues with a dueDate set. Omit for no constraint. Used by the Calendar "Unscheduled" panel (PM-58). Kept as a string enum because `class-transformer`\'s `enableImplicitConversion` (set in main.ts) clobbers `@Transform`-coerced booleans for query params — `Boolean("false")` is truthy.',
+  })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  hasDueDate?: 'true' | 'false';
 }

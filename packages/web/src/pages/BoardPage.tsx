@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { useDragScroll } from '@/shared/lib/useDragScroll'
 import { getBool, setBool, PARAM } from '@/shared/lib/filter-codec'
+import { issueRepository } from '@/features/issue/repository'
 import { STATUSES, calculateDropOrder } from '@/shared/config/constants'
 import { useBoardData } from '@/features/issue/hooks/useBoardData'
 import { useBoardMutations } from '@/features/issue/hooks/useBoardMutations'
@@ -13,6 +15,7 @@ import { useOpenIssueFromUrl } from '@/features/issue/hooks/useOpenIssueFromUrl'
 import { filterBoard } from '@/features/issue/lib/boardFilter'
 import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
 import BoardColumn from '@/features/issue/components/board/BoardColumn'
+import BoardTocSidebar from '@/features/issue/components/board/BoardTocSidebar'
 import SwimlaneBoardView from '@/features/issue/components/board/SwimlaneBoardView'
 import BoardToolbar from '@/features/issue/components/board/BoardToolbar'
 import CreateIssueModal from '@/features/issue/components/CreateIssueModal'
@@ -49,6 +52,8 @@ export default function BoardPage() {
   // swimlane defaults to true; explicit '0' opts out.
   const groupByEpic = !searchParams.has(PARAM.swimlane) ? true : getBool(searchParams, PARAM.swimlane, true)
   const showArchived = getBool(searchParams, PARAM.archived, false)
+  // TOC sidebar opens by default; ?toc=0 in the URL collapses it.
+  const tocOpen = !searchParams.has('toc') ? true : getBool(searchParams, 'toc', true)
 
   const mutateParams = useCallback(
     (mutator: (p: URLSearchParams) => void) => {
@@ -72,6 +77,10 @@ export default function BoardPage() {
     (value: boolean) => mutateParams((p) => setBool(p, PARAM.swimlane, value, true)),
     [mutateParams],
   )
+  const toggleTocOpen = useCallback(
+    () => mutateParams((p) => setBool(p, 'toc', !tocOpen, true)),
+    [mutateParams, tocOpen],
+  )
 
   const dragScrollRef = useDragScroll<HTMLDivElement>()
 
@@ -83,6 +92,18 @@ export default function BoardPage() {
 
   const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
+
+  // Module list for the Domain filter chip. Cheap query — the TOC
+  // endpoint is small (only DOMAIN + EPIC rows).
+  const { data: toc } = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId!),
+    enabled: !!projectId,
+  })
+  const boardModules = useMemo(
+    () => toc?.domains.map((d) => ({ id: d.id, title: d.title })) ?? [],
+    [toc],
+  )
 
   // Archived toggle is a view switch (matches Lists page semantics):
   //   off → server already excludes archived
@@ -199,9 +220,19 @@ export default function BoardPage() {
   if (!projectId) return null
 
   const projectKey = project?.key ?? ''
+  const taskish = flatBoardIssues.filter((i) => i.type !== 'EPIC' && i.type !== 'DOMAIN')
 
   return (
-    <div className="flex h-full flex-col">
+    // `overflow-hidden` here is load-bearing: BoardColumn uses `min-w-max`
+    // inside the horizontal-scroll container; without `min-w-0` + clipped
+    // outer the AppLayout `<main>`'s `overflow-auto` ends up holding the
+    // scrollbar and dragging the whole page (TOC sidebar included) when
+    // the user scrolls the board. Both axes need to be clipped here so
+    // every nested scroll stays nested.
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Page-level header spans the full Board width — TOC sidebar
+          slots BELOW it, not beside, so the title + toolbar always
+          read as one unit. */}
       <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
         <div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{projectKey} Board</h1>
@@ -220,6 +251,7 @@ export default function BoardPage() {
           boardLabels={boardLabels}
           boardComponents={boardComponents}
           boardEpics={boardEpics}
+          boardModules={boardModules}
           epicOwners={epicOwners}
           hasFilters={hasFilters}
           showArchived={showArchived}
@@ -237,7 +269,20 @@ export default function BoardPage() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 p-4">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <BoardTocSidebar
+          toc={toc}
+          boardEpics={boardEpics}
+          taskish={taskish}
+          childrenMap={childrenMap}
+          allIssuesById={allIssuesById}
+          onIssueClick={setSelectedIssue}
+          collapsed={!tocOpen}
+          onToggleCollapse={toggleTocOpen}
+        />
+      {/* min-w-0 lets this flex child shrink below its content's
+          min-w-max so horizontal scroll stays here, not on `<main>`. */}
+      <div className="flex flex-1 min-h-0 min-w-0 flex-col p-4">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
@@ -260,6 +305,7 @@ export default function BoardPage() {
               onChildClick={openChild}
               onChildStatusToggle={toggleChildStatus}
               epicOwnersFilter={filters.epicOwners}
+              domainFilter={filters.domainId}
               epics={boardEpics}
               collapsedEpics={collapsedEpics}
               onCollapseToggle={toggleCollapse}
@@ -296,6 +342,7 @@ export default function BoardPage() {
             </DragDropContext>
           </div>
         )}
+      </div>
       </div>
 
       {createModal && (

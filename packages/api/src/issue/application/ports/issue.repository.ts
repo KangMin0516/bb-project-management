@@ -10,7 +10,7 @@
  */
 export const ISSUE_REPOSITORY = Symbol('ISSUE_REPOSITORY');
 
-export type IssueTypeLiteral = 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK';
+export type IssueTypeLiteral = 'DOMAIN' | 'EPIC' | 'TASK' | 'BUG' | 'SUB_TASK';
 export type IssueStatusLiteral =
   | 'BACKLOG'
   | 'TODO'
@@ -202,6 +202,39 @@ export interface IssueRepository {
 
   /** Hard-delete `ids` scoped to project. Returns affected count. */
   bulkDelete(projectId: string, ids: string[]): Promise<number>;
+
+  // ─── Domain / Table-of-Content (Phase 4) ──────────────────
+
+  /**
+   * Project + type of a single issue. Used by the bulk-set-parent use
+   * case to verify the proposed parent is a DOMAIN in the same project
+   * before any writes. Returns null when the issue id does not exist.
+   */
+  findIssueProjectAndType(
+    id: string,
+  ): Promise<{ projectId: string; type: IssueTypeLiteral } | null>;
+
+  /**
+   * Minimal projection for the bulk-set-parent flow: only the fields
+   * the use case needs to verify scope + diff parentId. Rows missing
+   * from the input id list signal a not-found / cross-project mix.
+   */
+  findMinimalForParentBulk(
+    projectId: string,
+    ids: string[],
+  ): Promise<BulkParentTargetRow[]>;
+
+  /**
+   * Atomic `updateMany` + `createMany(activities)` for setting (or
+   * clearing) the parentId on a list of Epics. One activity row per
+   * issue whose parentId actually changed.
+   */
+  bulkSetParent(
+    rows: BulkParentTargetRow[],
+    newParentId: string | null,
+    actorId: string,
+    source?: string,
+  ): Promise<void>;
 }
 
 export interface ReorderIssuePayload {
@@ -223,6 +256,18 @@ export interface BulkIssueRow {
   status: IssueStatusLiteral;
   priority: IssuePriorityLiteral;
   assigneeId: string | null;
+  number: number;
+  title: string;
+}
+
+/**
+ * Minimal row needed by the bulk-set-parent (Module assignment) flow.
+ * The use case verifies type/project on every input id before writing.
+ */
+export interface BulkParentTargetRow {
+  id: string;
+  type: IssueTypeLiteral;
+  parentId: string | null;
   number: number;
   title: string;
 }

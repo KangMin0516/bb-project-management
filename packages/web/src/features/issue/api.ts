@@ -161,6 +161,30 @@ export interface DependencyLink {
   targetIssue: LinkedIssueInfo
 }
 
+/**
+ * Shape returned by `GET /projects/:projectId/issues/table-of-content`.
+ * `orphanEpics` is the bucket for Epics that haven't been assigned a
+ * Module yet — backward-compat for projects created before the feature.
+ */
+export interface TableOfContentEpic {
+  id: string
+  title: string
+  status: string
+  taskCount: number
+  doneCount: number
+}
+
+export interface TableOfContentDomain {
+  id: string
+  title: string
+  epics: TableOfContentEpic[]
+}
+
+export interface TableOfContent {
+  domains: TableOfContentDomain[]
+  orphanEpics: TableOfContentEpic[]
+}
+
 export const issueApi = {
   list: (projectId: string, params?: Record<string, string>) =>
     api.get<{ data: PaginatedIssues }>(`/projects/${projectId}/issues`, { params }).then((r) => r.data.data),
@@ -182,6 +206,12 @@ export const issueApi = {
     api.patch<{ data: { updated: number } }>(`/projects/${projectId}/issues/bulk`, data).then((r) => r.data.data),
   bulkDelete: (projectId: string, issueIds: string[]) =>
     api.post<{ data: { deleted: number } }>(`/projects/${projectId}/issues/bulk-delete`, { issueIds }).then((r) => r.data.data),
+  /** Bulk-assign Module (DOMAIN parent) to a list of Epics. `parentId=null` unparents. PM↑ only. */
+  bulkSetParent: (projectId: string, issueIds: string[], parentId: string | null) =>
+    api.patch<{ data: { updated: number } }>(`/projects/${projectId}/issues/bulk-set-parent`, { issueIds, parentId }).then((r) => r.data.data),
+  /** Project's Domain → Epic outline + orphan Epics bucket. */
+  tableOfContent: (projectId: string) =>
+    api.get<{ data: TableOfContent }>(`/projects/${projectId}/issues/table-of-content`).then((r) => r.data.data),
 
   activities: (projectId: string, issueId: string) =>
     api.get<{ data: { items: Activity[]; total: number } }>(`/projects/${projectId}/issues/${issueId}/activities`).then((r) => r.data.data),

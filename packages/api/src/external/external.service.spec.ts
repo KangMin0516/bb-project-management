@@ -18,10 +18,13 @@ const mkService = (issues: Issue[]) => {
       count: jest.fn(async () => issues.length),
     },
   };
-  // Constructor expects 6 deps; only PrismaService is exercised by
-  // listIssues so the rest are stubs.
+  // Only PrismaService is exercised by listIssues; the rest are stubs.
   return new ExternalService(
     prisma as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,

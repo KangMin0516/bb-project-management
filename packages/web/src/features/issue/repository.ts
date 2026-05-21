@@ -92,6 +92,11 @@ export const issueRepository = {
   /** Bulk operations from the issues list page. */
   bulkUpdate: issueApi.bulkUpdate,
   bulkDelete: issueApi.bulkDelete,
+  /** PM↑ bulk-assign Module (DOMAIN parent) for a list of Epics. */
+  bulkSetParent: issueApi.bulkSetParent,
+
+  /** Project Domain → Epic outline (Table of Content view). */
+  findTableOfContent: issueApi.tableOfContent,
 
   /** Activity feed. */
   findActivities: issueApi.activities,

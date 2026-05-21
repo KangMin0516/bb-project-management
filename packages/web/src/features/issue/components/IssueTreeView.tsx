@@ -11,6 +11,12 @@ interface TreeNode {
   children: TreeNode[]
 }
 
+interface FlatNode {
+  issue: Issue
+  /** Indent depth relative to the group root (0 = first row inside the group). */
+  depth: number
+}
+
 interface TreeGroup {
   id: string
   label: string
@@ -19,11 +25,11 @@ interface TreeGroup {
   nodes: TreeNode[]
 }
 
-function flattenNodes(nodes: TreeNode[]): Issue[] {
-  const result: Issue[] = []
+function flattenNodes(nodes: TreeNode[], depth = 0): FlatNode[] {
+  const result: FlatNode[] = []
   for (const node of nodes) {
-    result.push(node.issue)
-    result.push(...flattenNodes(node.children))
+    result.push({ issue: node.issue, depth })
+    result.push(...flattenNodes(node.children, depth + 1))
   }
   return result
 }
@@ -53,7 +59,8 @@ function buildTree(issues: Issue[]): TreeGroup[] {
     return { issue, children }
   }
 
-  // Count all descendants (including nested)
+  // Count visible rows under a node (all descendants, recursively).
+  // Excludes the node itself — the group header already represents it.
   function countDescendants(node: TreeNode): number {
     let count = node.children.length
     for (const child of node.children) {
@@ -62,13 +69,27 @@ function buildTree(issues: Issue[]): TreeGroup[] {
     return count
   }
 
-  // Group: Epics with their descendants
+  // Three buckets aligned with the 4-level hierarchy:
+  //   1. Module groups (DOMAIN as group header, Epics inside, Tasks deeper)
+  //   2. Standalone Epic groups (Epic without Module parent)
+  //   3. Standalone Tasks (Tasks / Bugs without Epic parent)
+  const moduleGroups: TreeGroup[] = []
   const epicGroups: TreeGroup[] = []
   const standaloneNodes: TreeNode[] = []
 
   for (const issue of rootIssues) {
     const node = buildNode(issue)
-    if (issue.type === 'EPIC') {
+    if (issue.type === 'DOMAIN') {
+      moduleGroups.push({
+        id: issue.id,
+        label: issue.title,
+        icon: TYPE_ICONS.DOMAIN || '📁',
+        count: countDescendants(node),
+        // Module's children (Epics) become the visible rows; the Module
+        // itself lives in the group header so we don't double-render it.
+        nodes: node.children,
+      })
+    } else if (issue.type === 'EPIC') {
       epicGroups.push({
         id: issue.id,
         label: issue.title,
@@ -81,24 +102,30 @@ function buildTree(issues: Issue[]): TreeGroup[] {
     }
   }
 
-  // Epics with no children still show as a group with themselves as content
+  // Empty Epic groups still render the Epic itself so the user can
+  // open / drag it. Empty Module groups stay header-only.
   for (const group of epicGroups) {
     if (group.count === 0) {
-      // Epic with no children — show itself
       const epicIssue = issues.find((i) => i.id === group.id)!
       group.nodes = [{ issue: epicIssue, children: [] }]
       group.count = 1
     }
   }
 
-  const groups: TreeGroup[] = [...epicGroups]
+  const groups: TreeGroup[] = [...moduleGroups, ...epicGroups]
 
   if (standaloneNodes.length > 0) {
+    // Recursive count so the badge reflects every visible row (sub-tasks
+    // included), not just the root standalones.
+    const totalStandalone = standaloneNodes.reduce(
+      (sum, n) => sum + 1 + countDescendants(n),
+      0,
+    )
     groups.push({
       id: '__standalone__',
       label: 'Standalone Tasks',
       icon: '📝',
-      count: standaloneNodes.length,
+      count: totalStandalone,
       nodes: standaloneNodes,
     })
   }
@@ -118,6 +145,11 @@ export default function IssueTreeView({
   onEpicChange?: (issueId: string, newParentId: string | null) => void
 }) {
   const groups = useMemo(() => buildTree(issues), [issues])
+  const issueMap = useMemo(() => {
+    const map = new Map<string, Issue>()
+    for (const issue of issues) map.set(issue.id, issue)
+    return map
+  }, [issues])
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const toggleGroup = (id: string) => {
@@ -139,9 +171,15 @@ export default function IssueTreeView({
     // Same group — no change
     if (destGroupId === sourceGroupId) return
 
-    // Don't allow dragging epics themselves
+    // Don't allow dragging epics / modules themselves — re-parenting an
+    // Epic to a different Module uses the bulk-assign UI / detail panel.
     const draggedIssue = issues.find((i) => i.id === issueId)
-    if (!draggedIssue || draggedIssue.type === 'EPIC') return
+    if (!draggedIssue || draggedIssue.type === 'EPIC' || draggedIssue.type === 'DOMAIN') return
+
+    // Cross-Module drops don't change Task parent (Task's parent is an
+    // Epic, not a Module); skip when the destination is a Module group.
+    const destGroup = groups.find((g) => g.id === destGroupId)
+    if (destGroup && issueMap.get(destGroupId)?.type === 'DOMAIN') return
 
     const newParentId = destGroupId === '__standalone__' ? null : destGroupId
     onEpicChange(issueId, newParentId)
@@ -192,9 +230,8 @@ export default function IssueTreeView({
                     )}
                   >
                     {!isCollapsed &&
-                      flatIssues.map((issue, index) => {
+                      flatIssues.map(({ issue, depth }, index) => {
                         const isEpicSelf = issue.type === 'EPIC' && issue.id === group.id
-                        const depth = issue.parentId && issue.parentId !== group.id ? 1 : 0
                         return (
                           <Draggable
                             key={issue.id}
