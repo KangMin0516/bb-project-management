@@ -29,6 +29,12 @@ const MemberTasksPage = lazy(() => import('@/pages/MemberTasksPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 const ApiDocsPage = lazy(() => import('@/pages/ApiDocsPage'))
 const OAuthAuthorizePage = lazy(() => import('@/pages/OAuthAuthorizePage'))
+const SharePasscodePage = lazy(
+  () => import('@/features/share-link/pages/SharePasscodePage'),
+)
+const SharedTimelinePage = lazy(
+  () => import('@/features/share-link/pages/SharedTimelinePage'),
+)
 
 function AuthGuard() {
   const { token, isLoading, loadUser } = useAuthStore()
@@ -56,6 +62,10 @@ export function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
+      {/* Public share-link routes — outside AuthGuard. Clients without
+          a BB PM account land here from /share/:token URLs. */}
+      <Route path="/share/:token" element={<SharePasscodePage />} />
+      <Route path="/share/:token/timeline" element={<SharedTimelinePage />} />
 
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>

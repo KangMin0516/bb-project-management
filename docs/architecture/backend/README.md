@@ -50,6 +50,7 @@
 | Response envelope | `src/common/interceptors/transform.interceptor.ts` |
 | Error → HTTP mapping | `src/common/filters/http-exception.filter.ts` |
 | Schedulers | `src/issue/archive.scheduler.ts`, `src/standup/standup.scheduler.ts`, `src/report/report.scheduler.ts` |
+| Public share-link feature | [`public-share-link.md`](./public-share-link.md) — two JWT lanes, whitelist mapper, redirect/clear semantics |
 
 ## Conventions worth knowing up front
 

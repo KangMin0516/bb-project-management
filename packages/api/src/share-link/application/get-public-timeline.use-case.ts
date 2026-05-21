@@ -20,6 +20,14 @@ export interface PublicTimelineIssue {
   priority: string;
   startDate: string | null;
   dueDate: string | null;
+  /**
+   * Creation timestamp — included so the internal Timeline lib can
+   * anchor a bar at `createdAt` when `startDate` is null (matches the
+   * fallback used by `packages/web/src/features/timeline/lib.ts`).
+   * Not sensitive; the project's age is already implied by its key
+   * counter.
+   */
+  createdAt: string;
   parentId: string | null;
   assignee: { name: string; avatar: string | null } | null;
   labels: Array<{ name: string; color: string }>;
@@ -79,6 +87,7 @@ interface InternalIssueShape {
   priority: string;
   startDate: Date | string | null;
   dueDate: Date | string | null;
+  createdAt: Date | string;
   parentId: string | null;
   assignee?: { name: string; avatar: string | null } | null;
   labels?: Array<{ label: { name: string; color: string } }> | null;
@@ -99,6 +108,7 @@ export function toPublicTimelineIssue(raw: unknown): PublicTimelineIssue {
     priority: i.priority,
     startDate: toIsoString(i.startDate),
     dueDate: toIsoString(i.dueDate),
+    createdAt: toIsoString(i.createdAt) ?? new Date(0).toISOString(),
     parentId: i.parentId,
     assignee: i.assignee
       ? { name: i.assignee.name, avatar: i.assignee.avatar }

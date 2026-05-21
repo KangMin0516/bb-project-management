@@ -15,6 +15,12 @@ import { getEnum, setEnum, PARAM } from '@/shared/lib/filter-codec'
 import { toggleSet } from '@/shared/ui/filterState'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import type { Issue } from '@/features/issue/api'
+import { Share2 } from 'lucide-react'
+import ShareLinkDialog from '@/features/share-link/components/ShareLinkDialog'
+import {
+  isPmOrAdmin,
+  useProjectRole,
+} from '@/features/share-link/hooks/useProjectRole'
 
 const LABEL_WIDTH = 280
 const ROW_HEIGHT = 36
@@ -32,7 +38,11 @@ export default function TimelinePage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
   const [hoveredIssue, setHoveredIssue] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const projectRole = useProjectRole(projectId)
+  const canShare = isPmOrAdmin(projectRole)
 
   const groupBy = getEnum<GroupBy>(searchParams, PARAM.group, GROUP_BY_OPTIONS, 'epic')
   const setGroupBy = useCallback((value: GroupBy) => {
@@ -108,6 +118,17 @@ export default function TimelinePage() {
         setGroupBy={setGroupBy}
         assignedMembers={assignedMembers}
         hasFilters={hasFilters}
+        rightActions={canShare ? (
+          <button
+            type="button"
+            onClick={() => setShareDialogOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            title="Create a public share link to this timeline"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+        ) : undefined}
       />
 
       <div className="flex-1 overflow-hidden">
@@ -154,6 +175,14 @@ export default function TimelinePage() {
           context="board"
           onClose={() => setSelectedIssue(null)}
           onNavigate={setSelectedIssue}
+        />
+      )}
+
+      {canShare && (
+        <ShareLinkDialog
+          projectId={projectId}
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
         />
       )}
     </div>

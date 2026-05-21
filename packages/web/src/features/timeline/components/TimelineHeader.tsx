@@ -19,6 +19,8 @@ interface TimelineHeaderProps {
   setGroupBy: (next: GroupBy) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
   hasFilters: boolean
+  /** Slot for trailing actions (e.g. the Share button for PM↑). */
+  rightActions?: React.ReactNode
 }
 
 export default function TimelineHeader({
@@ -31,6 +33,7 @@ export default function TimelineHeader({
   setGroupBy,
   assignedMembers,
   hasFilters,
+  rightActions,
 }: TimelineHeaderProps) {
   return (
     <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
@@ -60,6 +63,12 @@ export default function TimelineHeader({
         <FilterDivider />
         <AssigneeAvatars members={assignedMembers} selected={filters.assignees} onToggle={toggleAssignee} />
         {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
+        {rightActions && (
+          <>
+            <FilterDivider />
+            {rightActions}
+          </>
+        )}
       </div>
     </div>
   )
