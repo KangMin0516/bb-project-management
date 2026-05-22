@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FolderOpen, Plus, MoveRight, Loader2 } from 'lucide-react'
+import { FolderOpen, Plus, MoveRight, Loader2, Trash2, Unlink } from 'lucide-react'
 import { issueRepository } from '@/features/issue/repository'
 import { projectRepository } from '@/features/project/repository'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 import CreateIssueModal from '@/features/issue/components/CreateIssueModal'
 import {
   Select,
@@ -80,6 +81,53 @@ export default function TableOfContentPage() {
     [projectId, reload],
   )
 
+  const handleRemoveEpicFromModule = useCallback(
+    async (epic: TableOfContentEpic) => {
+      const ok = await confirmDialog({
+        title: 'Remove epic from module?',
+        description: `"${epic.title}" will appear under Unassigned Epics. The epic itself is kept — you can re-assign it later from there.`,
+        confirmLabel: 'Remove',
+      })
+      if (!ok) return
+      void handleMoveToModule(epic.id, null)
+    },
+    [handleMoveToModule],
+  )
+
+  const handleDeleteModule = useCallback(
+    async (domain: { id: string; title: string; epics: TableOfContentEpic[] }) => {
+      if (!projectId) return
+      const n = domain.epics.length
+      const ok = await confirmDialog({
+        title: `Delete module "${domain.title}"?`,
+        description:
+          n > 0
+            ? `This module contains ${n} epic${n === 1 ? '' : 's'}. They will be kept and moved to Unassigned Epics so you can re-assign them later — but the module itself is deleted permanently.`
+            : 'The module will be deleted permanently. No epics will be affected.',
+        confirmLabel: 'Delete module',
+        destructive: true,
+      })
+      if (!ok) return
+      try {
+        await issueRepository.remove(projectId, domain.id)
+        useToastStore
+          .getState()
+          .addToast(
+            n > 0
+              ? `Module deleted · ${n} epic${n === 1 ? '' : 's'} moved to Unassigned`
+              : 'Module deleted',
+            'success',
+          )
+        reload()
+      } catch (err) {
+        useToastStore
+          .getState()
+          .addToast(getErrorMessage(err, 'Failed to delete module'), 'error')
+      }
+    },
+    [projectId, reload],
+  )
+
   const openCreate = (next: { type: 'DOMAIN' | 'EPIC'; parentId?: string }) => {
     setCreateDefaults(next)
     setCreateOpen(true)
@@ -126,6 +174,8 @@ export default function TableOfContentPage() {
                 projectId={projectId}
                 domain={d}
                 onAddEpic={() => openCreate({ type: 'EPIC', parentId: d.id })}
+                onDeleteModule={() => handleDeleteModule(d)}
+                onRemoveEpic={handleRemoveEpicFromModule}
               />
             ))}
 
@@ -162,9 +212,11 @@ interface ModuleCardProps {
   projectId: string
   domain: { id: string; title: string; epics: TableOfContentEpic[] }
   onAddEpic: () => void
+  onDeleteModule: () => void
+  onRemoveEpic: (epic: TableOfContentEpic) => void
 }
 
-function ModuleCard({ projectId, domain, onAddEpic }: ModuleCardProps) {
+function ModuleCard({ projectId, domain, onAddEpic, onDeleteModule, onRemoveEpic }: ModuleCardProps) {
   const totals = domain.epics.reduce(
     (acc, e) => ({ tasks: acc.tasks + e.taskCount, done: acc.done + e.doneCount }),
     { tasks: 0, done: 0 },
@@ -183,14 +235,24 @@ function ModuleCard({ projectId, domain, onAddEpic }: ModuleCardProps) {
             · {domain.epics.length} epic{domain.epics.length === 1 ? '' : 's'} · {totals.done}/{totals.tasks} done ({pct}%)
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onAddEpic}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-        >
-          <Plus className="h-3 w-3" />
-          Add Epic
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onAddEpic}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            <Plus className="h-3 w-3" />
+            Add Epic
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteModule}
+            title="Delete module"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </header>
 
       {domain.epics.length === 0 ? (
@@ -198,7 +260,12 @@ function ModuleCard({ projectId, domain, onAddEpic }: ModuleCardProps) {
       ) : (
         <ul>
           {domain.epics.map((e) => (
-            <EpicRow key={e.id} projectId={projectId} epic={e} />
+            <EpicRow
+              key={e.id}
+              projectId={projectId}
+              epic={e}
+              onRemove={() => onRemoveEpic(e)}
+            />
           ))}
         </ul>
       )}
@@ -206,10 +273,18 @@ function ModuleCard({ projectId, domain, onAddEpic }: ModuleCardProps) {
   )
 }
 
-function EpicRow({ projectId, epic }: { projectId: string; epic: TableOfContentEpic }) {
+function EpicRow({
+  projectId,
+  epic,
+  onRemove,
+}: {
+  projectId: string
+  epic: TableOfContentEpic
+  onRemove: () => void
+}) {
   const pct = epic.taskCount > 0 ? (epic.doneCount / epic.taskCount) * 100 : 0
   return (
-    <li className="flex items-center gap-3 border-t border-gray-100 px-4 py-2 first:border-t-0 dark:border-gray-700">
+    <li className="group flex items-center gap-3 border-t border-gray-100 px-4 py-2 first:border-t-0 dark:border-gray-700">
       <span className="w-5 text-center text-base">{TYPE_ICONS.EPIC}</span>
       <Link
         to={`/projects/${projectId}/lists?focus=${epic.id}`}
@@ -235,6 +310,14 @@ function EpicRow({ projectId, epic }: { projectId: string; epic: TableOfContentE
           style={{ width: `${pct}%` }}
         />
       </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        title="Remove from module"
+        className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 opacity-0 transition group-hover:opacity-100 hover:bg-amber-50 hover:text-amber-600 dark:text-gray-600 dark:hover:bg-amber-900/30 dark:hover:text-amber-400"
+      >
+        <Unlink className="h-3 w-3" />
+      </button>
     </li>
   )
 }

@@ -22,6 +22,13 @@
 
 ## Timeline
 
+### 2026-05-22 — Delete module + unlink epic from module on Table of Content
+**Added.** `TableOfContentPage` now exposes two missing destructive-ish actions PMs were asking for: a trash icon on every `ModuleCard` header to delete the module, and an `Unlink` icon on each `EpicRow` (visible on hover) to remove that epic from its current module. Both go through `confirmDialog()` so the user knows what happens before they click — module-delete shows the epic count and explicitly says they will be kept under "Unassigned Epics", and epic-unlink mentions the epic itself is not deleted, only re-parented to `null`.
+
+The BE didn't need a new endpoint: `DELETE /projects/:projectId/issues/:issueId` already works on `DOMAIN` rows, and the Prisma schema declares `parent.onDelete: SetNull` for `Issue.parent`, so child Epics' `parentId` flips to `null` automatically when the parent Domain row is deleted — they fall straight into the existing Unassigned Epics section of the same page on next refetch. Epic-unlink reuses `bulkSetParent(projectId, [epicId], null)` which already powered the orphan-→-module flow in the reverse direction. Toast on success names how many epics moved so the user can verify the cascade visually.
+
+- Source: `packages/web/src/pages/TableOfContentPage.tsx` (new `handleDeleteModule` / `handleRemoveEpicFromModule` use cases, new `Trash2` button on `ModuleCard` header, new hover-revealed `Unlink` button on `EpicRow`).
+
 ### 2026-05-21 — Public timeline endpoint + `ShareLink` model (PM-60 PR1)
 **Added.** New module `packages/api/src/share-link/` exposes a Timeline view of any project under a passcode-gated public URL. The model `ShareLink` (table `share_links`, migration `20260521100415_add_share_link`) stores `token` (32 hex, unique), bcrypt-hashed `passcodeHash`, `scopes ShareScope[]` (Phase 1 only `TIMELINE`), optional `expiresAt`, and the brute-force counters (`failedAttempts`, `lockedUntil`). One Project can have many ShareLinks (PM creates one per external client), each `createdBy` a user — relations cascade on Project delete, restrict on User delete (auditing).
 
