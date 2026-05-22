@@ -20,8 +20,10 @@ import {
 import { toIssueShape } from '../api/toIssueShape'
 import PublicIssueModal from '../components/PublicIssueModal'
 
-const LABEL_WIDTH = 280
+const LABEL_WIDTH_EXPANDED = 280
+const LABEL_WIDTH_COLLAPSED = 48
 const ROW_HEIGHT = 36
+const LABELS_COLLAPSED_KEY = 'timeline-labels-collapsed'
 
 /**
  * Read-only Timeline rendered from the public API. Reuses the same leaf
@@ -44,6 +46,16 @@ export default function SharedTimelinePage() {
   const navigate = useNavigate()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
+  const [labelsCollapsed, setLabelsCollapsed] = useState<boolean>(
+    () => localStorage.getItem(LABELS_COLLAPSED_KEY) === 'true',
+  )
+  const toggleLabelsCollapsed = () => {
+    setLabelsCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(LABELS_COLLAPSED_KEY, String(next))
+      return next
+    })
+  }
   const [hoveredIssue, setHoveredIssue] = useState<
     { id: string; x: number; y: number } | null
   >(null)
@@ -183,7 +195,9 @@ export default function SharedTimelinePage() {
                 groupBy="epic"
                 projectKey={projectQuery.data?.projectKey}
                 rowHeight={ROW_HEIGHT}
-                width={LABEL_WIDTH}
+                width={labelsCollapsed ? LABEL_WIDTH_COLLAPSED : LABEL_WIDTH_EXPANDED}
+                collapsed={labelsCollapsed}
+                onToggleCollapsed={toggleLabelsCollapsed}
                 onSelectIssue={setSelectedIssue}
                 onToggleEpic={toggleEpicCollapse}
               />

@@ -18,6 +18,19 @@
 
 ## Timeline
 
+### 2026-05-22 — Timeline: collapsible labels + drag-to-set-dates + bar edge resize (PM-65)
+**Added.** Three gestural improvements to the project Timeline view, bundled because they share the same `useTimelineDateDrag` hook and TimelineChart edit window. Spec + decisions: [`docs/plans/timeline-drag-dates.md`](../plans/timeline-drag-dates.md).
+
+1. **Collapsible label column.** The fixed 280 px "Issues" column ate ~25 % of horizontal screen real estate on a 13" laptop. A new `PanelLeftClose` / `PanelLeftOpen` chevron in the column header collapses it to 48 px (status dot + type icon only; full title in a `title` tooltip). Persisted to `localStorage['timeline-labels-collapsed']`; respected by both `TimelinePage` and `SharedTimelinePage` (public share view) so client guests see the same option.
+2. **Drag-to-set-dates.** Hovering a chart row reveals an affordance — `MoveHorizontal` icon at today's column for issues with no dates, or a tiny edge handle on bars with one date — and dragging horizontally commits the date pair on release. From-today drags set the missing pair (`startDate = today, dueDate = cursor` for right-drag; reverse for left). From-edge drags on one-sided issues set the missing date with the existing date as anchor. A 3 px click-vs-drag threshold suppresses noisy clicks; `Escape` cancels the drag mid-gesture; `window.blur` cancels too. The real bar dims to 30 % during drag and a small floating label near the cursor shows the would-be range. Optimistic update via TanStack `setQueryData` so the bar materialises before the network round-trip; on 4xx/5xx the previous payload is restored and a toast surfaces the error.
+3. **Bar edge resize.** Issues with both dates set show edge handles on both sides; dragging an edge moves only that date (`resize-left` → startDate; `resize-right` → dueDate), with the other date anchored. Clamped so `startDate ≤ dueDate - 1 day` — drag visual stops at the clamp.
+
+Backend is unchanged — every gesture calls the existing `PATCH /api/projects/:projectId/issues/:issueId` with the new date pair. The pixel-to-date math lives in a new pure helper `pixelToDate(offset, rangeStart, rangeEnd, chartWidthPx)` in `features/timeline/lib.ts`; the chart's inner wrapper feeds its `getBoundingClientRect()` in so layout reflows (resize, sidebar collapse) don't break the snap.
+
+Smoke plan executed in this PR is documented in the plan doc §3 Step 8; needs manual browser pass before close (Playwright doesn't reliably synthesise drag on the timeline grid yet).
+
+- Source: `packages/web/src/features/timeline/hooks/useTimelineDateDrag.ts` (new), `packages/web/src/features/timeline/lib.ts` (`pixelToDate` + `clampDate` helpers), `packages/web/src/features/timeline/components/TimelineChart.tsx` (affordances + ghost bar + dim-during-drag), `packages/web/src/features/timeline/components/TimelineLabelColumn.tsx` (collapsed render mode + header chevron), `packages/web/src/pages/TimelinePage.tsx` (mount hook + collapsed state), `packages/web/src/features/share-link/pages/SharedTimelinePage.tsx` (collapsed state only — drag intentionally not exposed on the public read-only view).
+
 ### 2026-05-22 — Project sidebar UX: popover selector, scrollable nav, "Module" rename
 **Changed.** Four small fixes to `AppLayout.tsx` that the existing sidebar had been quietly failing at as the workspace grew:
 

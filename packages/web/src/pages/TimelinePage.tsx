@@ -5,6 +5,7 @@ import { useTimelineDateRange } from '@/features/timeline/hooks/useTimelineDateR
 import { useTimelineGroups } from '@/features/timeline/hooks/useTimelineGroups'
 import { useTimelineRows } from '@/features/timeline/hooks/useTimelineRows'
 import { useFilteredIssues } from '@/features/timeline/hooks/useFilteredIssues'
+import { useTimelineDateDrag } from '@/features/timeline/hooks/useTimelineDateDrag'
 import TimelineHeader from '@/features/timeline/components/TimelineHeader'
 import TimelineLabelColumn from '@/features/timeline/components/TimelineLabelColumn'
 import TimelineChart from '@/features/timeline/components/TimelineChart'
@@ -22,8 +23,10 @@ import {
   useProjectRole,
 } from '@/features/share-link/hooks/useProjectRole'
 
-const LABEL_WIDTH = 280
+const LABEL_WIDTH_EXPANDED = 280
+const LABEL_WIDTH_COLLAPSED = 48
 const ROW_HEIGHT = 36
+const LABELS_COLLAPSED_KEY = 'timeline-labels-collapsed'
 
 /**
  * Composition root for the project timeline. All data, filtering, and
@@ -39,7 +42,20 @@ export default function TimelinePage() {
   const [collapsedEpics, setCollapsedEpics] = useState<Set<string>>(new Set())
   const [hoveredIssue, setHoveredIssue] = useState<{ id: string; x: number; y: number } | null>(null)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [labelsCollapsed, setLabelsCollapsed] = useState<boolean>(
+    () => localStorage.getItem(LABELS_COLLAPSED_KEY) === 'true',
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const toggleLabelsCollapsed = useCallback(() => {
+    setLabelsCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(LABELS_COLLAPSED_KEY, String(next))
+      return next
+    })
+  }, [])
+
+  const labelWidth = labelsCollapsed ? LABEL_WIDTH_COLLAPSED : LABEL_WIDTH_EXPANDED
 
   const projectRole = useProjectRole(projectId)
   const canShare = isPmOrAdmin(projectRole)
@@ -66,6 +82,8 @@ export default function TimelinePage() {
     }
     return [...map.values()]
   }, [allIssues])
+
+  const dateDrag = useTimelineDateDrag({ projectId: projectId ?? '', dateRange })
 
   const todayOffset = useMemo(() => {
     const now = startOfDay(new Date())
@@ -146,7 +164,9 @@ export default function TimelinePage() {
                 groupBy={groupBy}
                 projectKey={project?.key}
                 rowHeight={ROW_HEIGHT}
-                width={LABEL_WIDTH}
+                width={labelWidth}
+                collapsed={labelsCollapsed}
+                onToggleCollapsed={toggleLabelsCollapsed}
                 onSelectIssue={setSelectedIssue}
                 onToggleEpic={toggleEpicCollapse}
               />
@@ -157,6 +177,7 @@ export default function TimelinePage() {
                 rowHeight={ROW_HEIGHT}
                 onSelectIssue={setSelectedIssue}
                 onHover={handleHover}
+                drag={dateDrag}
               />
             </div>
           </div>

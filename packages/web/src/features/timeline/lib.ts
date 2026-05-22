@@ -49,6 +49,35 @@ export function computeBarStyle(issue: Issue, startDate: Date, endDate: Date): B
   }
 }
 
+export function clampDate(d: Date, min: Date, max: Date): Date {
+  if (d < min) return min
+  if (d > max) return max
+  return d
+}
+
+/**
+ * Convert a pixel offset (from the chart's inner-wrapper left edge) into a
+ * day-aligned Date inside the timeline's [start, end] window. Snaps to the
+ * nearest day boundary so the gesture lands on whole days instead of jittery
+ * sub-day fractions. Used by the drag-to-set-dates hook.
+ */
+export function pixelToDate(
+  pixelOffsetFromChartLeft: number,
+  rangeStart: Date,
+  rangeEnd: Date,
+  chartWidthPx: number,
+): Date {
+  if (chartWidthPx <= 0) return startOfDay(rangeStart)
+  const totalDays = Math.max(
+    1,
+    Math.round((rangeEnd.getTime() - rangeStart.getTime()) / DAY_MS),
+  )
+  const dayWidth = chartWidthPx / totalDays
+  const dayOffset = Math.round(pixelOffsetFromChartLeft / dayWidth)
+  const target = new Date(rangeStart.getTime() + dayOffset * DAY_MS)
+  return clampDate(startOfDay(target), startOfDay(rangeStart), startOfDay(rangeEnd))
+}
+
 export type GroupBy = 'epic' | 'type' | 'assignee'
 export const GROUP_BY_OPTIONS = ['epic', 'type', 'assignee'] as const satisfies readonly GroupBy[]
 
