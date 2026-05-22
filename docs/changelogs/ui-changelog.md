@@ -18,6 +18,22 @@
 
 ## Timeline
 
+### 2026-05-22 — Project sidebar UX: popover selector, scrollable nav, "Module" rename
+**Changed.** Four small fixes to `AppLayout.tsx` that the existing sidebar had been quietly failing at as the workspace grew:
+
+1. **Project selector → searchable popover.** The "Select Project" dropdown used to expand inline below the trigger button, pushing every nav item (Home/Standup/Admin/…/Dashboard/Board/…/Settings) down the sidebar. Past a dozen projects it pushed real navigation off-screen; past 50 it became unusable. Replaced with a shadcn `Popover` containing a `Command` palette (search input + scrollable list capped at `max-h-72` + "+ New Project" as a separate group). Trigger look is unchanged. The popover floats via Radix Portal so the sidebar layout stays fixed regardless of project count. The old click-outside `useEffect` was removed — Popover handles dismiss natively.
+2. **Nav list scrolls within the sidebar.** The `<nav>` was `flex-1` but missing `overflow-y-auto`, so a long list (admin user sees 6+ global items + 9 project items) pushed the bottom user panel (theme toggle / avatar / logout) off-screen. Added `overflow-y-auto [scrollbar-width:thin]` — top and bottom panels now stay fixed; only the nav itself scrolls.
+3. **"Table of Content" sidebar label → "Module".** Pure cosmetic — route, page component, BE endpoint (`/issues/table-of-content`), and types (`TableOfContent`, `TableOfContentDomain`, `TableOfContentEpic`) all keep the original name so external bookmarks / MCP tool / Slack unfurl don't break. Only the human-visible label is renamed to match how the domain layer talks about `DOMAIN` rows ("Module") everywhere else.
+
+- Source: `packages/web/src/widgets/AppLayout/AppLayout.tsx`.
+
+### 2026-05-22 — Share-links manage page + sidebar + Settings entry (PM-60 PR3)
+**Added.** A dedicated PM-facing page at `/projects/:projectId/share-links` for managing every public share link on a project, plus a "Share Links" entry in the project sidebar (PM↑ only) and a card in Settings linking to it. PR2 already exposed a quick-access "Manage" tab inside the Share dialog on the Timeline toolbar, but that surface is one column of compact rows — fine for a glance, not enough for an audit. The new page is the spec-mandated long form (per `docs/plans/public-share-link.md` §5 row 5) with an 8-column table (Created, Created by, Scopes, Expires, Last accessed, Views, Status, Actions), per-row actions (Copy URL, Rotate passcode, Revoke), a "New share link" CTA that opens the existing `ShareLinkDialog`, and a passcode-rotate modal with one-shot reveal of the new value (AWS-style — bcrypt-hashed server-side, can only be rotated, not retrieved).
+
+Role gating mirrors the BE `RolesGuard` (`@Roles(ADMIN, PM)`): the sidebar entry only renders when `useProjectRole(projectId)` is PM↑ (or the user is a superuser) so DEVELOPERs never see the link; the Settings card is conditionally rendered behind `isAdminOrPm`; and a DEVELOPER who lands on the URL via a direct link sees a "PM↑ only" placeholder with a Back link instead of a 403. Reuses `useProjectRole` from PR2, the same `shareLinkApi` client, and the same `confirmDialog()` flow for the destructive Revoke action (which, on success, makes the public URL return 410 Gone).
+
+- Source: `packages/web/src/pages/ShareLinksPage.tsx` (new), `packages/web/src/features/project/components/settings/ShareLinksSection.tsx` (new), `packages/web/src/pages/SettingsPage.tsx` (wire section behind `isAdminOrPm`), `packages/web/src/widgets/AppLayout/AppLayout.tsx` (sidebar entry gated by `useProjectRole`), `packages/web/src/app/router/index.tsx` (register route under `ProjectRouteGate`).
+
 ### 2026-05-21 — Public share-link FE route moves from `/share/:token` to `/s/:token` (PM-60 PR2 follow-up)
 **Fixed.** PR2 used `/share/:token` for the public passcode + timeline routes. That collided with the production nginx config (`packages/web/nginx.conf:41`), which rewrites every `/share/*` to `/api/share/*` and proxies to the backend so the existing OG-unfurl `ShareController` can answer Slack/Twitter crawlers on `/share/PITB-12`. Hitting `https://pm.burningbros.kr/share/<32-hex-token>` in prod therefore returned `{ "success": false, "statusCode": 404, "message": "Invalid issue key" }` — the OG controller tried to parse the token as `KEY-NUMBER`.
 

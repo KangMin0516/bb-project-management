@@ -35,6 +35,7 @@ const SharePasscodePage = lazy(
 const SharedTimelinePage = lazy(
   () => import('@/features/share-link/pages/SharedTimelinePage'),
 )
+const ShareLinksPage = lazy(() => import('@/pages/ShareLinksPage'))
 
 function AuthGuard() {
   const { token, isLoading, loadUser } = useAuthStore()
@@ -94,6 +95,7 @@ export function AppRouter() {
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="credentials" element={<CredentialsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="share-links" element={<ShareLinksPage />} />
           </Route>
         </Route>
       </Route>

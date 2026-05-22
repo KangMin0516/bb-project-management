@@ -16,6 +16,7 @@ import JoinRequestsSection from '@/features/project/components/settings/JoinRequ
 import LabelsSection from '@/features/project/components/settings/LabelsSection'
 import ComponentsSection from '@/features/project/components/settings/ComponentsSection'
 import DangerZoneSection from '@/features/project/components/settings/DangerZoneSection'
+import ShareLinksSection from '@/features/project/components/settings/ShareLinksSection'
 import SlackIntegration from '@/features/integrations/slack/components/SlackIntegration'
 import GitHubIntegration from '@/features/integrations/github/components/GitHubIntegration'
 import DailyReportSettings from '@/features/report/components/DailyReportSettings'
@@ -107,6 +108,8 @@ export default function SettingsPage() {
         onUpdate={(id, data) => components.update.mutate({ id, data })}
         onDelete={(id) => components.remove.mutate(id)}
       />
+
+      {isAdminOrPm && <ShareLinksSection projectId={resolvedId} />}
 
       <SlackIntegration />
       <GitHubIntegration projectId={projectId} />

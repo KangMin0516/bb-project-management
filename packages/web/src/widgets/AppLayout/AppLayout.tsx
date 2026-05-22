@@ -21,6 +21,7 @@ import {
   FileText,
   FolderKanban,
   Home,
+  KeyRound,
   LayoutDashboard,
   List,
   ListChecks,
@@ -38,7 +39,19 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { isPmOrAdmin, useProjectRole } from '@/features/share-link/hooks/useProjectRole'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/shared/ui/command'
+import { Plus } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 const THEME_OPTIONS: { value: Theme; icon: typeof Sun; title: string }[] = [
@@ -160,13 +173,6 @@ export default function AppLayout() {
 
   const currentProject = projects?.find((p) => p.id === projectId || p.key === projectId)
 
-  useEffect(() => {
-    if (!showProjects) return
-    const handleClick = () => setShowProjects(false)
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [showProjects])
-
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -184,16 +190,22 @@ export default function AppLayout() {
     { to: '/api-docs', icon: BookOpen, label: 'API Docs' },
   ]
 
+  const projectRole = useProjectRole(projectId)
+  const canManageShareLinks = isPmOrAdmin(projectRole) || !!user?.isSuperuser
+
   const projectNavItems = projectId
     ? [
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
-        { to: `/projects/${projectId}/table-of-content`, icon: ListTree, label: 'Table of Content' },
+        { to: `/projects/${projectId}/table-of-content`, icon: ListTree, label: 'Module' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/lists`, icon: List, label: 'Lists' },
         { to: `/projects/${projectId}/calendar`, icon: Calendar, label: 'Calendar' },
         { to: `/projects/${projectId}/timeline`, icon: ChartGantt, label: 'Timeline' },
         { to: `/projects/${projectId}/credentials`, icon: Shield, label: 'Credentials' },
+        ...(canManageShareLinks
+          ? [{ to: `/projects/${projectId}/share-links`, icon: KeyRound, label: 'Share Links' }]
+          : []),
         { to: `/projects/${projectId}/settings`, icon: Settings, label: 'Settings' },
       ]
     : []
@@ -225,46 +237,62 @@ export default function AppLayout() {
         {/* Project Selector */}
         {!collapsed ? (
           <div className="border-b border-gray-200 dark:border-gray-700 p-3">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowProjects(!showProjects) }}
-              className="flex w-full items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-            >
-              <span className="truncate">
-                {currentProject ? `${currentProject.key} - ${currentProject.name}` : 'Select Project'}
-              </span>
-              <ChevronDown className="h-4 w-4 shrink-0" />
-            </button>
-            {showProjects && (
-              <div className="mt-1 space-y-0.5">
-                {projects?.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      navigate(`/projects/${p.key}/board`)
-                      setShowProjects(false)
-                    }}
-                    className={cn(
-                      'flex w-full items-center rounded-md px-3 py-1.5 text-sm',
-                      (p.id === projectId || p.key === projectId)
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
-                    )}
-                  >
-                    <span className="mr-2 font-mono text-xs text-gray-400 dark:text-gray-500">{p.key}</span>
-                    <span className="truncate">{p.name}</span>
-                  </button>
-                ))}
+            <Popover open={showProjects} onOpenChange={setShowProjects}>
+              <PopoverTrigger asChild>
                 <button
-                  onClick={() => {
-                    navigate('/projects/new')
-                    setShowProjects(false)
-                  }}
-                  className="flex w-full items-center rounded-md px-3 py-1.5 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30"
+                  className="flex w-full items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
                 >
-                  + New Project
+                  <span className="truncate">
+                    {currentProject ? `${currentProject.key} - ${currentProject.name}` : 'Select Project'}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0" />
                 </button>
-              </div>
-            )}
+              </PopoverTrigger>
+              <PopoverContent align="start" sideOffset={6} className="w-64 p-0">
+                <Command>
+                  <CommandInput placeholder="Search projects…" />
+                  <CommandList className="max-h-72">
+                    <CommandEmpty>No projects match.</CommandEmpty>
+                    <CommandGroup>
+                      {projects?.map((p) => {
+                        const active = p.id === projectId || p.key === projectId
+                        return (
+                          <CommandItem
+                            key={p.id}
+                            value={`${p.key} ${p.name}`}
+                            onSelect={() => {
+                              navigate(`/projects/${p.key}/board`)
+                              setShowProjects(false)
+                            }}
+                            className={cn(
+                              'flex items-center gap-2',
+                              active && 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+                            )}
+                          >
+                            <span className="font-mono text-[11px] text-gray-400 dark:text-gray-500">{p.key}</span>
+                            <span className="truncate">{p.name}</span>
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                    <CommandSeparator />
+                    <CommandGroup>
+                      <CommandItem
+                        value="__new-project__"
+                        onSelect={() => {
+                          navigate('/projects/new')
+                          setShowProjects(false)
+                        }}
+                        className="text-primary-600 dark:text-primary-400"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        New Project
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         ) : (
           <div className="flex justify-center border-b border-gray-200 dark:border-gray-700 py-3">
@@ -273,7 +301,7 @@ export default function AppLayout() {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 space-y-0.5 p-2">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2 [scrollbar-width:thin]">
           {globalNavItems.map((item) => (
             <Link
               key={item.to}
