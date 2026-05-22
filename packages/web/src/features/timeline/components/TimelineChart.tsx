@@ -178,8 +178,6 @@ function ChartRow({
       : issue
   const barStyle = computeBarStyle(displayIssue, startDate, endDate)
   const isDot = !displayIssue.dueDate
-  const hovered = drag?.hoverIssueId === issue.id
-
   return (
     <div
       className={cn(
@@ -189,8 +187,6 @@ function ChartRow({
           : 'border-gray-100 dark:border-gray-700',
       )}
       style={{ height: rowHeight }}
-      onMouseEnter={() => drag?.setHoverIssueId(issue.id)}
-      onMouseLeave={() => drag?.setHoverIssueId(null)}
     >
       <WeekGridlines weeks={weeks} muted={!isEpic} />
       {todayVisible && (
@@ -215,8 +211,11 @@ function ChartRow({
         onMouseLeave={() => onHover(null)}
       />
 
-      {/* Drag affordances — only when not currently dragging any row */}
-      {drag && !drag.disabled && hovered && !drag.session && (
+      {/* Drag affordances — always rendered when drag is enabled so the
+          empty-issue today icon remains a visible hint. CSS opacity +
+          group-hover handles the show/hide. Hide while another drag is
+          in flight so the user can't accidentally chain gestures. */}
+      {drag && !drag.disabled && !drag.session && (
         <DragAffordances
           issue={issue}
           isEpic={isEpic}
@@ -257,15 +256,21 @@ function DragAffordances({
   todayVisible: boolean
   onStart: (mode: DragMode, e: React.MouseEvent) => void
 }) {
-  // Empty issue → only the today affordance (if today is visible)
+  // Empty issue → drag affordance at today's column position. Always
+  // mounted (when today is visible) at a faint default opacity so PMs
+  // see it as a hint even before they hover, then opacity-100 on
+  // row-hover. The icon at `todayOffset` is intentionally not at the
+  // createdAt-fallback dot — the gesture's anchor is today, not the
+  // issue's creation date, so positioning the affordance at today
+  // teaches the gesture by example.
   if (!issue.startDate && !issue.dueDate) {
     if (!todayVisible) return null
     return (
       <button
         type="button"
         onMouseDown={(e) => onStart('create-from-today', e)}
-        title="Drag to set start/due dates"
-        className="absolute top-1/2 z-[3] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 opacity-0 shadow-sm ring-1 ring-gray-300 dark:ring-gray-600 transition-opacity group-hover:opacity-80"
+        title="Drag to set start/due dates from today"
+        className="absolute top-1/2 z-[3] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 opacity-40 shadow-sm ring-1 ring-gray-300 dark:ring-gray-600 transition-opacity hover:opacity-100 group-hover:opacity-100"
         style={{ left: `${todayOffset}%` }}
       >
         <MoveHorizontal className="h-3 w-3" />
