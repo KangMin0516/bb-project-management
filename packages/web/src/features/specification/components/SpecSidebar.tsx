@@ -52,7 +52,10 @@ export default function SpecSidebar({
   }
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    // Width is controlled by the outer wrapper in SpecificationsPage so the
+    // collapse/expand transition animates; the inner content keeps its
+    // intrinsic w-64 layout via the parent's overflow clip.
+    <div className="flex h-full w-64 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100">{projectKey} Specs</h1>
         <div className="flex items-center gap-0.5">
@@ -171,7 +174,7 @@ function SpecRow({
       className={cn(
         'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition cursor-pointer',
         isSelected
-          ? 'bg-primary-50 text-primary-700'
+          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200'
           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
         isDragging && 'shadow-lg ring-1 ring-primary-300 bg-white dark:bg-gray-800',
       )}

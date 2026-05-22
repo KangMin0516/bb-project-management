@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, PanelLeftOpen } from 'lucide-react'
+import { cn } from '@/shared/lib/utils'
 import { specRepository } from '@/features/specification/repository'
 import { projectRepository } from '@/features/project/repository'
 import { issueRepository } from '@/features/issue/repository'
@@ -113,7 +114,14 @@ export default function SpecificationsPage() {
 
   return (
     <div className="flex h-full">
-      {showSidebar ? (
+      {/* Sidebar open state — width animates 0 ↔ 256, content keeps its
+          intrinsic w-64 inside and gets clipped during transition. */}
+      <div
+        className={cn(
+          'shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out',
+          showSidebar ? 'w-64' : 'w-0',
+        )}
+      >
         <SpecSidebar
           projectKey={project?.key ?? ''}
           specs={specs.list}
@@ -125,8 +133,16 @@ export default function SpecificationsPage() {
           onClose={() => setShowSidebar(false)}
           onReorder={reorder}
         />
-      ) : (
-        <div className="flex shrink-0 flex-col items-center border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-1.5">
+      </div>
+      {/* Collapsed rail — complementary width so the two animate in lockstep
+          (closing the sidebar opens the rail and vice versa). */}
+      <div
+        className={cn(
+          'shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out',
+          showSidebar ? 'w-0' : 'w-12',
+        )}
+      >
+        <div className="flex h-full w-12 flex-col items-center border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-1.5">
           <button
             onClick={() => setShowSidebar(true)}
             className="rounded p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
@@ -135,7 +151,7 @@ export default function SpecificationsPage() {
             <PanelLeftOpen className="h-4 w-4" />
           </button>
         </div>
-      )}
+      </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {specs.detail ? (
@@ -172,8 +188,17 @@ export default function SpecificationsPage() {
                 )}
               </div>
 
-              {showComments && (
-                <div className="w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              {/* Right comments panel — width animates 0 ↔ 320; the inner
+                  div keeps its w-80 so content doesn't reflow during the
+                  transition. Panel stays mounted so scroll position +
+                  composing-comment drafts survive a hide/show round-trip. */}
+              <div
+                className={cn(
+                  'shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out',
+                  showComments ? 'w-80' : 'w-0',
+                )}
+              >
+                <div className="h-full w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                   <SpecCommentPanel
                     projectId={projectId}
                     specId={specs.detail.id}
@@ -185,7 +210,7 @@ export default function SpecificationsPage() {
                     onScrollToSection={(id) => specContentRef.current?.scrollToSection(id)}
                   />
                 </div>
-              )}
+              </div>
             </div>
           </>
         ) : (

@@ -18,7 +18,23 @@
 
 ## Timeline
 
-### 2026-05-22 — IssueMetadata dark-mode + Created-by alignment polish
+### 2026-05-22 — Specs page: dark-mode active row + collapse animations
+**Fixed.** Three follow-ups on the Specifications page reported via the in-app annotation tool:
+
+1. **`SpecSidebar` active spec row** was rendered with `bg-primary-50 text-primary-700` and no dark-mode variant, so in dark theme the selected spec appeared as a light-blue pill on a dark background — jarring and lower-contrast than the surrounding rows. Added `dark:bg-primary-900/40 dark:text-primary-200`.
+2. **Left sidebar collapse / expand had no animation** — the page conditionally rendered either the full sidebar or a 48px collapsed rail, so the swap was instantaneous. Replaced with two sibling wrappers that animate `width` complementarily (`w-64 ↔ w-0` and `w-0 ↔ w-12`) over 200ms with `overflow-hidden` clipping the inner content during the transition. The inner `SpecSidebar` keeps its intrinsic `w-64` so its layout doesn't reflow mid-animation; the collapsed-rail button likewise lives inside a fixed-width container that is revealed by its wrapper's growing width.
+3. **Right comments panel close** had the same instant-pop problem. Same pattern: outer wrapper animates `w-80 ↔ w-0`, inner content holds `w-80`. As a side effect, `SpecCommentPanel` now stays mounted across hide/show round-trips, so any composing draft, scroll position, and section filter survive a toggle.
+
+- Source: `packages/web/src/features/specification/components/SpecSidebar.tsx` (active-row dark variant; root width controlled by outer wrapper), `packages/web/src/pages/SpecificationsPage.tsx` (replace conditional renders with width-animated wrappers for both left sidebar + right comments panel).
+
+### 2026-05-22 — Settings page: TOC sidebar + 2-col integrations + full-width fill
+**Changed.** The Settings page previously rendered as a single 768px-wide column centred under `mx-auto max-w-6xl`, which on a 1920px viewport left ~280px of empty gutter on each side and meant the user scrolled through 10 vertically-stacked sections to reach Danger Zone. Rebuilt the layout as:
+
+- **Sticky TOC sidebar** on the left (`w-44`, `lg:` only) with anchor links to General / Members / (Join Requests, when pending) / Labels / Components / (Share Links, admin-only) / Integrations / Daily Reports / Danger Zone. Each section gets `scroll-mt-6` so the anchor doesn't park flush against the top edge.
+- **No centred wrapper**: page is `flex gap-8 p-6` so the TOC sits flush against the AppLayout sidebar and the content column stretches to fill the rest of the viewport. The narrow-viewport breakpoint (`< lg`) hides the TOC and falls back to the old single-column flow.
+- **2-up integration grid**: Slack + GitHub integration cards sit in a `xl:grid-cols-2` grid since each card's body is short — keeps the page from feeling like a long single column. Daily Reports and Share Links remain full-width because their bodies are taller.
+
+- Source: `packages/web/src/pages/SettingsPage.tsx` (full rewrite of layout shell; section components are unchanged).
 **Fixed.** Three follow-ups on the metadata column after the per-name avatar refactor:
 
 1. The Assignee, Reviewer, Module, and Epic/Parent display spans only had `text-gray-700` — no `dark:` variant — so in dark mode the full name / title (e.g. "Văn Thương Đào", "Admin", "⚡ #12 KUG") rendered in near-invisible dark-gray-on-dark. The Created-by row, added with PM-76, already shipped with `dark:text-gray-300`, which made the rows look mismatched. All four legacy rows now match.
