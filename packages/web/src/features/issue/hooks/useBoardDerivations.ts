@@ -2,12 +2,27 @@ import { useMemo } from 'react'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from '@/features/issue/components/board/types'
 
+interface UseBoardDerivationsOptions {
+  /**
+   * When true, sub-tasks are surfaced as full cards in `parentOnlyBoard`
+   * (in addition to staying in `childrenMap` for the per-task expand UI).
+   * Wired to the `Sub-tasks` toolbar toggle (PM-70).
+   */
+  includeSubtasks?: boolean
+}
+
 /**
  * One pass over the raw board produces every secondary structure the
  * page needs: per-id lookup, sub-task index, parent-only filtered view,
- * and the assignee/label/component/epic facets shown in the toolbar.
+ * the assignee/label/component/epic facets shown in the toolbar, and
+ * (when `includeSubtasks` is on) the sub-task → epic-ancestor map the
+ * swimlane view needs to slot sub-tasks into their epic lane.
  */
-export function useBoardDerivations(board: Record<string, Issue[]> | undefined) {
+export function useBoardDerivations(
+  board: Record<string, Issue[]> | undefined,
+  options: UseBoardDerivationsOptions = {},
+) {
+  const includeSubtasks = options.includeSubtasks ?? false
   return useMemo(() => {
     const allIssuesById = new Map<string, Issue>()
     const childrenMap = new Map<string, ChildIssue[]>()
@@ -16,12 +31,14 @@ export function useBoardDerivations(board: Record<string, Issue[]> | undefined) 
     const labelMap = new Map<string, { id: string; name: string; color: string }>()
     const compMap = new Map<string, { id: string; name: string }>()
     const epics: Issue[] = []
+    const epicAncestorMap = new Map<string, string | null>()
 
     if (!board) {
       return {
         allIssuesById,
         childrenMap,
         parentOnlyBoard: undefined as Record<string, Issue[]> | undefined,
+        epicAncestorMap,
         assignedMembers: [] as { id: string; name: string; avatar: string | null }[],
         boardLabels: [] as { id: string; name: string; color: string }[],
         boardComponents: [] as { id: string; name: string }[],
@@ -48,6 +65,10 @@ export function useBoardDerivations(board: Record<string, Issue[]> | undefined) 
               : null,
           })
           childrenMap.set(issue.parentId, list)
+          // When the toggle is on, the sub-task ALSO renders as a full
+          // card. We add it to parents here so it lands in the same
+          // status column as a peer of its grandparent's tasks.
+          if (includeSubtasks) parents.push(issue)
         } else if (issue.type !== 'DOMAIN') {
           // DOMAINs are organisational rows (Modules) and don't belong
           // in the kanban status columns. Keep them in `allIssuesById`
@@ -64,17 +85,41 @@ export function useBoardDerivations(board: Record<string, Issue[]> | undefined) 
       parentOnlyBoard[status] = parents
     }
 
+    // Walk the parent chain for sub-tasks to find their epic ancestor.
+    // Used by `SwimlaneBoardView` to group sub-tasks into the right lane
+    // when `includeSubtasks` is on (sub-task.parentId is a TASK, not an
+    // EPIC, so the lane logic needs this extra hop).
+    if (includeSubtasks) {
+      for (const issue of allIssuesById.values()) {
+        if (issue.type !== 'SUB_TASK') continue
+        let cursor: Issue | undefined = issue
+        const seen = new Set<string>()
+        while (cursor?.parentId && !seen.has(cursor.parentId)) {
+          seen.add(cursor.parentId)
+          const parent = allIssuesById.get(cursor.parentId)
+          if (!parent) break
+          if (parent.type === 'EPIC') {
+            epicAncestorMap.set(issue.id, parent.id)
+            break
+          }
+          cursor = parent
+        }
+        if (!epicAncestorMap.has(issue.id)) epicAncestorMap.set(issue.id, null)
+      }
+    }
+
     const flatBoardIssues = Object.values(parentOnlyBoard).flat()
 
     return {
       allIssuesById,
       childrenMap,
       parentOnlyBoard,
+      epicAncestorMap,
       assignedMembers: [...assigneeMap.values()],
       boardLabels: [...labelMap.values()],
       boardComponents: [...compMap.values()],
       boardEpics: epics,
       flatBoardIssues,
     }
-  }, [board])
+  }, [board, includeSubtasks])
 }

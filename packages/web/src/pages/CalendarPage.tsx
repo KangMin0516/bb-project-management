@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { DragDropContext } from '@hello-pangea/dnd'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { issueRepository } from '@/features/issue/repository'
+import { projectRepository } from '@/features/project/repository'
+import { componentApi } from '@/features/project/component-api'
 import { useCalendarData } from '@/features/calendar/hooks/useCalendarData'
 import { useUnscheduledIssues } from '@/features/calendar/hooks/useUnscheduledIssues'
 import { useCalendarDnd } from '@/features/calendar/hooks/useCalendarDnd'
 import { useFilteredIssues } from '@/features/timeline/hooks/useFilteredIssues'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
-import { toggleSet } from '@/shared/ui/filterState'
+import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
 import { getBool, setBool } from '@/shared/lib/filter-codec'
 import CalendarHeader from '@/features/calendar/components/CalendarHeader'
 import EmptyMonthBanner from '@/features/calendar/components/EmptyMonthBanner'
@@ -17,6 +20,7 @@ import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import type { Issue } from '@/features/issue/api'
 
 const UNSCHEDULED_PARAM = 'unscheduled'
+const ARCHIVED_PARAM = 'archived'
 
 /**
  * Composition root for the project calendar. Month grid of dueDate-pinned
@@ -40,11 +44,65 @@ export default function CalendarPage() {
   const { filters, setFilters, resetFilters } = useFilterSearchParams()
   const queryClient = useQueryClient()
 
+  const showArchived = getBool(searchParams, ARCHIVED_PARAM, false)
+  const setShowArchived = useCallback(
+    (value: boolean) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          setBool(next, ARCHIVED_PARAM, value, false)
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
   const { project, issues: allIssues, total, isLoading } = useCalendarData(
     projectId ?? '',
     cursorMonth,
+    { includeArchived: showArchived },
   )
-  const filteredIssues = useFilteredIssues(allIssues, filters)
+  // Match the Lists convention: the Archived toggle is a *view switch*,
+  // not a superset — off shows only active rows (BE already excludes
+  // archived via the default), on shows ONLY archived rows. The BE
+  // returns active + archived when `includeArchived=true` is sent, so
+  // we strip the active rows client-side here.
+  const visibleIssues = useMemo(
+    () => (showArchived ? allIssues.filter((i) => i.archivedAt != null) : allIssues),
+    [allIssues, showArchived],
+  )
+  const filteredIssues = useFilteredIssues(visibleIssues, filters)
+
+  // Project metadata for the FiltersPopover (labels / components / modules / epics).
+  const projectLabelsQuery = useQuery({
+    queryKey: ['labels', projectId],
+    queryFn: () => projectRepository.listLabels(projectId!),
+    enabled: !!projectId,
+  })
+  const projectComponentsQuery = useQuery({
+    queryKey: ['components', projectId],
+    queryFn: () => componentApi.list(projectId!),
+    enabled: !!projectId,
+  })
+  const tocQuery = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId!),
+    enabled: !!projectId,
+  })
+  const projectModules = useMemo(
+    () => tocQuery.data?.domains.map((d) => ({ id: d.id, title: d.title })) ?? [],
+    [tocQuery.data],
+  )
+  const projectEpics = useMemo(() => {
+    const fromDomains = tocQuery.data?.domains.flatMap((d) =>
+      d.epics.map((e) => ({ id: e.id, title: e.title })),
+    ) ?? []
+    const orphans =
+      tocQuery.data?.orphanEpics.map((e) => ({ id: e.id, title: e.title })) ?? []
+    return [...fromDomains, ...orphans]
+  }, [tocQuery.data])
 
   // Unscheduled panel — opens by default; explicit `?unscheduled=0` collapses.
   const unscheduledOpen = !searchParams.has(UNSCHEDULED_PARAM)
@@ -101,13 +159,7 @@ export default function CalendarPage() {
     setCursorMonth(new Date(now.getFullYear(), now.getMonth(), 1))
   }, [])
 
-  const hasFilters = !!(
-    filters.search ||
-    filters.status.size ||
-    filters.priority.size ||
-    filters.type.size ||
-    filters.assignees.size
-  )
+  const hasFilters = hasActiveFilters(filters)
 
   if (!projectId) return null
 
@@ -124,7 +176,13 @@ export default function CalendarPage() {
         resetFilters={resetFilters}
         toggleAssignee={toggleAssignee}
         assignedMembers={assignedMembers}
+        projectLabels={projectLabelsQuery.data ?? []}
+        projectComponents={projectComponentsQuery.data ?? []}
+        projectModules={projectModules}
+        projectEpics={projectEpics}
         hasFilters={hasFilters}
+        showArchived={showArchived}
+        setShowArchived={setShowArchived}
       />
 
       <DragDropContext onDragEnd={onDragEnd}>

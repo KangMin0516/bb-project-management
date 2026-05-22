@@ -12,7 +12,11 @@ import { getMonthGrid } from '@/features/calendar/lib'
  */
 const CALENDAR_LIMIT = 200
 
-export function useCalendarData(projectId: string, cursorMonth: Date) {
+export function useCalendarData(
+  projectId: string,
+  cursorMonth: Date,
+  options: { includeArchived?: boolean } = {},
+) {
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectRepository.findOne(projectId),
@@ -40,12 +44,13 @@ export function useCalendarData(projectId: string, cursorMonth: Date) {
 
   const monthKey = `${cursorMonth.getFullYear()}-${cursorMonth.getMonth()}`
   const issuesQuery = useQuery({
-    queryKey: ['issues', projectId, 'calendar', monthKey],
+    queryKey: ['issues', projectId, 'calendar', monthKey, options.includeArchived ? 'archived' : 'active'],
     queryFn: () =>
       issueRepository.findInProjectRaw(projectId, {
         limit: String(CALENDAR_LIMIT),
         dueDateFrom,
         dueDateTo,
+        ...(options.includeArchived ? { includeArchived: 'true' } : {}),
       }),
     enabled: !!projectId,
   })

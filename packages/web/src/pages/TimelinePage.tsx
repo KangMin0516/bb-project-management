@@ -1,5 +1,9 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { projectRepository } from '@/features/project/repository'
+import { componentApi } from '@/features/project/component-api'
+import { issueRepository } from '@/features/issue/repository'
 import { useTimelineData } from '@/features/timeline/hooks/useTimelineData'
 import { useTimelineDateRange } from '@/features/timeline/hooks/useTimelineDateRange'
 import { useTimelineGroups } from '@/features/timeline/hooks/useTimelineGroups'
@@ -13,7 +17,7 @@ import TimelineTooltip from '@/features/timeline/components/TimelineTooltip'
 import { startOfDay, type GroupBy, GROUP_BY_OPTIONS } from '@/features/timeline/lib'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { getEnum, setEnum, PARAM } from '@/shared/lib/filter-codec'
-import { toggleSet } from '@/shared/ui/filterState'
+import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
 import type { Issue } from '@/features/issue/api'
 import { Share2 } from 'lucide-react'
@@ -71,8 +75,37 @@ export default function TimelinePage() {
 
   const { project, issues: allIssues, isLoading } = useTimelineData(projectId ?? '')
   const filteredIssues = useFilteredIssues(allIssues, filters)
+
+  // Project metadata for the FiltersPopover (labels / components / modules / epics).
+  const projectLabelsQuery = useQuery({
+    queryKey: ['labels', projectId],
+    queryFn: () => projectRepository.listLabels(projectId!),
+    enabled: !!projectId,
+  })
+  const projectComponentsQuery = useQuery({
+    queryKey: ['components', projectId],
+    queryFn: () => componentApi.list(projectId!),
+    enabled: !!projectId,
+  })
+  const tocQuery = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId!),
+    enabled: !!projectId,
+  })
+  const projectModules = useMemo(
+    () => tocQuery.data?.domains.map((d) => ({ id: d.id, title: d.title })) ?? [],
+    [tocQuery.data],
+  )
+  const projectEpics = useMemo(() => {
+    const fromDomains = tocQuery.data?.domains.flatMap((d) =>
+      d.epics.map((e) => ({ id: e.id, title: e.title })),
+    ) ?? []
+    const orphans =
+      tocQuery.data?.orphanEpics.map((e) => ({ id: e.id, title: e.title })) ?? []
+    return [...fromDomains, ...orphans]
+  }, [tocQuery.data])
   const dateRange = useTimelineDateRange(filteredIssues)
-  const { epicGroups, groups } = useTimelineGroups(allIssues, filteredIssues, groupBy)
+  const { epicGroups, groups } = useTimelineGroups(allIssues, filteredIssues, groupBy, filters.sortStack)
   const rows = useTimelineRows(groupBy, epicGroups, groups, collapsedEpics)
 
   const assignedMembers = useMemo(() => {
@@ -114,13 +147,7 @@ export default function TimelinePage() {
     [hoveredIssue, allIssues],
   )
 
-  const hasFilters = !!(
-    filters.search ||
-    filters.status.size ||
-    filters.priority.size ||
-    filters.type.size ||
-    filters.assignees.size
-  )
+  const hasFilters = hasActiveFilters(filters)
 
   if (!projectId) return null
 
@@ -135,6 +162,10 @@ export default function TimelinePage() {
         groupBy={groupBy}
         setGroupBy={setGroupBy}
         assignedMembers={assignedMembers}
+        projectLabels={projectLabelsQuery.data ?? []}
+        projectComponents={projectComponentsQuery.data ?? []}
+        projectModules={projectModules}
+        projectEpics={projectEpics}
         hasFilters={hasFilters}
         rightActions={canShare ? (
           <button

@@ -227,11 +227,15 @@ interface FiltersPopoverProps {
   toggleLabel: (id: string) => void
   toggleComponent: (id: string) => void
   setEpicId: (id: string | null) => void
+  setModuleId?: (id: string | null) => void
   toggleEpicOwner?: (id: string) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
   boardLabels: { id: string; name: string; color: string }[]
   boardComponents: { id: string; name: string }[]
   boardEpics: { id: string; title: string }[]
+  /** Modules (DOMAIN issues) available on this project — drives the Module
+   *  section. Single-select like Epic; click an active row again to clear. */
+  boardModules?: { id: string; title: string }[]
   epicOwners?: { id: string; name: string; avatar: string | null }[]
   /** When true, hides the Epic Owner section. */
   hideEpicOwner?: boolean
@@ -247,11 +251,13 @@ export function FiltersPopover({
   toggleLabel,
   toggleComponent,
   setEpicId,
+  setModuleId,
   toggleEpicOwner,
   assignedMembers,
   boardLabels,
   boardComponents,
   boardEpics,
+  boardModules,
   epicOwners,
   hideEpicOwner,
 }: FiltersPopoverProps) {
@@ -265,6 +271,7 @@ export function FiltersPopover({
     filters.labels.size +
     filters.components.size +
     (filters.epicId ? 1 : 0) +
+    (filters.domainId ? 1 : 0) +
     (filters.epicOwners?.size ?? 0)
 
   return (
@@ -381,6 +388,20 @@ export function FiltersPopover({
                   onChange={() => toggleComponent(c.id)}
                 >
                   <span className="truncate">{c.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardModules && boardModules.length > 0 && setModuleId && (
+            <FilterSection title="Module">
+              {boardModules.map((m) => (
+                <CheckboxRow
+                  key={m.id}
+                  checked={filters.domainId === m.id}
+                  onChange={() => setModuleId(filters.domainId === m.id ? null : m.id)}
+                >
+                  <span className="truncate">{m.title}</span>
                 </CheckboxRow>
               ))}
             </FilterSection>

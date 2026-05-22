@@ -52,6 +52,7 @@ export default function BoardPage() {
   // swimlane defaults to true; explicit '0' opts out.
   const groupByEpic = !searchParams.has(PARAM.swimlane) ? true : getBool(searchParams, PARAM.swimlane, true)
   const showArchived = getBool(searchParams, PARAM.archived, false)
+  const showSubtasks = getBool(searchParams, 'subtasks', false)
   // TOC sidebar opens by default; ?toc=0 in the URL collapses it.
   const tocOpen = !searchParams.has('toc') ? true : getBool(searchParams, 'toc', true)
 
@@ -75,6 +76,10 @@ export default function BoardPage() {
   )
   const setGroupByEpic = useCallback(
     (value: boolean) => mutateParams((p) => setBool(p, PARAM.swimlane, value, true)),
+    [mutateParams],
+  )
+  const setShowSubtasks = useCallback(
+    (value: boolean) => mutateParams((p) => setBool(p, 'subtasks', value, false)),
     [mutateParams],
   )
   const toggleTocOpen = useCallback(
@@ -121,12 +126,13 @@ export default function BoardPage() {
     allIssuesById,
     childrenMap,
     parentOnlyBoard,
+    epicAncestorMap,
     assignedMembers,
     boardLabels,
     boardComponents,
     boardEpics,
     flatBoardIssues,
-  } = useBoardDerivations(viewBoard)
+  } = useBoardDerivations(viewBoard, { includeSubtasks: showSubtasks })
 
   const expandAllSwimlanes = useCallback(() => setCollapsedEpics(new Set()), [])
   const collapseAllSwimlanes = useCallback(() => {
@@ -258,6 +264,8 @@ export default function BoardPage() {
           setShowArchived={setShowArchived}
           groupByEpic={groupByEpic}
           setGroupByEpic={setGroupByEpic}
+          showSubtasks={showSubtasks}
+          setShowSubtasks={setShowSubtasks}
           onExpandAll={expandAllSwimlanes}
           onCollapseAll={collapseAllSwimlanes}
         />
@@ -309,6 +317,8 @@ export default function BoardPage() {
               epics={boardEpics}
               collapsedEpics={collapsedEpics}
               onCollapseToggle={toggleCollapse}
+              epicAncestorMap={epicAncestorMap}
+              allIssuesById={allIssuesById}
             />
           </div>
         ) : (

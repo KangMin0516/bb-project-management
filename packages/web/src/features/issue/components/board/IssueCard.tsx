@@ -91,7 +91,7 @@ export default memo(function IssueCard({
   const doneCount = displayList.filter((c) => c.status === 'DONE').length
 
   return (
-    <div ref={cardRef}>
+    <div ref={cardRef} className={cn(issue.type === 'SUB_TASK' && 'ml-2')}>
       <div
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}

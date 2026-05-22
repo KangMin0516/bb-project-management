@@ -1,8 +1,10 @@
 import { useState, useDeferredValue, useEffect, useMemo } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, List, GitBranch } from 'lucide-react'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { useIssueListData } from '@/features/issue/hooks/useIssueListData'
+import { issueRepository } from '@/features/issue/repository'
 import { useIssueListSelection } from '@/features/issue/hooks/useIssueListSelection'
 import { useIssueListUrlState, type ViewMode } from '@/features/issue/hooks/useIssueListUrlState'
 import { useOpenIssueFromUrl } from '@/features/issue/hooks/useOpenIssueFromUrl'
@@ -51,6 +53,27 @@ export default function IssuesPage() {
   const { project, members, projectLabels, projectComponents, list, isLoading, epicChange, remove } =
     useIssueListData({ projectId: projectId ?? '', listParams })
 
+  // TOC drives the Module + Epic sections of the FiltersPopover. The query
+  // is already cached by other pages (BoardPage / TableOfContentPage), so
+  // this is effectively free on warm navigation.
+  const { data: toc } = useQuery({
+    queryKey: ['toc', projectId],
+    queryFn: () => issueRepository.findTableOfContent(projectId!),
+    enabled: !!projectId,
+  })
+  const projectModules = useMemo(
+    () => toc?.domains.map((d) => ({ id: d.id, title: d.title })) ?? [],
+    [toc],
+  )
+  const projectEpics = useMemo(() => {
+    const fromDomains = toc?.domains.flatMap((d) =>
+      d.epics.map((e) => ({ id: e.id, title: e.title })),
+    ) ?? []
+    const orphans =
+      toc?.orphanEpics.map((e) => ({ id: e.id, title: e.title })) ?? []
+    return [...fromDomains, ...orphans]
+  }, [toc])
+
   const displayItems = useMemo(
     () => applyClientFilters(list?.items, filters, { showArchived: url.showArchived }),
     [list?.items, filters, url.showArchived],
@@ -84,19 +107,12 @@ export default function IssuesPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
-        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{projectKey} Lists</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
-        >
-          <Plus className="h-4 w-4" />
-          New Issue
-        </button>
-      </div>
-
-      {selection.selectedIds.size > 0 ? (
-        <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
+      <div className="flex items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{projectKey} Lists</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{project?.name}</p>
+        </div>
+        {selection.selectedIds.size > 0 ? (
           <BulkActionBar
             projectId={projectId}
             selectedIds={selection.selectedIds}
@@ -106,22 +122,33 @@ export default function IssuesPage() {
             members={memberList.map((m) => ({ id: m.id, name: m.name, avatar: m.avatar }))}
             onClear={selection.clear}
           />
-        </div>
-      ) : (
-        <IssuesToolbar
-          filters={filters}
-          setFilters={setFilters}
-          resetFilters={resetFilters}
-          members={memberList}
-          projectLabels={projectLabels ?? []}
-          projectComponents={projectComponents ?? []}
-          viewMode={url.viewMode}
-          setViewMode={url.setViewMode}
-          showArchived={url.showArchived}
-          setShowArchived={url.setShowArchived}
-          viewOptions={VIEW_OPTIONS}
-        />
-      )}
+        ) : (
+          <IssuesToolbar
+            filters={filters}
+            setFilters={setFilters}
+            resetFilters={resetFilters}
+            members={memberList}
+            projectLabels={projectLabels ?? []}
+            projectComponents={projectComponents ?? []}
+            projectModules={projectModules}
+            projectEpics={projectEpics}
+            viewMode={url.viewMode}
+            setViewMode={url.setViewMode}
+            showArchived={url.showArchived}
+            setShowArchived={url.setShowArchived}
+            viewOptions={VIEW_OPTIONS}
+            rightActions={(
+              <button
+                onClick={() => setShowCreate(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
+              >
+                <Plus className="h-4 w-4" />
+                New Issue
+              </button>
+            )}
+          />
+        )}
+      </div>
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (

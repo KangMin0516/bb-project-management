@@ -1,14 +1,14 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Archive, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   SearchInput,
-  DropdownFilters,
-  AssigneeAvatars,
-  FilterDivider,
+  FiltersPopover,
   ClearFiltersButton,
 } from '@/shared/ui/FilterBar'
 import type { FilterState } from '@/shared/ui/filterState'
+import { toggleSet } from '@/shared/ui/filterState'
 import type { ProjectDetail } from '@/features/project/api'
 import { formatMonth } from '@/features/calendar/lib'
+import { cn } from '@/shared/lib/utils'
 
 interface CalendarHeaderProps {
   project: ProjectDetail | undefined
@@ -21,7 +21,13 @@ interface CalendarHeaderProps {
   resetFilters: () => void
   toggleAssignee: (id: string) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
+  projectLabels: { id: string; name: string; color: string }[]
+  projectComponents: { id: string; name: string }[]
+  projectModules: { id: string; title: string }[]
+  projectEpics: { id: string; title: string }[]
   hasFilters: boolean
+  showArchived: boolean
+  setShowArchived: (value: boolean) => void
 }
 
 export default function CalendarHeader({
@@ -35,7 +41,13 @@ export default function CalendarHeader({
   resetFilters,
   toggleAssignee,
   assignedMembers,
+  projectLabels,
+  projectComponents,
+  projectModules,
+  projectEpics,
   hasFilters,
+  showArchived,
+  setShowArchived,
 }: CalendarHeaderProps) {
   return (
     <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-3">
@@ -73,24 +85,39 @@ export default function CalendarHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <SearchInput value={filters.search} onChange={(v) => setFilters({ search: v })} />
-        <DropdownFilters
-          status={filters.status}
-          priority={filters.priority}
-          type={filters.type}
-          source={filters.source}
-          onStatusChange={(v) => setFilters({ status: v })}
-          onPriorityChange={(v) => setFilters({ priority: v })}
-          onTypeChange={(v) => setFilters({ type: v })}
-          onSourceChange={(v) => setFilters({ source: v })}
+        <FiltersPopover
+          filters={filters}
+          setStatus={(v) => setFilters({ status: v })}
+          setPriority={(v) => setFilters({ priority: v })}
+          setType={(v) => setFilters({ type: v })}
+          setSource={(v) => setFilters({ source: v })}
+          toggleAssignee={toggleAssignee}
+          toggleLabel={(id) => setFilters({ labels: toggleSet(filters.labels, id) })}
+          toggleComponent={(id) => setFilters({ components: toggleSet(filters.components, id) })}
+          setEpicId={(id) => setFilters({ epicId: id })}
+          setModuleId={(id) => setFilters({ domainId: id })}
+          assignedMembers={assignedMembers}
+          boardLabels={projectLabels}
+          boardComponents={projectComponents}
+          boardEpics={projectEpics}
+          boardModules={projectModules}
+          hideEpicOwner
         />
-        <FilterDivider />
-        <AssigneeAvatars
-          members={assignedMembers}
-          selected={filters.assignees}
-          onToggle={toggleAssignee}
-        />
+        <button
+          type="button"
+          onClick={() => setShowArchived(!showArchived)}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition',
+            showArchived
+              ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+              : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700',
+          )}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          Archived
+        </button>
         {hasFilters && <ClearFiltersButton onClick={resetFilters} />}
       </div>
     </div>

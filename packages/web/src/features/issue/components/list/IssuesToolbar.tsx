@@ -1,7 +1,7 @@
 import { Archive } from 'lucide-react'
 import type { FilterState } from '@/shared/ui/filterState'
 import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
-import { AssigneeAvatars, LabelChips, ComponentChips, FilterDivider, ClearFiltersButton, DropdownFilters, SearchInput } from '@/shared/ui/FilterBar'
+import { FiltersPopover, ClearFiltersButton, SearchInput } from '@/shared/ui/FilterBar'
 import SortMenu from '@/shared/ui/SortMenu'
 import ViewToggle, { type ViewOption } from '@/shared/ui/ViewToggle'
 import { cn } from '@/shared/lib/utils'
@@ -15,11 +15,17 @@ interface IssuesToolbarProps {
   members: { id: string; name: string; avatar: string | null }[]
   projectLabels: Label[]
   projectComponents: { id: string; name: string }[]
+  /** Modules (DOMAIN issues) for the Module section inside the popover. */
+  projectModules: { id: string; title: string }[]
+  /** Epics for the Epic section inside the popover. */
+  projectEpics: { id: string; title: string }[]
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
   showArchived: boolean
   setShowArchived: (value: boolean) => void
   viewOptions: ViewOption<ViewMode>[]
+  /** Trailing slot for page-level actions (e.g. "New Issue" button). */
+  rightActions?: React.ReactNode
 }
 
 export default function IssuesToolbar({
@@ -29,17 +35,21 @@ export default function IssuesToolbar({
   members,
   projectLabels,
   projectComponents,
+  projectModules,
+  projectEpics,
   viewMode,
   setViewMode,
   showArchived,
   setShowArchived,
   viewOptions,
+  rightActions,
 }: IssuesToolbarProps) {
   const toggle = (key: 'assignees' | 'labels' | 'components', id: string) =>
     setFilters({ [key]: toggleSet(filters[key], id) })
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-2">
+    <div className="flex flex-wrap items-center gap-2">
+      <SearchInput value={filters.search} onChange={(v) => setFilters({ search: v })} />
       <ViewToggle options={viewOptions} value={viewMode} onChange={setViewMode} />
       <button
         type="button"
@@ -54,26 +64,27 @@ export default function IssuesToolbar({
         <Archive className="h-3.5 w-3.5" />
         Archived
       </button>
-      <FilterDivider />
-      <SearchInput value={filters.search} onChange={(v) => setFilters({ search: v })} />
-      <DropdownFilters
-        status={filters.status}
-        priority={filters.priority}
-        type={filters.type}
-        source={filters.source}
-        onStatusChange={(v) => setFilters({ status: v })}
-        onPriorityChange={(v) => setFilters({ priority: v })}
-        onTypeChange={(v) => setFilters({ type: v })}
-        onSourceChange={(v) => setFilters({ source: v })}
+      <FiltersPopover
+        filters={filters}
+        setStatus={(v) => setFilters({ status: v })}
+        setPriority={(v) => setFilters({ priority: v })}
+        setType={(v) => setFilters({ type: v })}
+        setSource={(v) => setFilters({ source: v })}
+        toggleAssignee={(id) => toggle('assignees', id)}
+        toggleLabel={(id) => toggle('labels', id)}
+        toggleComponent={(id) => toggle('components', id)}
+        setEpicId={(id) => setFilters({ epicId: id })}
+        setModuleId={(id) => setFilters({ domainId: id })}
+        assignedMembers={members}
+        boardLabels={projectLabels}
+        boardComponents={projectComponents}
+        boardEpics={projectEpics}
+        boardModules={projectModules}
+        hideEpicOwner
       />
       <SortMenu sortStack={filters.sortStack} onChange={(v) => setFilters({ sortStack: v })} />
-      {members.length > 0 && <FilterDivider />}
-      <AssigneeAvatars members={members} selected={filters.assignees} onToggle={(id) => toggle('assignees', id)} />
-      {projectLabels.length > 0 && <FilterDivider />}
-      <LabelChips labels={projectLabels} selected={filters.labels} onToggle={(id) => toggle('labels', id)} />
-      {projectComponents.length > 0 && <FilterDivider />}
-      <ComponentChips components={projectComponents} selected={filters.components} onToggle={(id) => toggle('components', id)} />
       {hasActiveFilters(filters) && <ClearFiltersButton onClick={resetFilters} />}
+      {rightActions && <div className="ml-1">{rightActions}</div>}
     </div>
   )
 }

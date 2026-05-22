@@ -18,6 +18,34 @@
 
 ## Timeline
 
+### 2026-05-22 — Board: `Sub-tasks` toggle to surface every issue including sub-tasks (PM-70)
+**Added.** `BoardToolbar` gains a `Sub-tasks` toggle (icon `ListTree`, default OFF, URL state `?subtasks=1`) that, when ON, renders SUB_TASK rows as full board cards instead of leaving them buried behind the per-Task expand chevron. Useful on projects where most work is broken down — flipping it on lets a PM see every unit of work without clicking through.
+
+In **swimlane mode** sub-tasks land in their epic ancestor's lane via a `epicAncestorMap` built by `useBoardDerivations` (walks `parentId` through the parent Task to find the nearest EPIC). Sub-tasks of orphan tasks fall into the `No Epic` lane. In **flat mode** they appear in their own status column inline with TASK/BUG cards. The existing per-Task expand affordance stays — it's still useful when the global toggle is off.
+
+`IssueCard` adds an 8 px (`ml-2`) left margin when `issue.type === 'SUB_TASK'` so the hierarchy reads visually without tree lines. The type icon (`SUB_TASK` emoji) already distinguishes them; the indent is the extra cue.
+
+**Drag invariants.** Sub-task drag between status columns inside its own swimlane is allowed (BE accepts the status change). Cross-swimlane drag is **blocked** — reparenting a sub-task to an EPIC would break the `SUB_TASK → TASK` schema constraint, and silently reparenting the parent TASK was rejected as too implicit. The drop refuses and the card snaps back. Detection happens in `SwimlaneBoardView.handleDragEnd` via `allIssuesById.get(draggableId)?.type === 'SUB_TASK'`.
+
+- Source: `packages/web/src/features/issue/hooks/useBoardDerivations.ts` (new `includeSubtasks` option + `epicAncestorMap`), `packages/web/src/features/issue/components/board/BoardToolbar.tsx` (toggle button), `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx` (group sub-tasks via ancestor map + block cross-swimlane drag), `packages/web/src/features/issue/components/board/IssueCard.tsx` (8 px indent), `packages/web/src/pages/BoardPage.tsx` (URL state + plumb props).
+
+### 2026-05-22 — Unify filter UX: every page now uses one `FiltersPopover` + Lists header collapsed to 1 row (PM-66)
+**Changed.** Filter surface across Board / Lists / Calendar / Timeline was inconsistent — Board had a popover + a separate Module Select, Lists / Calendar / Timeline had inline `DropdownFilters` + `AssigneeAvatars` + `LabelChips` + `ComponentChips` chips. The chip pattern was already crowding the toolbar at 5 filters; adding Module + future filters would have overflowed the header on a 13" laptop.
+
+Consolidated: every page now drives its filters through `FiltersPopover` (in `shared/ui/FilterBar.tsx`), which gained a **Module** section and a new `setModuleId` setter. The popover's badge count includes `domainId` so PMs see "Filters (3)" with Module counted. Page-level surfaces (Search, Sort, Archived toggle, view-grouping toggle, page-specific actions like Today nav, Share button, New Issue button) stay outside the popover — they're view/page actions, not filters.
+
+Side effects:
+- **Board** — removed the standalone `Module: All ▾` Select chip from `BoardToolbar`; it's now inside the popover.
+- **Lists** — `IssuesToolbar` now fetches the project's TOC to feed Module + Epic sections; rest of the inline chip set folded into the popover. **Header collapsed from 2 rows to 1 row** to match the other three pages: title + project-name subtitle on the left, full toolbar on the right with the `New Issue` button slotted at the trailing end (via the new `rightActions` prop on `IssuesToolbar`). Title-row + toolbar-row was wasting vertical space and lacked a project-name subtitle versus Board / Calendar / Timeline.
+- **Calendar** — `CalendarHeader` similarly fed; added the previously-missing **Archived** toggle (URL state `?archived=1`, pipes `includeArchived=true` through `useCalendarData`).
+- **Timeline** — `TimelineHeader` migrated.
+
+Section order inside the popover is identical on every page: Status → Priority → Type → Source → Assignee → Label → Component → Module → Epic → Epic Owner (Epic Owner hidden unless caller opts in — only Board does today).
+
+**Wiring fix.** Exposing Module / Epic / Label / Component filters on Calendar + Timeline initially silently no-op'd — `useFilteredIssues` (the hook both pages use to apply `FilterState` client-side) only honoured Status / Priority / Type / Assignee / Search. Extended it to also apply `epicId` / `domainId` (with a parent-chain walk via `parentId` so the match keeps every descendant Task / SubTask, not just the matched ancestor row itself) and `labels` / `components` (any-of match against the issue's joined arrays). Without this fix, picking an Epic from the popover on Timeline visibly left every row in place — the badge said "Filters (1)" but the chart didn't narrow.
+
+- Source: `packages/web/src/shared/ui/FilterBar.tsx` (Module section + setModuleId + domainId in badge count), `packages/web/src/features/issue/components/board/BoardToolbar.tsx`, `packages/web/src/features/issue/components/list/IssuesToolbar.tsx`, `packages/web/src/features/calendar/components/CalendarHeader.tsx`, `packages/web/src/features/calendar/hooks/useCalendarData.ts` (accepts `includeArchived`), `packages/web/src/features/timeline/components/TimelineHeader.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/pages/CalendarPage.tsx` (archived URL state + label/component/TOC fetches), `packages/web/src/pages/TimelinePage.tsx` (same fetches).
+
 ### 2026-05-22 — Timeline drag affordance: always expose both edges (PM-65 follow-up)
 **Fixed.** Initial PM-65 commit (`beecdf6`) only rendered the **missing-date** edge handle for one-sided issues, so an issue with `dueDate` set but no `startDate` showed only a *left* handle (for setting the missing startDate) — there was no way to grab the visible right edge to adjust the existing dueDate. User reported it via hover on a dueDate-only bar.
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { Issue } from '@/features/issue/api'
-import { NO_EPIC_KEY, type EpicGroup, type GroupBy } from '@/features/timeline/lib'
+import { NO_EPIC_KEY, makeIssueComparator, type EpicGroup, type GroupBy } from '@/features/timeline/lib'
+import type { SortRule } from '@/shared/ui/filterState'
 
 const TYPE_ORDER = ['EPIC', 'TASK', 'BUG', 'SUB_TASK']
 
@@ -13,12 +14,19 @@ const TYPE_ORDER = ['EPIC', 'TASK', 'BUG', 'SUB_TASK']
  * EPIC was filtered out are still surfaced because we look it up via
  * `issueMap` instead of only the visible set.
  */
-export function useTimelineGroups(allIssues: Issue[], filteredIssues: Issue[], groupBy: GroupBy) {
+export function useTimelineGroups(
+  allIssues: Issue[],
+  filteredIssues: Issue[],
+  groupBy: GroupBy,
+  sortStack: SortRule[] = [],
+) {
   const issueMap = useMemo(() => {
     const m = new Map<string, Issue>()
     for (const issue of allIssues) m.set(issue.id, issue)
     return m
   }, [allIssues])
+
+  const compare = useMemo(() => makeIssueComparator(sortStack), [sortStack])
 
   const epicGroups = useMemo<EpicGroup[]>(() => {
     if (groupBy !== 'epic') return []
@@ -54,13 +62,14 @@ export function useTimelineGroups(allIssues: Issue[], filteredIssues: Issue[], g
       .sort((a, b) => {
         if (a.key === NO_EPIC_KEY) return 1
         if (b.key === NO_EPIC_KEY) return -1
+        if (sortStack.length > 0 && a.epic && b.epic) return compare(a.epic, b.epic)
         return (a.epic ? new Date(a.epic.createdAt).getTime() : 0) - (b.epic ? new Date(b.epic.createdAt).getTime() : 0)
       })
       .map((g) => ({
         ...g,
-        children: [...g.children].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+        children: [...g.children].sort(compare),
       }))
-  }, [filteredIssues, issueMap, groupBy])
+  }, [filteredIssues, issueMap, groupBy, compare, sortStack])
 
   const groups = useMemo(() => {
     const grouped = new Map<string, Issue[]>()
@@ -90,9 +99,10 @@ export function useTimelineGroups(allIssues: Issue[], filteredIssues: Issue[], g
 
     for (const [key, items] of grouped) {
       if (items.length === 0) grouped.delete(key)
+      else items.sort(compare)
     }
     return grouped
-  }, [filteredIssues, groupBy])
+  }, [filteredIssues, groupBy, compare])
 
   return { epicGroups, groups }
 }

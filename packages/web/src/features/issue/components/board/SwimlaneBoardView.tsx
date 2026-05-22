@@ -39,6 +39,12 @@ interface SwimlaneBoardViewProps {
   onCollapseToggle: (epicId: string | null) => void
   /** Persist the new order when an Epic swimlane is dragged or moved by arrow. */
   onSwimlaneReorder?: (epicId: string, status: string, newOrder: number) => void
+  /** Map of sub-task id → epic ancestor id (or null). Drives sub-task
+   *  swimlane assignment when the `Sub-tasks` toggle is on (PM-70). */
+  epicAncestorMap?: Map<string, string | null>
+  /** Lookup of every issue by id — used to identify a draggable card's
+   *  type so we can block cross-swimlane drag of SUB_TASKs. */
+  allIssuesById?: Map<string, Issue>
 }
 
 export default function SwimlaneBoardView({
@@ -61,6 +67,8 @@ export default function SwimlaneBoardView({
   collapsedEpics,
   onCollapseToggle,
   onSwimlaneReorder,
+  epicAncestorMap,
+  allIssuesById,
 }: SwimlaneBoardViewProps) {
   // Horizontal scroll sync — each SwimlaneRow registers its columns
   // container here so scrolling one mirrors to the others. RAF + a
@@ -99,12 +107,18 @@ export default function SwimlaneBoardView({
       }
     }
 
-    // Second pass: group non-epic issues by their parent epic
+    // Second pass: group non-epic issues by their parent epic. Sub-tasks
+    // need an extra hop via `epicAncestorMap` because their `parentId`
+    // points at a TASK, not an EPIC.
     for (const [status, issues] of Object.entries(board)) {
       for (const issue of issues) {
         if (issue.type === 'EPIC') continue
 
-        const epicId = issue.parentId && epicMap.has(issue.parentId) ? issue.parentId : null
+        const effectiveParentId =
+          issue.type === 'SUB_TASK' && epicAncestorMap?.has(issue.id)
+            ? epicAncestorMap.get(issue.id) ?? null
+            : issue.parentId
+        const epicId = effectiveParentId && epicMap.has(effectiveParentId) ? effectiveParentId : null
 
         if (epicId) {
           if (!epicChildren.has(epicId)) epicChildren.set(epicId, {})
@@ -161,7 +175,7 @@ export default function SwimlaneBoardView({
     }
 
     return { swimlanes: filtered }
-  }, [board, epicOwnersFilter, domainFilter])
+  }, [board, epicOwnersFilter, domainFilter, epicAncestorMap])
 
   const handleDragEnd = useCallback((result: DropResult) => {
     const { destination, source, draggableId, type } = result
@@ -187,10 +201,17 @@ export default function SwimlaneBoardView({
     const destEpicPrefix = destParts.join(':')
     const sourceEpicPrefix = source.droppableId.split(':').slice(0, -1).join(':')
 
-    // Cross-epic drag: update parentId
-    if (destEpicPrefix !== sourceEpicPrefix && onEpicChange) {
-      const newParentId = destEpicPrefix === '__no_epic__' ? null : destEpicPrefix
-      onEpicChange(draggableId, newParentId)
+    // Cross-epic drag: update parentId. SUB_TASKs are blocked here —
+    // reparenting them to an EPIC would break the SUB_TASK → TASK
+    // schema invariant, and silently reparenting their parent TASK is
+    // too implicit (PM-70). Drop is rejected with no state change.
+    if (destEpicPrefix !== sourceEpicPrefix) {
+      const draggedType = allIssuesById?.get(draggableId)?.type
+      if (draggedType === 'SUB_TASK') return
+      if (onEpicChange) {
+        const newParentId = destEpicPrefix === '__no_epic__' ? null : destEpicPrefix
+        onEpicChange(draggableId, newParentId)
+      }
     }
 
     // Get issues in destination column from the correct swimlane
@@ -206,7 +227,7 @@ export default function SwimlaneBoardView({
 
     const newOrder = calculateDropOrder(destIssues, destination.index)
     onReorder(draggableId, destStatus, newOrder)
-  }, [swimlanes, onReorder, onEpicChange, onSwimlaneReorder])
+  }, [swimlanes, onReorder, onEpicChange, onSwimlaneReorder, allIssuesById])
 
   // Epic lanes are draggable to reorder; "No Epic" lane stays pinned at the bottom.
   const epicLanes = swimlanes.filter((l) => l.epic)
