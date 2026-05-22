@@ -200,3 +200,57 @@ describe('CreateIssueUseCase — defaults + auto-fill', () => {
     expect(payload.assigneeId).toBeNull();
   });
 });
+
+describe('CreateIssueUseCase — default reviewer (PM-81)', () => {
+  it('defaults reviewerAssigneeId to creatorId when omitted', async () => {
+    const createSpy = jest.fn(async () => ({ id: 'i-1' }));
+    const uc = new CreateIssueUseCase(
+      makeRepo({ createWithSequenceAndActivity: createSpy }),
+    );
+
+    await uc.execute({ projectId: 'p', creatorId: 'u-creator', title: 't' });
+
+    const payload = (createSpy as jest.Mock).mock.calls[0][0] as {
+      reviewerAssigneeId: string | null;
+    };
+    expect(payload.reviewerAssigneeId).toBe('u-creator');
+  });
+
+  it('honours explicit null (opt-out) and leaves reviewerAssigneeId null', async () => {
+    const createSpy = jest.fn(async () => ({ id: 'i-1' }));
+    const uc = new CreateIssueUseCase(
+      makeRepo({ createWithSequenceAndActivity: createSpy }),
+    );
+
+    await uc.execute({
+      projectId: 'p',
+      creatorId: 'u-creator',
+      title: 't',
+      reviewerAssigneeId: null,
+    });
+
+    const payload = (createSpy as jest.Mock).mock.calls[0][0] as {
+      reviewerAssigneeId: string | null;
+    };
+    expect(payload.reviewerAssigneeId).toBeNull();
+  });
+
+  it('respects an explicit non-creator reviewer', async () => {
+    const createSpy = jest.fn(async () => ({ id: 'i-1' }));
+    const uc = new CreateIssueUseCase(
+      makeRepo({ createWithSequenceAndActivity: createSpy }),
+    );
+
+    await uc.execute({
+      projectId: 'p',
+      creatorId: 'u-creator',
+      title: 't',
+      reviewerAssigneeId: 'u-teammate',
+    });
+
+    const payload = (createSpy as jest.Mock).mock.calls[0][0] as {
+      reviewerAssigneeId: string | null;
+    };
+    expect(payload.reviewerAssigneeId).toBe('u-teammate');
+  });
+});

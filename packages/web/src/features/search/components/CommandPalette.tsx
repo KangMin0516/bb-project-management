@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { searchApi, type SearchResult } from '@/features/search/api'
-import { cn } from '@/shared/lib/utils'
-import { STATUS_COLORS, PRIORITY_COLORS, TYPE_ICONS, DEBOUNCE_DELAY } from '@/shared/config/constants'
+import { searchApi, type GlobalSearchResult } from '@/features/search/api'
+import { DEBOUNCE_DELAY } from '@/shared/config/constants'
 import {
   Plus, List, BarChart3,
   Settings, FileText, Keyboard, FolderKanban,
@@ -43,10 +42,11 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
     return () => clearTimeout(timer)
   }, [query])
 
-  const { data: results = [] } = useQuery({
-    queryKey: ['search', debouncedQuery],
-    queryFn: () => searchApi.issues(debouncedQuery),
-    enabled: debouncedQuery.length > 0,
+  // PM-80: global cross-project search — issues + comments + specs.
+  const { data: globalResults = [] } = useQuery({
+    queryKey: ['search-all', debouncedQuery],
+    queryFn: () => searchApi.all(debouncedQuery),
+    enabled: debouncedQuery.length >= 2,
   })
 
   // Reset query when the palette opens — `open` is owned by the parent
@@ -61,10 +61,26 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange])
 
-  const handleSelect = useCallback((result: SearchResult) => {
+  const handleGlobalSelect = useCallback((r: GlobalSearchResult) => {
     close()
-    navigate(`/projects/${result.project.key}/lists`, { state: { selectedIssueId: result.id } })
+    switch (r.kind) {
+      case 'issue':
+        navigate(`/projects/${r.projectKey}/board?open=${r.id}`)
+        break
+      case 'comment':
+        // Open the parent issue's detail panel; comment scroll is Phase 2.
+        navigate(`/projects/${r.projectKey}/board?open=${r.id}`)
+        break
+      case 'spec':
+        navigate(`/projects/${r.projectKey}/specs`, { state: { selectedSpecId: r.id } })
+        break
+    }
   }, [navigate, close])
+
+  // Bucket global results by kind so each gets its own CommandGroup.
+  const issueHits = globalResults.filter((r) => r.kind === 'issue').slice(0, 5)
+  const commentHits = globalResults.filter((r) => r.kind === 'comment').slice(0, 5)
+  const specHits = globalResults.filter((r) => r.kind === 'spec').slice(0, 5)
 
   // Build quick actions
   const quickActions: QuickAction[] = []
@@ -139,25 +155,60 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           </CommandGroup>
         )}
 
-        {debouncedQuery && results.length > 0 && (
+        {debouncedQuery && issueHits.length > 0 && (
           <CommandGroup heading="Issues">
-            {results.map((result) => (
+            {issueHits.map((r) => (
               <CommandItem
-                key={result.id}
-                // Force-include backend hit regardless of cmdk's local filter.
-                value={`${result.project.key}-${result.number} ${result.title} ${query}`}
-                onSelect={() => handleSelect(result)}
+                key={`issue-${r.id}`}
+                value={`${r.projectKey}-${r.issueNumber} ${r.title} ${query}`}
+                onSelect={() => handleGlobalSelect(r)}
               >
-                <span className="text-xs">{TYPE_ICONS[result.type] || '📋'}</span>
+                <span className="text-xs">📋</span>
                 <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
-                  {result.project.key}-{result.number}
+                  {r.projectKey}-{r.issueNumber}
                 </span>
                 <span className="flex-1 truncate font-medium text-gray-900 dark:text-gray-100">
-                  {result.title}
+                  {r.title}
                 </span>
-                <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[result.status])} />
-                <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', PRIORITY_COLORS[result.priority])}>
-                  {result.priority}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {debouncedQuery && commentHits.length > 0 && (
+          <CommandGroup heading="Comments">
+            {commentHits.map((r) => (
+              <CommandItem
+                key={`comment-${r.id}`}
+                value={`${r.projectKey}-${r.issueNumber} ${r.snippet} ${query}`}
+                onSelect={() => handleGlobalSelect(r)}
+              >
+                <span className="text-xs">💬</span>
+                <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
+                  {r.projectKey}-{r.issueNumber}
+                </span>
+                <span className="flex-1 truncate text-gray-700 dark:text-gray-300">
+                  {r.snippet}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {debouncedQuery && specHits.length > 0 && (
+          <CommandGroup heading="Specs">
+            {specHits.map((r) => (
+              <CommandItem
+                key={`spec-${r.id}`}
+                value={`${r.title} ${r.snippet} ${query}`}
+                onSelect={() => handleGlobalSelect(r)}
+              >
+                <span className="text-xs">📄</span>
+                <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
+                  {r.projectKey}
+                </span>
+                <span className="flex-1 truncate font-medium text-gray-900 dark:text-gray-100">
+                  {r.title}
                 </span>
               </CommandItem>
             ))}

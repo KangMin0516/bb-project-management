@@ -28,7 +28,11 @@ export interface CreateIssueCommand {
   priority?: IssuePriority;
   parentId?: string;
   assigneeId?: string;
-  reviewerAssigneeId?: string;
+  /**
+   * Reviewer to assign. **undefined** means "no preference" and defaults
+   * to the creator. **null** is an explicit opt-out (no reviewer at all).
+   */
+  reviewerAssigneeId?: string | null;
   startDate?: string;
   dueDate?: string;
   labelIds?: string[];
@@ -95,6 +99,13 @@ export class CreateIssueUseCase {
       );
     }
 
+    // PM-81: default reviewer = creator when the caller didn't pick one.
+    // Explicit `null` from the caller (opt-out) is honoured.
+    const effectiveReviewerAssigneeId =
+      cmd.reviewerAssigneeId === undefined
+        ? cmd.creatorId
+        : cmd.reviewerAssigneeId;
+
     let issue: unknown;
     try {
       issue = await this.repo.createWithSequenceAndActivity({
@@ -107,7 +118,7 @@ export class CreateIssueUseCase {
         priority: cmd.priority ?? 'MEDIUM',
         parentId,
         assigneeId: effectiveAssigneeId,
-        reviewerAssigneeId: cmd.reviewerAssigneeId ?? null,
+        reviewerAssigneeId: effectiveReviewerAssigneeId,
         startDate: cmd.startDate ? new Date(cmd.startDate) : null,
         dueDate: cmd.dueDate ? new Date(cmd.dueDate) : null,
         labelIds: cmd.labelIds ?? [],

@@ -7,6 +7,7 @@ import { getErrorMessage } from '@/shared/lib/error'
 import { useShortcutsStore } from '@/shared/lib/shortcuts'
 import { useThemeStore, type Theme } from '@/shared/lib/theme'
 import { useToastStore } from '@/shared/lib/toast'
+import { useIssueKeyLinkHandler } from '@/shared/lib/useIssueKeyLinkHandler'
 import { useKeyboardShortcuts } from '@/shared/lib/useKeyboardShortcuts'
 import { useRegisterShortcuts } from '@/shared/lib/useRegisterShortcuts'
 import { cn } from '@/shared/lib/utils'
@@ -74,6 +75,9 @@ export default function AppLayout() {
 
   // Global keyboard shortcut listener
   useKeyboardShortcuts()
+  // Click delegation for `PM-123` auto-links rendered in descriptions /
+  // comments / specs (PM-77). One listener for the whole app.
+  useIssueKeyLinkHandler()
 
   const globalShortcuts = useMemo(() => [
     {

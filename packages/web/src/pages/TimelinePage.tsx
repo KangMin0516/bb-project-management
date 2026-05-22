@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
 import { issueRepository } from '@/features/issue/repository'
+import { useAuthStore } from '@/features/auth/store'
 import { useTimelineData } from '@/features/timeline/hooks/useTimelineData'
 import { useTimelineDateRange } from '@/features/timeline/hooks/useTimelineDateRange'
 import { useTimelineGroups } from '@/features/timeline/hooks/useTimelineGroups'
@@ -74,7 +75,6 @@ export default function TimelinePage() {
   }, [setSearchParams])
 
   const { project, issues: allIssues, isLoading } = useTimelineData(projectId ?? '')
-  const filteredIssues = useFilteredIssues(allIssues, filters)
 
   // Project metadata for the FiltersPopover (labels / components / modules / epics).
   const projectLabelsQuery = useQuery({
@@ -104,9 +104,6 @@ export default function TimelinePage() {
       tocQuery.data?.orphanEpics.map((e) => ({ id: e.id, title: e.title })) ?? []
     return [...fromDomains, ...orphans]
   }, [tocQuery.data])
-  const dateRange = useTimelineDateRange(filteredIssues)
-  const { epicGroups, groups } = useTimelineGroups(allIssues, filteredIssues, groupBy, filters.sortStack)
-  const rows = useTimelineRows(groupBy, epicGroups, groups, collapsedEpics)
 
   const assignedMembers = useMemo(() => {
     const map = new Map<string, { id: string; name: string; avatar: string | null }>()
@@ -115,6 +112,23 @@ export default function TimelinePage() {
     }
     return [...map.values()]
   }, [allIssues])
+
+  // PM-78: search-input operator parsing context.
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const searchParseCtx = useMemo(
+    () => ({
+      currentUserId,
+      members: assignedMembers,
+      labels: projectLabelsQuery.data ?? [],
+      modules: projectModules,
+      epics: projectEpics,
+    }),
+    [currentUserId, assignedMembers, projectLabelsQuery.data, projectModules, projectEpics],
+  )
+  const filteredIssues = useFilteredIssues(allIssues, filters, searchParseCtx)
+  const dateRange = useTimelineDateRange(filteredIssues)
+  const { epicGroups, groups } = useTimelineGroups(allIssues, filteredIssues, groupBy, filters.sortStack)
+  const rows = useTimelineRows(groupBy, epicGroups, groups, collapsedEpics)
 
   const dateDrag = useTimelineDateDrag({ projectId: projectId ?? '', dateRange })
 

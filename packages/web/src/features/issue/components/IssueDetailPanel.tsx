@@ -145,6 +145,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
           {activeTab === 'details' && (
             <div className="space-y-5 p-6">
               <IssueDescription
+                key={d.id}
                 description={d.description}
                 onSave={(description, mentionedUserIds) =>
                   update.mutate({

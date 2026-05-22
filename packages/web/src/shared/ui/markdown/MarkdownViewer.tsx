@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
 import DOMPurify from 'dompurify'
+import { linkifyIssueKeys } from '@/shared/lib/linkifyIssueKeys'
 import './markdown.css'
 
 interface MarkdownViewerProps {
@@ -23,9 +24,13 @@ function isHtmlContent(content: string): boolean {
 
 export default function MarkdownViewer({ content, className = '' }: MarkdownViewerProps) {
   if (isHtmlContent(content)) {
-    const sanitized = DOMPurify.sanitize(content, {
+    // Auto-link `PM-123` patterns BEFORE sanitization so DOMPurify keeps
+    // the new anchors. The pass skips text inside <code>/<pre>/<a>, so
+    // code samples are not touched (PM-77).
+    const withLinks = linkifyIssueKeys(content)
+    const sanitized = DOMPurify.sanitize(withLinks, {
       ADD_TAGS: ['img'],
-      ADD_ATTR: ['target', 'rel', 'src', 'alt', 'href'],
+      ADD_ATTR: ['target', 'rel', 'src', 'alt', 'href', 'data-issue-key', 'class'],
     })
     return (
       <div

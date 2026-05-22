@@ -4,6 +4,7 @@ import { type CreateIssuePayload } from '@/features/issue/api'
 import { templateApi } from '@/features/template/api'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
+import { useAuthStore } from '@/features/auth/store'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 import MentionableEditor from '@/shared/ui/editor/MentionableEditor'
 import { useToastStore } from '@/shared/lib/toast'
@@ -41,15 +42,22 @@ interface CreateIssueModalProps {
 /** Sentinel values — Radix Select rejects empty string item values. */
 const UNASSIGNED = '__unassigned__'
 const NO_PARENT = '__none__'
+const NO_REVIEWER = '__no_reviewer__'
 
 export default function CreateIssueModal({ projectId, defaultStatus, defaultParentId, defaultType, onClose, onCreated }: CreateIssueModalProps) {
   const { open, requestClose } = useDeferredClose(onClose)
+  // PM-81: default Reviewer = creator (current user). User can clear to
+  // "No reviewer" via the picker, in which case we send explicit null so
+  // the BE honours the opt-out instead of defaulting again.
+  const currentUserId = useAuthStore((s) => s.user?.id) ?? ''
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('MEDIUM')
   const [type, setType] = useState<string>(defaultType ?? 'TASK')
   const [assigneeId, setAssigneeId] = useState('')
+  /** `null` = explicit "No reviewer" (opt-out). Empty string = use default. */
+  const [reviewerAssigneeId, setReviewerAssigneeId] = useState<string | null>(currentUserId)
   const [labelIds, setLabelIds] = useState<string[]>([])
   const [componentIds, setComponentIds] = useState<string[]>([])
   const [parentId, setParentId] = useState(defaultParentId ?? '')
@@ -134,6 +142,13 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
       priority,
       type,
       assigneeId: assigneeId || undefined,
+      // PM-81: send explicit null when user picked "No reviewer", omit
+      // otherwise so the BE applies the creator-default. Sending undefined
+      // ≠ sending null in the payload — keep them distinct.
+      reviewerAssigneeId:
+        reviewerAssigneeId === null
+          ? null
+          : reviewerAssigneeId || undefined,
       parentId: parentId || undefined,
       labelIds: labelIds.length ? labelIds : undefined,
       componentIds: componentIds.length ? componentIds : undefined,
@@ -242,6 +257,40 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
                 })),
               ]}
               placeholder="Unassigned"
+              searchPlaceholder="Search member..."
+              emptyMessage="No matches"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Reviewer</label>
+            <Combobox
+              value={reviewerAssigneeId ?? NO_REVIEWER}
+              onChange={(v) => setReviewerAssigneeId(v === NO_REVIEWER ? null : v)}
+              options={[
+                { value: NO_REVIEWER, label: 'No reviewer' },
+                ...(members ?? []).map((m) => ({
+                  value: m.user.id,
+                  label: m.user.name,
+                  searchValue: `${m.user.name} ${m.user.email}`,
+                  render: (
+                    <span className="flex items-center gap-2">
+                      <UserAvatar user={m.user} size="sm" />
+                      <span className="flex flex-col leading-tight">
+                        <span className="text-sm">{m.user.name}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{m.user.email}</span>
+                      </span>
+                    </span>
+                  ),
+                  triggerRender: (
+                    <span className="flex items-center gap-2">
+                      <UserAvatar user={m.user} size="sm" />
+                      <span className="text-sm">{m.user.name}</span>
+                    </span>
+                  ),
+                })),
+              ]}
+              placeholder="No reviewer"
               searchPlaceholder="Search member..."
               emptyMessage="No matches"
             />

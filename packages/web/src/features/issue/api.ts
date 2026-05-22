@@ -125,7 +125,8 @@ export interface CreateIssuePayload {
   priority?: string
   type?: string
   assigneeId?: string
-  reviewerAssigneeId?: string
+  /** Omit to default to creator. Pass `null` to opt out (no reviewer). */
+  reviewerAssigneeId?: string | null
   parentId?: string
   startDate?: string
   dueDate?: string

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
+import { stringToHslColor } from '@/shared/lib/color'
 import { STATUSES, STATUS_COLORS } from '@/shared/config/constants'
 import type { FilterState } from '@/shared/ui/filterState'
 import { toggleSet } from '@/shared/ui/filterState'
@@ -470,9 +471,22 @@ function CheckboxRow({
 }
 
 function Avatar32({ name, avatar }: { name: string; avatar: string | null }) {
+  if (avatar) {
+    return (
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full">
+        <img src={avatar} alt={name} className="h-full w-full object-cover" />
+      </span>
+    )
+  }
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100 text-[10px] font-medium text-primary-700">
-      {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-medium"
+      style={{
+        backgroundColor: stringToHslColor(name),
+        color: stringToHslColor(name, 70, 20),
+      }}
+    >
+      {name.charAt(0).toUpperCase()}
     </span>
   )
 }

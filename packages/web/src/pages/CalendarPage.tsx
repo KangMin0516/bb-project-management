@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { issueRepository } from '@/features/issue/repository'
 import { projectRepository } from '@/features/project/repository'
 import { componentApi } from '@/features/project/component-api'
+import { useAuthStore } from '@/features/auth/store'
 import { useCalendarData } from '@/features/calendar/hooks/useCalendarData'
 import { useUnscheduledIssues } from '@/features/calendar/hooks/useUnscheduledIssues'
 import { useCalendarDnd } from '@/features/calendar/hooks/useCalendarDnd'
@@ -73,7 +74,7 @@ export default function CalendarPage() {
     () => (showArchived ? allIssues.filter((i) => i.archivedAt != null) : allIssues),
     [allIssues, showArchived],
   )
-  const filteredIssues = useFilteredIssues(visibleIssues, filters)
+  const currentUserId = useAuthStore((s) => s.user?.id)
 
   // Project metadata for the FiltersPopover (labels / components / modules / epics).
   const projectLabelsQuery = useQuery({
@@ -142,6 +143,19 @@ export default function CalendarPage() {
     }
     return [...map.values()]
   }, [allIssues, unscheduledItems])
+
+  // PM-78: search-input operator parsing context. `assignee:me` etc.
+  const searchParseCtx = useMemo(
+    () => ({
+      currentUserId,
+      members: assignedMembers,
+      labels: projectLabelsQuery.data ?? [],
+      modules: projectModules,
+      epics: projectEpics,
+    }),
+    [currentUserId, assignedMembers, projectLabelsQuery.data, projectModules, projectEpics],
+  )
+  const filteredIssues = useFilteredIssues(visibleIssues, filters, searchParseCtx)
 
   const toggleAssignee = useCallback(
     (id: string) => setFilters({ assignees: toggleSet(filters.assignees, id) }),

@@ -12,7 +12,9 @@ import { ReorderIssueUseCase } from './application/reorder-issue.use-case.js';
 import { UpdateIssueUseCase } from './application/update-issue.use-case.js';
 import { IssuePrismaRepository } from './infrastructure/issue.prisma.repository.js';
 import { ArchiveScheduler } from './archive.scheduler.js';
+import { DeadlineScheduler } from './deadline.scheduler.js';
 import { IssueController } from './issue.controller.js';
+import { IssueResolveController } from './issue-resolve.controller.js';
 
 /**
  * Issue module — fully migrated to Clean Architecture per
@@ -22,9 +24,10 @@ import { IssueController } from './issue.controller.js';
  */
 @Module({
   imports: [NotificationModule, IssueLinkModule],
-  controllers: [IssueController],
+  controllers: [IssueController, IssueResolveController],
   providers: [
     ArchiveScheduler,
+    DeadlineScheduler,
     IssueQueryService,
     IssuePrismaRepository,
     { provide: ISSUE_REPOSITORY, useExisting: IssuePrismaRepository },

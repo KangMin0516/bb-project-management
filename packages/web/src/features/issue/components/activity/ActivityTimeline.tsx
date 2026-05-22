@@ -267,7 +267,7 @@ function ActivityItem({
 
   return (
     <div className="flex gap-3 py-2.5">
-      <UserAvatar user={user ?? null} size="md" variant="gray" className="shrink-0" />
+      <UserAvatar user={user ?? null} size="md" className="shrink-0" />
 
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex flex-wrap items-center gap-1 text-xs">

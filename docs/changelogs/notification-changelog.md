@@ -17,6 +17,20 @@
 
 ## Timeline
 
+### 2026-05-22 — Deadline alerts: hourly cron creates in-app notifications for at-risk issues (PM-79, Phase 1)
+**Added.** New `DeadlineScheduler` (`packages/api/src/issue/deadline.scheduler.ts`) runs every hour. For each non-terminal (`status NOT IN (DONE, CANCELED)`), non-archived issue with `dueDate <= now + 24h`, it creates a `DEADLINE_WARNING` notification (or `DEADLINE_OVERDUE` if `dueDate < now`) addressed to the assignee — or falls back to the creator if the issue is unassigned.
+
+Idempotency: before insert, the scheduler queries existing notifications by `(userId, issueId, type)` and skips if a row already exists. This keeps the hourly cron from re-firing the same warning every tick. Trade-off: if the assignee bumps the dueDate, no new warning fires for the new date because the original row still blocks — refine in Phase 2 by also matching `meta.dueAt`.
+
+`NotificationType` gained two new variants `DEADLINE_WARNING | DEADLINE_OVERDUE`. The in-app `NotificationBell` already renders any new notification row, so no FE change is required for the receiving surface.
+
+**Out of scope (Phase 2):**
+- Slack DM dispatch for deadlines — the existing per-notification-type formatter only handles ASSIGNED / REVIEWER_ASSIGNED / COMMENTED / MENTIONED. Adding DEADLINE_* requires the Slack block builder + the `sendDM` opt-in path. Phase 1 ships in-app only.
+- Multi-tier warnings (e.g. 7d / 3d / 1d / overdue). Phase 1 is 24h + overdue.
+- User-level preference toggle (`User.preferences.deadlineAlerts.enabled`). Phase 1 enables for everyone.
+
+- Source: `packages/api/src/issue/deadline.scheduler.ts` (new), `packages/api/src/issue/issue.module.ts` (register provider), `packages/api/src/notification/notification.service.ts` (add `DEADLINE_*` to `NotificationType`).
+
 ### 2026-05-13 — Slack DM on `ASSIGNED` notifications
 **Changed.** `NotificationService.create()` now triggers a fire-and-forget Slack DM via `SlackService.sendDirectMessage` whenever `type === 'ASSIGNED'` and the recipient has `users.slack_user_id` populated. The in-app `notifications` row remains the authoritative record — Slack is enrichment, not a replacement. Users without a linked Slack identity continue to see only the in-app notification.
 

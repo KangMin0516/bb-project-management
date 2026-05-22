@@ -20,7 +20,9 @@ type NotificationType =
   | 'COMMENTED'
   | 'MENTIONED'
   | 'JOIN_APPROVED'
-  | 'JOIN_REJECTED';
+  | 'JOIN_REJECTED'
+  | 'DEADLINE_WARNING'
+  | 'DEADLINE_OVERDUE';
 
 export interface CreateNotificationInput {
   type: NotificationType;

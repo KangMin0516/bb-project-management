@@ -146,7 +146,7 @@ export default function IssueMetadata({
         label="Assignee"
         fieldId="assignee"
         display={
-          <span className={`flex items-center gap-2 ${d.assignee ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+          <span className={`flex items-center gap-2 ${d.assignee ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 italic'}`}>
             {d.assignee ? (<><UserAvatar user={d.assignee} />{d.assignee.name}</>) : 'Unassigned'}
           </span>
         }
@@ -164,8 +164,8 @@ export default function IssueMetadata({
         label="Reviewer"
         fieldId="reviewer"
         display={
-          <span className={`flex items-center gap-2 ${d.reviewerAssignee ? 'text-gray-700' : 'text-gray-400 italic'}`}>
-            {d.reviewerAssignee ? (<><UserAvatar user={d.reviewerAssignee} variant="purple" />{d.reviewerAssignee.name}</>) : 'No reviewer'}
+          <span className={`flex items-center gap-2 ${d.reviewerAssignee ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 italic'}`}>
+            {d.reviewerAssignee ? (<><UserAvatar user={d.reviewerAssignee} />{d.reviewerAssignee.name}</>) : 'No reviewer'}
           </span>
         }
       >
@@ -179,6 +179,22 @@ export default function IssueMetadata({
         )}
       </InlineField>
 
+      <div className="flex items-center gap-2 py-1.5">
+        <span className="w-20 shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">Created by</span>
+        {/* Match InlineField's button geometry (-mx-1.5 px-1.5) so the avatar
+            sits at the same x-offset as Assignee / Reviewer above. */}
+        <div className="flex-1 -mx-1.5 px-1.5 py-0.5 text-sm">
+          {d.creator ? (
+            <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <UserAvatar user={d.creator} />
+              {d.creator.name}
+            </span>
+          ) : (
+            <span className="text-gray-400 italic">—</span>
+          )}
+        </div>
+      </div>
+
       <DateField label="Start Date" fieldId="start-date" value={d.startDate} onChange={(v) => onUpdate({ startDate: v })} />
       <DateField label="Due Date" fieldId="due-date" value={d.dueDate} onChange={(v) => onUpdate({ dueDate: v })} />
 
@@ -187,7 +203,7 @@ export default function IssueMetadata({
           label="Module"
           display={
             d.parent
-              ? <span className="text-gray-700">📁 {d.parent.title}</span>
+              ? <span className="text-gray-700 dark:text-gray-300">📁 {d.parent.title}</span>
               : <span className="text-gray-400 italic">No module</span>
           }
         >
@@ -222,7 +238,7 @@ export default function IssueMetadata({
           label={d.type === 'SUB_TASK' ? 'Parent' : 'Epic'}
           display={
             d.parent
-              ? <span className="text-gray-700">{TYPE_ICONS[d.parent.type] || '⚡'} #{d.parent.number} {d.parent.title}</span>
+              ? <span className="text-gray-700 dark:text-gray-300">{TYPE_ICONS[d.parent.type] || '⚡'} #{d.parent.number} {d.parent.title}</span>
               : <span className="text-gray-400 italic">{d.type === 'SUB_TASK' ? 'No parent' : 'No epic'}</span>
           }
         >

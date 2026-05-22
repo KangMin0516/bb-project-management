@@ -7,6 +7,7 @@ import {
   IsArray,
   ArrayMaxSize,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
@@ -46,10 +47,19 @@ export class CreateIssueDto {
   @IsUUID()
   assigneeId?: string;
 
-  @ApiPropertyOptional({ description: 'Reviewer assignee ID' })
+  @ApiPropertyOptional({
+    description:
+      'Reviewer assignee ID. Omit to default to the creator (current user); ' +
+      'pass null explicitly to create an issue with no reviewer.',
+    nullable: true,
+  })
   @IsOptional()
+  @ValidateIf(
+    (o: { reviewerAssigneeId?: string | null }) =>
+      o.reviewerAssigneeId !== null,
+  )
   @IsUUID()
-  reviewerAssigneeId?: string;
+  reviewerAssigneeId?: string | null;
 
   @ApiPropertyOptional({ description: 'Parent issue ID for sub-tasks' })
   @IsOptional()

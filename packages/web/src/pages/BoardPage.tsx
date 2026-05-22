@@ -14,6 +14,12 @@ import { useBoardKeyboardNav } from '@/features/issue/hooks/useBoardKeyboardNav'
 import { useOpenIssueFromUrl } from '@/features/issue/hooks/useOpenIssueFromUrl'
 import { filterBoard } from '@/features/issue/lib/boardFilter'
 import { hasActiveFilters, toggleSet } from '@/shared/ui/filterState'
+import { useAuthStore } from '@/features/auth/store'
+import {
+  applyParsedSearch,
+  hasOperators,
+  parseSearchQuery,
+} from '@/shared/lib/search-query'
 import BoardColumn from '@/features/issue/components/board/BoardColumn'
 import BoardTocSidebar from '@/features/issue/components/board/BoardTocSidebar'
 import SwimlaneBoardView from '@/features/issue/components/board/SwimlaneBoardView'
@@ -194,11 +200,26 @@ export default function BoardPage() {
     isDetailOpen: !!selectedIssue,
   })
 
-  const hasFilters = hasActiveFilters(filters)
+  // PM-78: parse search-input operators (`assignee:me status:open …`).
+  // AND-merge into FilterState before passing to filterBoard so the
+  // popover-set chips and the typed operators both contribute.
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const effective = useMemo(() => {
+    if (!hasOperators(filters.search)) return filters
+    const parsed = parseSearchQuery(filters.search, {
+      currentUserId,
+      members: assignedMembers,
+      labels: boardLabels,
+      modules: boardModules,
+      epics: boardEpics.map((e) => ({ id: e.id, title: e.title })),
+    })
+    return applyParsedSearch(filters, parsed)
+  }, [filters, currentUserId, assignedMembers, boardLabels, boardModules, boardEpics])
+  const hasFilters = hasActiveFilters(effective)
 
   const filteredBoard = useMemo(
-    () => (hasFilters ? filterBoard(parentOnlyBoard, filters, { childrenMap }) : parentOnlyBoard),
-    [parentOnlyBoard, hasFilters, filters, childrenMap],
+    () => (hasFilters ? filterBoard(parentOnlyBoard, effective, { childrenMap }) : parentOnlyBoard),
+    [parentOnlyBoard, hasFilters, effective, childrenMap],
   )
 
   // Use parentOnlyBoard (sub-tasks excluded) so they stop double-rendering
@@ -207,8 +228,8 @@ export default function BoardPage() {
   const filteredBoardForSwimlane = useMemo(() => {
     if (!groupByEpic) return null
     if (!hasFilters) return parentOnlyBoard
-    return filterBoard(parentOnlyBoard, filters, { keepEpics: true, childrenMap })
-  }, [groupByEpic, parentOnlyBoard, hasFilters, filters, childrenMap])
+    return filterBoard(parentOnlyBoard, effective, { keepEpics: true, childrenMap })
+  }, [groupByEpic, parentOnlyBoard, hasFilters, effective, childrenMap])
 
   const handleDragEnd = (result: DropResult) => {
     // While a server sort is active the cards aren't in manual order,

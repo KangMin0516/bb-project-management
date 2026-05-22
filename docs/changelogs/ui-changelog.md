@@ -18,6 +18,89 @@
 
 ## Timeline
 
+### 2026-05-22 — IssueMetadata dark-mode + Created-by alignment polish
+**Fixed.** Three follow-ups on the metadata column after the per-name avatar refactor:
+
+1. The Assignee, Reviewer, Module, and Epic/Parent display spans only had `text-gray-700` — no `dark:` variant — so in dark mode the full name / title (e.g. "Văn Thương Đào", "Admin", "⚡ #12 KUG") rendered in near-invisible dark-gray-on-dark. The Created-by row, added with PM-76, already shipped with `dark:text-gray-300`, which made the rows look mismatched. All four legacy rows now match.
+2. The Created-by row used a plain `<div>` (intentionally — read-only, no click-to-edit) but skipped the `-mx-1.5 px-1.5` geometry that `InlineField`'s button uses, so the avatar sat ~6px to the right of the avatars on Assignee / Reviewer. Added the matching negative-margin + padding so all three avatar columns align vertically.
+
+- Source: `packages/web/src/features/issue/components/detail/IssueMetadata.tsx` (lines 149, 167, 184, 206, 241).
+
+### 2026-05-22 — Initials-fallback avatars use a per-name hashed hue
+**Changed.** `UserAvatar` (and the inline `Avatar32` chip used by the FilterBar member popover) now derive the initials-chip background from a deterministic hash of the user's name via `shared/lib/color.ts:stringToHslColor`. The same identity shows the same hue everywhere — Board cards, Assignee/Reviewer/Creator rows in `IssueMetadata`, activity timeline, mention picker — so when two users sit next to each other (or the same user holds multiple roles) they're trivially distinguishable, and a single user no longer changes colour as you move between surfaces.
+
+Side-effects:
+- The `variant` prop on `UserAvatar` is gone; only call site that used it (`ActivityTimeline`'s `variant="gray"`) was updated.
+- The earlier `variant="purple"` override on the Reviewer row in `IssueMetadata` was already removed earlier today — this commit subsumes that fix and generalises it.
+- The `?` chip for `user={null}` keeps the neutral grey treatment.
+- Text colour reuses the same hue at low lightness (`l=20`) instead of a fixed white/black, so contrast holds across every hue (pure white fails on yellow/cyan; pure black fails on dark navy).
+
+- Source: `packages/web/src/shared/lib/color.ts` (new), `packages/web/src/entities/user/UserAvatar.tsx` (drop variant, switch to inline-style HSL bg/text), `packages/web/src/shared/ui/FilterBar.tsx` (`Avatar32` now matches), `packages/web/src/features/issue/components/activity/ActivityTimeline.tsx` (drop `variant="gray"`).
+
+### 2026-05-22 — Auto-linked issue keys no longer flip description into edit mode (PM-77 follow-up)
+**Fixed.** Clicking a `PM-N` auto-link inside an issue description correctly navigated to the target ticket, but the *destination* ticket's description landed in edit mode — pre-populated with the source ticket's draft. Two layered causes:
+
+1. `IssueDescription.handleClickRead` only short-circuited for `<img>` clicks; any other inner-target (anchor, span, code) bubbled up to the wrapper and called `enterEdit()`. The link click set `editing=true` on the source panel a frame before the document-level `useIssueKeyLinkHandler` ran `navigate(...)`.
+2. The same `IssueDescription` instance was reused across `?open=` navigations (no `key`), so the `editing` + `draft` state survived the issue switch.
+
+Fix #1 ignores clicks whose target is inside any `<a>` element (auto-link or hand-authored). Fix #2 adds `key={d.id}` to the `IssueDescription` mount in `IssueDetailPanel` so it remounts on issue switch and any in-flight draft is dropped — a defensive guard against future variants of this bug.
+
+- Source: `packages/web/src/features/issue/components/detail/IssueDescription.tsx` (`closest('a')` early-return in `handleClickRead`), `packages/web/src/features/issue/components/IssueDetailPanel.tsx` (`key={d.id}` on the description mount).
+
+### 2026-05-22 — Search operators with empty residual no longer leak the raw query (PM-78 follow-up)
+**Fixed.** Typing an operator-only query like `status:open` returned **No issues found** even when matching issues existed. Root cause: `applyParsedSearch` used `parsed.text || base.search` for the `search` field, so when the parser consumed all tokens (empty residual) the FilterState.search fell back to the literal string `"status:open"`. That string then flowed into `matchesFilters` (`issue.title.includes("status:open")` → always false) on Board / Calendar / Timeline, and into `buildListParams.search` (sent as `?search=status:open` to BE title search) on Lists. The fallback is removed; `search` is now always the parsed residual. Lists `buildListParams` was also adjusted so it only uses `deferredSearch` when no operators are present — when operators are present it trusts `beEffective.search` (which is debounced indirectly via `filters` propagation).
+
+- Source: `packages/web/src/shared/lib/search-query.ts` (drop `|| base.search` fallback), `packages/web/src/pages/IssuesPage.tsx` (gate `deferredSearch` fallback on `hasOperators(filters.search)`).
+
+### 2026-05-22 — Cmd+K command palette gains cross-project search results (PM-80 FE)
+**Added.** The command palette now fetches `GET /api/search?q=…` (the new global search endpoint) once the typed query is ≥2 chars (debounced via the existing `DEBOUNCE_DELAY`). Results bucket into three CommandGroups — **Issues** (top 5), **Comments** (top 5), **Specs** (top 5) — each row shows the project key prefix + title or snippet. Click → navigate:
+- Issue / Comment → `/projects/{projectKey}/board?open={id}` so the detail panel opens (comment scroll-to is Phase 2)
+- Spec → `/projects/{projectKey}/specs` with `selectedSpecId` in router state
+
+The pre-existing `searchApi.issues` endpoint stays in `api.ts` — other callers might use it — but the palette now exclusively renders the global search. The Quick Actions / Pages groups (Go to Board / Issues / Settings / etc.) are unchanged.
+
+- Source: `packages/web/src/features/search/api.ts` (new `searchApi.all` + `GlobalSearchResult` type), `packages/web/src/features/search/components/CommandPalette.tsx` (replace per-project issue results with global results, add Comments + Specs groups, dropped legacy `handleSelect`).
+
+### 2026-05-22 — Search input supports operators across Board / Lists / Calendar / Timeline (PM-78)
+**Added.** The Search input now parses Linear-style operators inline with the title-match text. Supported operators (case-insensitive key, value can be quoted):
+
+- `assignee:me` / `assignee:"Van Thuong"` / `assignee:none`
+- `status:open` (= BACKLOG|TODO|IN_PROGRESS|REVIEW_QA|RECHECK), `status:done`, `status:BACKLOG` (raw enum also works)
+- `priority:high` / `medium` / `low`
+- `type:task` / `bug` / `epic` / `domain` / `subtask`
+- `source:mcp` / `slack` / `web` / `api` / `webhook` / `system`
+- `module:"Authentication"` / `epic:"User onboarding"` (single-select, title match)
+- `label:bug` / `label:backend` (multi — repeat to AND)
+- `is:archived` (toggle Archived view from the query)
+
+Unrecognised operators (`xref:foo`) fall through as plain text — graceful degradation. Bare words accumulate into the residual title-match text.
+
+Implementation is one pure parser `shared/lib/search-query.ts` returning `{ text, filters }`, plus an `applyParsedSearch(base, parsed)` helper that AND-merges into the existing FilterState (popover-set chips OR-ed with operator-set ones via Set union; `domainId`/`epicId` fall through if the operator didn't set them). Each page parses inside its existing memo: Calendar + Timeline through `useFilteredIssues` (now accepts a parse context), Lists at the page level (twice: a context-less pass to drive `buildListParams` for the BE search query + sortable filters, then a full-context pass for the client-side narrow), Board at the page level before `filterBoard`.
+
+**Out of scope (Phase 1):**
+- Popover chips don't visually echo operator-derived filters back into the Search input — both are independent affordances that AND together at filter-apply time.
+- Boolean OR / negation / date ranges as operator values.
+- Operator-hint autocomplete dropdown.
+
+- Source: `packages/web/src/shared/lib/search-query.ts` (new — parser + apply helper), `packages/web/src/features/timeline/hooks/useFilteredIssues.ts` (accepts ctx + parses), `packages/web/src/pages/CalendarPage.tsx`, `packages/web/src/pages/TimelinePage.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/pages/BoardPage.tsx`.
+
+### 2026-05-22 — Keyboard Shortcuts dialog: dark-mode contrast fix
+**Fixed.** `ShortcutsHelpModal` was using hard-coded light-mode greys throughout (`text-gray-900`, `text-gray-700`, `text-gray-400`, `border-gray-200`, `bg-gray-50` on the `kbd` keys) with no `dark:` variants. In dark mode the dialog rendered as near-invisible dark text on the panel's dark background. Added `dark:` colour variants on every text / border / background that was hardcoded for light mode; no layout changes.
+
+- Source: `packages/web/src/shared/ui/ShortcutsHelpModal.tsx`.
+
+### 2026-05-22 — Markdown auto-link for `PM-123` issue references (PM-77 FE)
+**Added.** Any text like `PM-123` (project key 2–8 uppercase chars + dash + 1–6 digits) inside a description, comment, or spec body now renders as a clickable pill. Click → resolve the key via the new `/api/issues/resolve` endpoint → React Router navigates to the Board with `?open={issueId}` so the detail panel opens. Hover state and a "monospace pill" style make matched references visually distinct from prose.
+
+Implementation has three pieces:
+1. `shared/lib/linkifyIssueKeys.ts` — walks an HTML string via `DOMParser`, wraps matching text-node tokens with `<a href="#" data-issue-key="PM-123" class="issue-key-link">`. Skips `<a>` (already linked), `<code>`, and `<pre>` to avoid touching code samples.
+2. `MarkdownViewer` applies `linkifyIssueKeys` to its HTML branch before `DOMPurify.sanitize` (which gets the new attributes whitelisted). The markdown branch (`<ReactMarkdown>`) is not yet auto-linked — most of the corpus is HTML from Tiptap, deferred to Phase 2.
+3. `shared/lib/useIssueKeyLinkHandler.ts` — one document-level click delegate, mounted in `AppLayout`. Intercepts anchors with `data-issue-key`, looks up via TanStack Query (cached 5min), navigates. Errors surface as a toast (`Couldn't resolve PM-123`).
+
+Phase 1 ships render-side only — no Tiptap input rule for compose-time auto-link yet. Editor-side conversion comes later (separate ticket if PMs ask).
+
+- Source: `packages/web/src/shared/lib/linkifyIssueKeys.ts` (new), `packages/web/src/shared/lib/useIssueKeyLinkHandler.ts` (new), `packages/web/src/shared/ui/markdown/MarkdownViewer.tsx` (wire linkify before sanitize), `packages/web/src/shared/ui/markdown/markdown.css` (`.issue-key-link` styling), `packages/web/src/widgets/AppLayout/AppLayout.tsx` (mount click handler).
+
 ### 2026-05-22 — Board TOC: click an Epic scrolls to its swimlane in Group: Epic mode (PM-75)
 **Changed.** Clicking any row in `BoardTocSidebar` previously opened `IssueDetailPanel` via `setSelectedIssue`. For Tasks and Sub-tasks that makes sense, but for Epics the user's most likely intent is "take me to that swimlane on the board" — the TOC is acting as a navigator, not a details shortcut. With 20+ swimlanes on a real project, scrolling by hand to find the right Epic after seeing it in the TOC was wasted motion.
 

@@ -12,7 +12,7 @@ const CATEGORY_ORDER = ['Global', 'Navigation', 'Board', 'Issues', 'Issue Detail
 
 function KbdKey({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex min-w-[24px] items-center justify-center rounded-md border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 shadow-sm">
+    <kbd className="inline-flex min-w-[24px] items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-300 shadow-sm">
       {children}
     </kbd>
   )
@@ -36,7 +36,7 @@ function formatKeys(keys: string): React.ReactNode {
         {combo.map((c, j) => (
           <KbdKey key={j}>{c}</KbdKey>
         ))}
-        {i < arr.length - 1 && <span className="mx-1 text-xs text-gray-400">then</span>}
+        {i < arr.length - 1 && <span className="mx-1 text-xs text-gray-400 dark:text-gray-500">then</span>}
       </span>
     )
   })
@@ -61,8 +61,8 @@ export default function ShortcutsHelpModal() {
   return (
     <Dialog open={helpModalOpen} onOpenChange={setHelpModalOpen}>
       <DialogContent className="max-w-2xl rounded-xl p-0 gap-0 overflow-hidden">
-        <DialogHeader className="border-b border-gray-200 px-6 py-4">
-          <DialogTitle className="text-lg font-bold text-gray-900">Keyboard Shortcuts</DialogTitle>
+        <DialogHeader className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <DialogTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">Keyboard Shortcuts</DialogTitle>
           <DialogDescription className="sr-only">List of available keyboard shortcuts grouped by category</DialogDescription>
         </DialogHeader>
 
@@ -73,7 +73,7 @@ export default function ShortcutsHelpModal() {
               if (!items || items.length === 0) return null
               return (
                 <div key={category}>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     {category}
                   </h3>
                   <div className="space-y-1.5">
@@ -82,7 +82,7 @@ export default function ShortcutsHelpModal() {
                         key={item.label}
                         className="flex items-center justify-between rounded-lg px-2 py-1.5"
                       >
-                        <span className="text-sm text-gray-700">{item.label}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
                         <div className="flex items-center gap-1">{formatKeys(item.keys)}</div>
                       </div>
                     ))}
@@ -93,8 +93,8 @@ export default function ShortcutsHelpModal() {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 px-6 py-3">
-          <p className="text-xs text-gray-400">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-3">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
             Press <KbdKey>?</KbdKey> to toggle this dialog
           </p>
         </div>

@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
 import type { Issue } from '@/features/issue/api'
 import type { FilterState } from '@/shared/ui/filterState'
+import {
+  applyParsedSearch,
+  hasOperators,
+  parseSearchQuery,
+  type ParseContext,
+} from '@/shared/lib/search-query'
 /**
  * Applies the shared FilterBar state to a list of issues. `CANCELED` is
  * hidden by default — that matches the convention in the board / list
@@ -18,9 +24,21 @@ import type { FilterState } from '@/shared/ui/filterState'
  * walk a Module-filter would only match the Module row itself, leaving
  * the chart empty.
  */
-export function useFilteredIssues(allIssues: Issue[], filters: FilterState): Issue[] {
+export function useFilteredIssues(
+  allIssues: Issue[],
+  filters: FilterState,
+  parseCtx: ParseContext = {},
+): Issue[] {
+  // PM-78: search input supports operators (`assignee:me status:open …`).
+  // Parse on the fly, AND-merge with popover-set filters.
+  const effective = useMemo(() => {
+    if (!hasOperators(filters.search)) return filters
+    const parsed = parseSearchQuery(filters.search, parseCtx)
+    return applyParsedSearch(filters, parsed)
+  }, [filters, parseCtx])
+
   return useMemo(() => {
-    const searchLower = filters.search.toLowerCase()
+    const searchLower = effective.search.toLowerCase()
     const byId = new Map(allIssues.map((i) => [i.id, i]))
 
     const isDescendantOf = (issue: Issue, ancestorId: string): boolean => {
@@ -34,19 +52,19 @@ export function useFilteredIssues(allIssues: Issue[], filters: FilterState): Iss
     }
 
     return allIssues.filter((issue) => {
-      if (issue.type === 'DOMAIN' && !filters.type.has('DOMAIN')) return false
-      if (issue.status === 'CANCELED' && !filters.status.has('CANCELED')) return false
-      if (filters.status.size > 0 && !filters.status.has(issue.status)) return false
-      if (filters.priority.size > 0 && !filters.priority.has(issue.priority)) return false
-      if (filters.type.size > 0 && !filters.type.has(issue.type)) return false
-      if (filters.source.size > 0 && !filters.source.has(issue.source)) return false
-      if (filters.assignees.size > 0 && (!issue.assigneeId || !filters.assignees.has(issue.assigneeId))) return false
-      if (filters.epicId && !isDescendantOf(issue, filters.epicId)) return false
-      if (filters.domainId && !isDescendantOf(issue, filters.domainId)) return false
-      if (filters.labels.size > 0 && !issue.labels.some((l) => filters.labels.has(l.label.id))) return false
-      if (filters.components.size > 0 && !issue.components.some((c) => filters.components.has(c.component.id))) return false
-      if (filters.search && !issue.title.toLowerCase().includes(searchLower) && !String(issue.number).includes(filters.search)) return false
+      if (issue.type === 'DOMAIN' && !effective.type.has('DOMAIN')) return false
+      if (issue.status === 'CANCELED' && !effective.status.has('CANCELED')) return false
+      if (effective.status.size > 0 && !effective.status.has(issue.status)) return false
+      if (effective.priority.size > 0 && !effective.priority.has(issue.priority)) return false
+      if (effective.type.size > 0 && !effective.type.has(issue.type)) return false
+      if (effective.source.size > 0 && !effective.source.has(issue.source)) return false
+      if (effective.assignees.size > 0 && (!issue.assigneeId || !effective.assignees.has(issue.assigneeId))) return false
+      if (effective.epicId && !isDescendantOf(issue, effective.epicId)) return false
+      if (effective.domainId && !isDescendantOf(issue, effective.domainId)) return false
+      if (effective.labels.size > 0 && !issue.labels.some((l) => effective.labels.has(l.label.id))) return false
+      if (effective.components.size > 0 && !issue.components.some((c) => effective.components.has(c.component.id))) return false
+      if (effective.search && !issue.title.toLowerCase().includes(searchLower) && !String(issue.number).includes(effective.search)) return false
       return true
     })
-  }, [allIssues, filters])
+  }, [allIssues, effective])
 }

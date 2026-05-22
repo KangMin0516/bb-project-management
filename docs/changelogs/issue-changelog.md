@@ -22,6 +22,41 @@
 
 ## Timeline
 
+### 2026-05-22 — Global search endpoint across issues, comments, specs (PM-80 BE)
+**Added.** `SearchService.searchAll(userId, q, limit)` + `GET /api/search?q=…` return cross-project hits from three sources at once:
+- **Issues** — match on `title` (score 100) or `description` (score 50), archived rows excluded
+- **Comments** — match on `content` (score 30), exclude when the parent issue is archived
+- **Specs** — match on `title` (score 80) or `content` (score 40)
+
+Scope: only projects the caller is a member of (workspace superuser sees everything). Verified by joining through `ProjectMember`. Phase 1 uses simple Prisma `contains` / ILIKE queries (no tsvector + GIN index yet); fine for <10k rows per workspace. Phase 2 swaps in Postgres full-text once row count justifies the migration cost.
+
+Results are ranked by the in-memory score above (title > content > comments), then sliced to `limit` (default 20). Each row carries `{ kind, id, projectId, projectKey, title, snippet, score, issueNumber? }`. The snippet is a plain-text window (40 chars before + match + 80 chars after) — the FE wraps the matched substring in `<mark>` if it wants highlighting.
+
+- Source: `packages/api/src/search/search.service.ts` (new `searchAll` method + `SearchResult` type), `packages/api/src/search/search.controller.ts` (new `GET /search` endpoint alongside the existing `/search/issues`).
+
+### 2026-05-22 — Cross-project issue resolve endpoint (PM-77 BE)
+**Added.** `GET /api/issues/resolve?key=PM-123` returns `{ projectId, projectKey, issueId, issueNumber, title }` for any issue key the caller can see. Powers the FE markdown auto-link feature — when text mentions `PM-123`, the FE doesn't yet know the UUID needed for the deep-link, so it resolves on click.
+
+Implementation lives in `IssueQueryService.resolveKey(userId, key)`: validates the key shape `[A-Z]{2,8}-\d{1,6}`, looks up the project by key, checks the caller is a member (or workspace superuser), then finds the issue by `(projectId, number)`. Returns null on any miss — controller maps to 404. Membership check is intentional: don't leak titles of projects the caller isn't on.
+
+The endpoint sits in its own controller `IssueResolveController` mounted at `/issues` (without `ProjectMemberGuard`, since the project isn't known until after the lookup).
+
+- Source: `packages/api/src/issue/application/issue-query.service.ts` (`resolveKey` method), `packages/api/src/issue/issue-resolve.controller.ts` (new), `packages/api/src/issue/issue.module.ts` (register controller).
+
+### 2026-05-22 — Default Reviewer = creator on issue create (PM-81)
+**Changed.** `CreateIssueUseCase` now sets `reviewerAssigneeId` to the creator's id when the caller doesn't pass one. Explicit `null` from the caller is honoured as an opt-out (no reviewer at all), and an explicit user id is respected as before. Before this, `reviewerAssigneeId` was always `null` on create, which left the "Reviewer" metadata field empty on most issues — review-request flows never fired and PMs had to retrofit it by hand.
+
+The distinction "field omitted vs explicit null" required relaxing the create DTO: `reviewerAssigneeId` is now `string | null` with a `ValidateIf` so null skips the UUID check (matches the update DTO's existing pattern). The use case checks `cmd.reviewerAssigneeId === undefined` to decide whether to default, keeping callers like MCP / API-key clients in control. The `CreateIssueModal` on the web exposes a Reviewer combobox pre-selected to the current user, with a "No reviewer" entry that sends explicit `null`.
+
+3 new unit tests cover the three cases (default to creator, explicit null preserved, explicit user respected). 220 BE tests pass.
+
+- Source: `packages/api/src/issue/application/create-issue.use-case.ts`, `packages/api/src/issue/application/create-issue.use-case.spec.ts`, `packages/api/src/issue/dto/create-issue.dto.ts`, `packages/web/src/features/issue/api.ts` (`CreateIssuePayload.reviewerAssigneeId` accepts null), `packages/web/src/features/issue/components/CreateIssueModal.tsx` (new Reviewer picker, default = current user).
+
+### 2026-05-22 — Issue detail: "Created by" row in metadata block (PM-76)
+**Added.** `IssueMetadata` renders a new "Created by" row right under Reviewer that shows the creator's avatar + name. Read-only — creator is immutable. Falls back to "—" when `creator` is null (legacy data). Before this, anyone who wanted to know who filed an issue had to scroll to the bottom of the Activity tab and read the oldest entry.
+
+- Source: `packages/web/src/features/issue/components/detail/IssueMetadata.tsx`.
+
 ### 2026-05-22 — Issue detail children list adapts to the parent's hierarchy level (PM-74)
 **Changed.** `IssueSubtasks` (the children list rendered in `IssueDetailPanel` for every non-SUB_TASK issue) always said "Sub-tasks (N)" and always created a `SUB_TASK` from the inline `+ Add` button — regardless of whether the parent was a DOMAIN (Module), EPIC, or TASK. Opening an Epic that contained 9 TASK children showed them under the label "Sub-tasks (9)", which was wrong terminology and miscued the mental model.
 

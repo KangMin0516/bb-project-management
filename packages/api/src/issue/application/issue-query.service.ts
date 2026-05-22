@@ -300,6 +300,62 @@ export class IssueQueryService {
     };
   }
 
+  /**
+   * Resolve a human-readable issue key like `PM-123` to its row, scoped
+   * to projects the user can read. Returns null if the project key is
+   * unknown, the issue number is missing in that project, or the user
+   * isn't a member of the project (no leak of titles across tenants).
+   * Backs the markdown auto-link feature (PM-77).
+   */
+  async resolveKey(
+    userId: string,
+    key: string,
+  ): Promise<{
+    projectId: string;
+    projectKey: string;
+    issueId: string;
+    issueNumber: number;
+    title: string;
+  } | null> {
+    const match = key.match(/^([A-Z]{2,8})-(\d{1,6})$/);
+    if (!match) return null;
+    const [, projectKey, numStr] = match;
+    const issueNumber = Number(numStr);
+
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true, key: true },
+    });
+    if (!project) return null;
+
+    // Membership check via either project member or workspace superuser.
+    const [member, user] = await Promise.all([
+      this.prisma.projectMember.findFirst({
+        where: { projectId: project.id, userId },
+        select: { id: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { isSuperuser: true },
+      }),
+    ]);
+    if (!member && !user?.isSuperuser) return null;
+
+    const issue = await this.prisma.issue.findFirst({
+      where: { projectId: project.id, number: issueNumber },
+      select: { id: true, number: true, title: true },
+    });
+    if (!issue) return null;
+
+    return {
+      projectId: project.id,
+      projectKey: project.key,
+      issueId: issue.id,
+      issueNumber: issue.number,
+      title: issue.title,
+    };
+  }
+
   async findOne(projectId: string, issueId: string) {
     return this.prisma.issue.findUnique({
       where: { id: issueId },

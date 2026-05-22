@@ -3,6 +3,12 @@ import { useParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, List, GitBranch } from 'lucide-react'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
+import { useAuthStore } from '@/features/auth/store'
+import {
+  applyParsedSearch,
+  hasOperators,
+  parseSearchQuery,
+} from '@/shared/lib/search-query'
 import { useIssueListData } from '@/features/issue/hooks/useIssueListData'
 import { issueRepository } from '@/features/issue/repository'
 import { useIssueListSelection } from '@/features/issue/hooks/useIssueListSelection'
@@ -33,6 +39,18 @@ export default function IssuesPage() {
   const location = useLocation()
   const { filters, setFilters, resetFilters } = useFilterSearchParams()
   const deferredSearch = useDeferredValue(filters.search)
+  const currentUserId = useAuthStore((s) => s.user?.id)
+
+  // PM-78: parse operators out of the search input. First pass uses
+  // user-only context so it's available before useIssueListData fetches
+  // members/labels — drives BE params + initial display. A second pass
+  // (with full ctx) runs after fetching so `label:bug` / `module:X`
+  // resolve to ids client-side.
+  const beEffective = useMemo(() => {
+    if (!hasOperators(filters.search)) return filters
+    const parsed = parseSearchQuery(filters.search, { currentUserId })
+    return applyParsedSearch(filters, parsed)
+  }, [filters, currentUserId])
 
   const url = useIssueListUrlState()
   const [showCreate, setShowCreate] = useState(false)
@@ -40,14 +58,18 @@ export default function IssuesPage() {
 
   const listParams = useMemo(
     () => buildListParams({
-      search: deferredSearch,
-      filters,
+      // When operators are present, beEffective.search is the parsed
+      // residual (possibly empty) and must NOT fall back to the raw
+      // input — that would re-leak the operator string as a title-match.
+      // Otherwise use deferredSearch so plain-text typing stays debounced.
+      search: hasOperators(filters.search) ? beEffective.search : deferredSearch,
+      filters: beEffective,
       showArchived: url.showArchived,
       sortBy: url.sortBy || '',
       sortOrder: url.sortOrder,
       viewMode: url.viewMode,
     }),
-    [deferredSearch, filters, url.showArchived, url.sortBy, url.sortOrder, url.viewMode],
+    [filters.search, deferredSearch, beEffective, url.showArchived, url.sortBy, url.sortOrder, url.viewMode],
   )
 
   const { project, members, projectLabels, projectComponents, list, isLoading, epicChange, remove } =
@@ -74,9 +96,24 @@ export default function IssuesPage() {
     return [...fromDomains, ...orphans]
   }, [toc])
 
+  // PM-78: second pass with full ctx so label/module/epic operators
+  // resolve to ids using fetched project metadata.
+  const memberList = useMemo(() => members?.map((m) => m.user) ?? [], [members])
+  const fullEffective = useMemo(() => {
+    if (!hasOperators(filters.search)) return filters
+    const parsed = parseSearchQuery(filters.search, {
+      currentUserId,
+      members: memberList,
+      labels: projectLabels ?? [],
+      modules: projectModules,
+      epics: projectEpics,
+    })
+    return applyParsedSearch(filters, parsed)
+  }, [filters, currentUserId, memberList, projectLabels, projectModules, projectEpics])
+
   const displayItems = useMemo(
-    () => applyClientFilters(list?.items, filters, { showArchived: url.showArchived }),
-    [list?.items, filters, url.showArchived],
+    () => applyClientFilters(list?.items, fullEffective, { showArchived: url.showArchived }),
+    [list?.items, fullEffective, url.showArchived],
   )
 
   const selection = useIssueListSelection({
@@ -102,7 +139,6 @@ export default function IssuesPage() {
 
   if (!projectId) return null
 
-  const memberList = members?.map((m) => m.user) ?? []
   const projectKey = project?.key ?? ''
 
   return (

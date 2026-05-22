@@ -42,11 +42,18 @@ export default function IssueDescription({ description, onSave, onEditingChange,
   }
 
   const handleClickRead = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === 'IMG') {
-      const img = e.target as HTMLImageElement
+    const target = e.target as HTMLElement
+    if (target.tagName === 'IMG') {
+      const img = target as HTMLImageElement
       if (img.src) useImagePreviewStore.getState().open(img.src, img.alt || '')
       return
     }
+    // PM-77 follow-up: an auto-linked issue key (or any anchor) inside the
+    // description should navigate, not flip the surrounding card into edit
+    // mode. The link click bubbles up here before the document-level
+    // handler navigates away — without this guard we'd leave the *next*
+    // panel sitting in edit mode with the previous issue's draft.
+    if (target.closest('a')) return
     enterEdit()
   }
 
