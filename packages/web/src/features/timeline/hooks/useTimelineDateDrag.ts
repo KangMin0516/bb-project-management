@@ -8,28 +8,27 @@ import { DAY_MS, pixelToDate, startOfDay } from '@/features/timeline/lib'
 import type { TimelineDateRange } from '@/features/timeline/hooks/useTimelineDateRange'
 
 /**
- * The four ways the user can grab a row to set or change dates. The hook
- * doesn't care which affordance triggered the drag — `TimelineChart`
- * picks the right `DragMode` per row state and passes it through.
+ * Three gestures the chart can dispatch into the hook:
  *
- *  - `create-right`  : empty issue, drag right from today. anchor = today (becomes startDate).
- *  - `create-left`   : empty issue, drag left from today.  anchor = today (becomes dueDate).
- *  - `set-due`       : one-sided issue with startDate only. anchor = startDate. Drag sets dueDate.
- *  - `set-start`     : one-sided issue with dueDate only.   anchor = dueDate.   Drag sets startDate.
- *  - `resize-right`  : both dates set. anchor = startDate. Drag right edge → updates dueDate.
- *  - `resize-left`   : both dates set. anchor = dueDate.   Drag left edge → updates startDate.
+ *  - `create-from-today`: empty issue. Mousedown on the today icon, then
+ *    drag in either direction; `resolveDates` picks orientation based on
+ *    cursor vs anchor at commit time.
+ *  - `set-due`: drag the **right** edge of any visible bar → updates `dueDate`.
+ *    Existing `startDate` (if any) is preserved and clamps the floor.
+ *  - `set-start`: drag the **left** edge of any visible bar → updates
+ *    `startDate`. Existing `dueDate` (if any) is preserved and clamps the
+ *    ceiling. Setting startDate on a dueDate-only issue fills the missing
+ *    date; same edge on a both-dates issue resizes it.
+ *
+ * The mode is determined by which affordance the user clicked, not by the
+ * issue's current date state — so PMs can always grab the visible edge of
+ * any bar to adjust its end-points.
  */
-export type DragMode =
-  | 'create-right'
-  | 'create-left'
-  | 'set-due'
-  | 'set-start'
-  | 'resize-right'
-  | 'resize-left'
+export type DragMode = 'create-from-today' | 'set-due' | 'set-start'
 
 interface PreviewDates {
-  startDate: Date
-  dueDate: Date
+  startDate: Date | null
+  dueDate: Date | null
 }
 
 interface DragSession {
@@ -65,8 +64,8 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
   const mutation = useMutation({
     mutationFn: ({ issueId, dates }: { issueId: string; dates: PreviewDates }) =>
       issueRepository.update(projectId, issueId, {
-        startDate: dates.startDate.toISOString(),
-        dueDate: dates.dueDate.toISOString(),
+        startDate: dates.startDate ? dates.startDate.toISOString() : null,
+        dueDate: dates.dueDate ? dates.dueDate.toISOString() : null,
       }),
     onMutate: async ({ issueId, dates }) => {
       await queryClient.cancelQueries({
@@ -86,8 +85,8 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
               i.id === issueId
                 ? {
                     ...i,
-                    startDate: dates.startDate.toISOString(),
-                    dueDate: dates.dueDate.toISOString(),
+                    startDate: dates.startDate ? dates.startDate.toISOString() : null,
+                    dueDate: dates.dueDate ? dates.dueDate.toISOString() : null,
                   }
                 : i,
             ),
@@ -116,24 +115,38 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
 
   /** Resolve the (startDate, dueDate) pair from the current session. */
   const resolveDates = useCallback((s: DragSession): PreviewDates => {
-    const { mode, anchor, cursor } = s
+    const { issue, mode, anchor, cursor } = s
+    const existingStart = issue.startDate
+      ? startOfDay(new Date(issue.startDate))
+      : null
+    const existingDue = issue.dueDate
+      ? startOfDay(new Date(issue.dueDate))
+      : null
+
     switch (mode) {
-      case 'create-right':
-        // anchor = today (start), cursor = future (due)
-        return { startDate: anchor, dueDate: maxDate(cursor, addDays(anchor, 1)) }
-      case 'create-left':
-        // anchor = today (due), cursor = past (start)
+      case 'create-from-today': {
+        // anchor = today; direction picked from cursor vs anchor
+        if (cursor >= anchor) {
+          return { startDate: anchor, dueDate: maxDate(cursor, addDays(anchor, 1)) }
+        }
         return { startDate: minDate(cursor, addDays(anchor, -1)), dueDate: anchor }
-      case 'set-due':
-        // anchor = startDate (fixed), cursor = new dueDate
-        return { startDate: anchor, dueDate: maxDate(cursor, addDays(anchor, 1)) }
-      case 'set-start':
-        // anchor = dueDate (fixed), cursor = new startDate
-        return { startDate: minDate(cursor, addDays(anchor, -1)), dueDate: anchor }
-      case 'resize-right':
-        return { startDate: anchor, dueDate: maxDate(cursor, addDays(anchor, 1)) }
-      case 'resize-left':
-        return { startDate: minDate(cursor, addDays(anchor, -1)), dueDate: anchor }
+      }
+      case 'set-due': {
+        // Only dueDate moves. startDate (if any) stays put and clamps lower.
+        const minDue = existingStart ? addDays(existingStart, 1) : cursor
+        return {
+          startDate: existingStart,
+          dueDate: maxDate(cursor, minDue),
+        }
+      }
+      case 'set-start': {
+        // Only startDate moves. dueDate (if any) stays put and clamps upper.
+        const maxStart = existingDue ? addDays(existingDue, -1) : cursor
+        return {
+          startDate: minDate(cursor, maxStart),
+          dueDate: existingDue,
+        }
+      }
     }
   }, [])
 
@@ -149,7 +162,6 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
       e.preventDefault()
       e.stopPropagation()
       const anchor = anchorForMode(mode, issue)
-      if (!anchor) return
       const next: DragSession = {
         issue,
         mode,
@@ -234,19 +246,18 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
   }
 }
 
-function anchorForMode(mode: DragMode, issue: Issue): Date | null {
+function anchorForMode(mode: DragMode, issue: Issue): Date {
   switch (mode) {
-    case 'create-right':
-    case 'create-left':
+    case 'create-from-today':
       return startOfDay(new Date())
     case 'set-due':
-      return issue.startDate ? startOfDay(new Date(issue.startDate)) : null
+      return issue.startDate
+        ? startOfDay(new Date(issue.startDate))
+        : startOfDay(new Date(issue.dueDate ?? issue.createdAt))
     case 'set-start':
-      return issue.dueDate ? startOfDay(new Date(issue.dueDate)) : null
-    case 'resize-right':
-      return issue.startDate ? startOfDay(new Date(issue.startDate)) : null
-    case 'resize-left':
-      return issue.dueDate ? startOfDay(new Date(issue.dueDate)) : null
+      return issue.dueDate
+        ? startOfDay(new Date(issue.dueDate))
+        : startOfDay(new Date(issue.startDate ?? issue.createdAt))
   }
 }
 

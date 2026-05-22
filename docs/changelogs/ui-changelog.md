@@ -18,6 +18,13 @@
 
 ## Timeline
 
+### 2026-05-22 — Timeline drag affordance: always expose both edges (PM-65 follow-up)
+**Fixed.** Initial PM-65 commit (`beecdf6`) only rendered the **missing-date** edge handle for one-sided issues, so an issue with `dueDate` set but no `startDate` showed only a *left* handle (for setting the missing startDate) — there was no way to grab the visible right edge to adjust the existing dueDate. User reported it via hover on a dueDate-only bar.
+
+Collapsed the mode taxonomy to three: `create-from-today`, `set-due`, `set-start`. Every visible bar now renders **both** edge handles unconditionally — left-edge = `set-start`, right-edge = `set-due` — and the hook's `resolveDates` preserves whichever date isn't being dragged (or fills it in if missing). `resize-left` / `resize-right` are gone; they were redundant with set-start/set-due. Direction for `create-from-today` is picked at commit time from cursor-vs-anchor instead of being baked into the mode, which also drops the `create-left` / `create-right` split.
+
+- Source: `packages/web/src/features/timeline/hooks/useTimelineDateDrag.ts`, `packages/web/src/features/timeline/components/TimelineChart.tsx`.
+
 ### 2026-05-22 — Timeline: collapsible labels + drag-to-set-dates + bar edge resize (PM-65)
 **Added.** Three gestural improvements to the project Timeline view, bundled because they share the same `useTimelineDateDrag` hook and TimelineChart edit window. Spec + decisions: [`docs/plans/timeline-drag-dates.md`](../plans/timeline-drag-dates.md).
 

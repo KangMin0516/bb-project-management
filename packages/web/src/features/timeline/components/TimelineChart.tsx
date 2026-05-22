@@ -15,7 +15,7 @@ interface DragApi {
     mode: DragMode
     passedThreshold: boolean
   } | null
-  previewDates: { startDate: Date; dueDate: Date } | null
+  previewDates: { startDate: Date | null; dueDate: Date | null } | null
   startDrag: (
     e: React.MouseEvent,
     issue: Issue,
@@ -168,14 +168,17 @@ function ChartRow({
     isDraggingThis && drag?.previewDates
       ? {
           ...issue,
-          startDate: drag.previewDates.startDate.toISOString(),
-          dueDate: drag.previewDates.dueDate.toISOString(),
+          startDate: drag.previewDates.startDate
+            ? drag.previewDates.startDate.toISOString()
+            : null,
+          dueDate: drag.previewDates.dueDate
+            ? drag.previewDates.dueDate.toISOString()
+            : null,
         }
       : issue
   const barStyle = computeBarStyle(displayIssue, startDate, endDate)
   const isDot = !displayIssue.dueDate
   const hovered = drag?.hoverIssueId === issue.id
-  const dragMode = drag && !drag.disabled ? determineDragMode(issue, hovered) : null
 
   return (
     <div
@@ -212,7 +215,7 @@ function ChartRow({
         onMouseLeave={() => onHover(null)}
       />
 
-      {/* Drag affordances — only when not currently dragging this row */}
+      {/* Drag affordances — only when not currently dragging any row */}
       {drag && !drag.disabled && hovered && !drag.session && (
         <DragAffordances
           issue={issue}
@@ -220,7 +223,6 @@ function ChartRow({
           barStyle={barStyle}
           todayOffset={todayOffset}
           todayVisible={todayVisible}
-          dragMode={dragMode}
           onStart={(mode, e) => {
             if (innerRef.current) drag.startDrag(e, issue, mode, innerRef.current)
           }}
@@ -246,7 +248,6 @@ function DragAffordances({
   barStyle,
   todayOffset,
   todayVisible,
-  dragMode,
   onStart,
 }: {
   issue: Issue
@@ -254,7 +255,6 @@ function DragAffordances({
   barStyle: { left: string; width: string; minWidth: string }
   todayOffset: number
   todayVisible: boolean
-  dragMode: DragMode | null
   onStart: (mode: DragMode, e: React.MouseEvent) => void
 }) {
   // Empty issue → only the today affordance (if today is visible)
@@ -263,16 +263,7 @@ function DragAffordances({
     return (
       <button
         type="button"
-        onMouseDown={(e) => {
-          // Default to extending right; user can re-drag in the other direction
-          // by moving the cursor left of today after mousedown — but the chosen
-          // mode determines which date is the anchor on commit. We pick mode by
-          // initial cursor direction on the FIRST move; here we just start in
-          // create-right and the hook adjusts on move via `cursor` math.
-          // (Simpler: we commit to create-right if mode is null; effectively
-          //  both directions yield the same start=today, due/start=cursor pair.)
-          onStart('create-right', e)
-        }}
+        onMouseDown={(e) => onStart('create-from-today', e)}
         title="Drag to set start/due dates"
         className="absolute top-1/2 z-[3] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 opacity-0 shadow-sm ring-1 ring-gray-300 dark:ring-gray-600 transition-opacity group-hover:opacity-80"
         style={{ left: `${todayOffset}%` }}
@@ -282,39 +273,28 @@ function DragAffordances({
     )
   }
 
-  // Bar exists — show handles based on which dates are set.
-  const showLeft = !!issue.dueDate && (!!issue.startDate || dragMode === 'set-start')
-  const showRight = !!issue.startDate && (!!issue.dueDate || dragMode === 'set-due')
+  // Bar visible — always expose both edges. set-start updates startDate
+  // (or fills it in if missing); set-due updates dueDate (or fills it in).
+  // The hook's resolveDates preserves whichever date isn't being dragged.
   const heightClass = isEpic ? 'h-3.5' : 'h-5'
-
-  // For one-sided issues, only the missing-date edge is exposed.
-  const oneSidedRightOnly = !!issue.startDate && !issue.dueDate
-  const oneSidedLeftOnly = !issue.startDate && !!issue.dueDate
-
   return (
     <>
-      {(showLeft || oneSidedLeftOnly) && (
-        <EdgeHandle
-          side="left"
-          left={barStyle.left}
-          width={barStyle.width}
-          heightClass={heightClass}
-          onMouseDown={(e) =>
-            onStart(oneSidedLeftOnly ? 'set-start' : 'resize-left', e)
-          }
-        />
-      )}
-      {(showRight || oneSidedRightOnly) && (
-        <EdgeHandle
-          side="right"
-          left={barStyle.left}
-          width={barStyle.width}
-          heightClass={heightClass}
-          onMouseDown={(e) =>
-            onStart(oneSidedRightOnly ? 'set-due' : 'resize-right', e)
-          }
-        />
-      )}
+      <EdgeHandle
+        side="left"
+        left={barStyle.left}
+        width={barStyle.width}
+        heightClass={heightClass}
+        label={issue.startDate ? 'Drag to change start date' : 'Drag to set start date'}
+        onMouseDown={(e) => onStart('set-start', e)}
+      />
+      <EdgeHandle
+        side="right"
+        left={barStyle.left}
+        width={barStyle.width}
+        heightClass={heightClass}
+        label={issue.dueDate ? 'Drag to change due date' : 'Drag to set due date'}
+        onMouseDown={(e) => onStart('set-due', e)}
+      />
     </>
   )
 }
@@ -324,12 +304,14 @@ function EdgeHandle({
   left,
   width,
   heightClass,
+  label,
   onMouseDown,
 }: {
   side: 'left' | 'right'
   left: string
   width: string
   heightClass: string
+  label: string
   onMouseDown: (e: React.MouseEvent) => void
 }) {
   // Place a 6px-wide draggable strip on the bar edge. Visible only on hover.
@@ -342,7 +324,7 @@ function EdgeHandle({
       type="button"
       onMouseDown={onMouseDown}
       onClick={(e) => e.stopPropagation()}
-      title={side === 'left' ? 'Drag to change start date' : 'Drag to change due date'}
+      title={label}
       className={cn(
         'absolute top-1/2 z-[4] w-1.5 -translate-y-1/2 cursor-ew-resize rounded-sm bg-white dark:bg-gray-200 opacity-0 shadow-sm ring-1 ring-gray-400 transition-opacity group-hover:opacity-90',
         heightClass,
@@ -358,34 +340,24 @@ function PreviewLabel({
   rangeStart,
   rangeEnd,
 }: {
-  startDate: Date
-  dueDate: Date
+  startDate: Date | null
+  dueDate: Date | null
   rangeStart: Date
   rangeEnd: Date
 }) {
   const range = rangeEnd.getTime() - rangeStart.getTime()
   if (range === 0) return null
-  const rightOffset =
-    ((dueDate.getTime() - rangeStart.getTime()) / range) * 100
+  const anchor = dueDate ?? startDate
+  if (!anchor) return null
+  const offset = ((anchor.getTime() - rangeStart.getTime()) / range) * 100
   return (
     <span
       className="absolute top-1 z-[5] -translate-x-1/2 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white shadow"
-      style={{ left: `${rightOffset}%` }}
+      style={{ left: `${offset}%` }}
     >
-      {formatDate(startDate)} → {formatDate(dueDate)}
+      {startDate ? formatDate(startDate) : '—'} → {dueDate ? formatDate(dueDate) : '—'}
     </span>
   )
-}
-
-// Pick the most-relevant DragMode for hover affordance rendering. Returns
-// null for groups/no-epic rows (no drag) or for empty issues with today
-// off-screen.
-function determineDragMode(issue: Issue, hovered: boolean): DragMode | null {
-  if (!hovered) return null
-  if (!issue.startDate && !issue.dueDate) return 'create-right'
-  if (issue.startDate && !issue.dueDate) return 'set-due'
-  if (!issue.startDate && issue.dueDate) return 'set-start'
-  return 'resize-right'
 }
 
 function WeekGridlines({ weeks, muted }: { weeks: { date: Date; offset: number }[]; muted?: boolean }) {
