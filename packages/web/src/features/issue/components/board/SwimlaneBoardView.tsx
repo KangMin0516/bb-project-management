@@ -268,6 +268,7 @@ export default function SwimlaneBoardView({
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       className={snapshot.isDragging ? 'opacity-90' : undefined}
+                      data-swimlane-id={key}
                     >
                       <SwimlaneRow
                         epic={lane.epic}

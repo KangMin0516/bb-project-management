@@ -5,7 +5,7 @@ import type { ChildIssue } from './types'
 import IssueCard from './IssueCard'
 import UserAvatar from '@/entities/user/UserAvatar'
 import { cn } from '@/shared/lib/utils'
-import { STATUSES, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/shared/config/constants'
+import { BOARD_COLUMN_ORDER, STATUS_COLORS, STATUS_LABELS, STATUS_BADGE_COLORS } from '@/shared/config/constants'
 import { ChevronRight, ChevronDown, Plus, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 
 /**
@@ -203,7 +203,7 @@ export default memo(function SwimlaneRow({
           ref={columnsRef}
           onScroll={(e) => onColumnsScroll?.(e.currentTarget)}
           className="flex gap-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
-          {STATUSES.map((status) => {
+          {BOARD_COLUMN_ORDER.map((status) => {
             const columnIssues = issues[status] || []
             const droppableId = `${droppablePrefix}:${status}`
             const isExpanded = expandedColumns.has(status)
@@ -265,6 +265,7 @@ export default memo(function SwimlaneRow({
                                 compact
                                 epics={epics}
                                 onEpicChange={onEpicChange}
+                                hideEpicChip
                               />
                             </div>
                           )}

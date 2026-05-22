@@ -23,8 +23,13 @@ import {
 interface IssueSubtasksProps {
   projectId: string
   parentId: string
-  /** Status to inherit for new sub-tasks (mirrors current parent status). */
+  /** Status to inherit for new children (mirrors current parent status). */
   parentStatus: string
+  /** Parent issue type — drives whether children are Tasks, Sub-tasks,
+   *  or Epics. Without this we used to label every children list
+   *  "Sub-tasks" and always create SUB_TASK regardless of the parent's
+   *  position in the hierarchy. */
+  parentType: string
   children: IssueDetail['children'] | undefined
   isCreating: boolean
   onCreate: (data: CreateIssuePayload) => void
@@ -34,13 +39,30 @@ interface IssueSubtasksProps {
 }
 
 /**
+ * The 4-level hierarchy is `DOMAIN → EPIC → TASK/BUG → SUB_TASK`, so
+ * the children section's wording + the inline create button has to
+ * match the parent's level.
+ */
+function deriveChildSpec(parentType: string): { type: CreateIssuePayload['type']; label: string; singular: string } {
+  switch (parentType) {
+    case 'DOMAIN':
+      return { type: 'EPIC', label: 'Epics', singular: 'epic' }
+    case 'EPIC':
+      return { type: 'TASK', label: 'Tasks', singular: 'task' }
+    default:
+      return { type: 'SUB_TASK', label: 'Sub-tasks', singular: 'sub-task' }
+  }
+}
+
+/**
  * Sub-task list with an inline create-row. New sub-tasks inherit the
  * parent's status so they don't have to be re-statused right away.
  */
-export default function IssueSubtasks({ projectId, parentId, parentStatus, children, isCreating, onCreate, onNavigate, members }: IssueSubtasksProps) {
+export default function IssueSubtasks({ projectId, parentId, parentStatus, parentType, children, isCreating, onCreate, onNavigate, members }: IssueSubtasksProps) {
   const [showInput, setShowInput] = useState(false)
   const [title, setTitle] = useState('')
   const queryClient = useQueryClient()
+  const childSpec = deriveChildSpec(parentType)
 
   const assignMutation = useMutation({
     mutationFn: ({ subtaskId, assigneeId }: { subtaskId: string; assigneeId: string | null }) =>
@@ -50,7 +72,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
     },
     onError: (err: unknown) => {
-      useToastStore.getState().addToast(getErrorMessage(err, 'Failed to assign sub-task'), 'error')
+      useToastStore.getState().addToast(getErrorMessage(err, `Failed to assign ${childSpec.singular}`), 'error')
     },
   })
 
@@ -68,7 +90,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
 
   const submit = () => {
     if (!title.trim()) return
-    onCreate({ title, type: 'SUB_TASK', parentId, status: parentStatus })
+    onCreate({ title, type: childSpec.type, parentId, status: parentStatus })
     setTitle('')
     setShowInput(false)
   }
@@ -83,7 +105,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
   return (
     <div>
       <span className="block text-xs font-medium text-gray-500 mb-1">
-        Sub-tasks {children && children.length > 0 ? `(${children.length})` : ''}
+        {childSpec.label} {children && children.length > 0 ? `(${children.length})` : ''}
       </span>
       {children && children.length > 0 && (
         <div className="space-y-1 mb-2">
@@ -118,7 +140,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Sub-task title"
+            placeholder={`${childSpec.singular[0].toUpperCase()}${childSpec.singular.slice(1)} title`}
             className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
             autoFocus
             onKeyDown={(e) => {
@@ -142,7 +164,7 @@ export default function IssueSubtasks({ projectId, parentId, parentStatus, child
         </div>
       ) : (
         <button onClick={() => setShowInput(true)} className="text-xs text-gray-400 hover:text-primary-600">
-          + Add sub-task
+          + Add {childSpec.singular}
         </button>
       )}
     </div>

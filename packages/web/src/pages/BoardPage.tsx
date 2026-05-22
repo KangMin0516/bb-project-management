@@ -6,7 +6,7 @@ import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
 import { useDragScroll } from '@/shared/lib/useDragScroll'
 import { getBool, setBool, PARAM } from '@/shared/lib/filter-codec'
 import { issueRepository } from '@/features/issue/repository'
-import { STATUSES, calculateDropOrder } from '@/shared/config/constants'
+import { BOARD_COLUMN_ORDER, calculateDropOrder } from '@/shared/config/constants'
 import { useBoardData } from '@/features/issue/hooks/useBoardData'
 import { useBoardMutations } from '@/features/issue/hooks/useBoardMutations'
 import { useBoardDerivations } from '@/features/issue/hooks/useBoardDerivations'
@@ -81,6 +81,38 @@ export default function BoardPage() {
   const setShowSubtasks = useCallback(
     (value: boolean) => mutateParams((p) => setBool(p, 'subtasks', value, false)),
     [mutateParams],
+  )
+
+  /**
+   * In Group: Epic mode, clicking an Epic in the TOC sidebar should jump
+   * to its swimlane on the board instead of opening the detail panel —
+   * scanning the board is the primary task and the panel is one click
+   * away (via the swimlane title) if the user wants details. In flat
+   * mode there's no swimlane to scroll to, so fall back to the panel.
+   * Non-EPIC clicks (Tasks / Sub-tasks / Modules) always open the panel.
+   */
+  const handleTocClick = useCallback(
+    (issue: Issue) => {
+      if (groupByEpic && issue.type === 'EPIC') {
+        // Auto-expand the lane in case it was collapsed — scrollIntoView
+        // would land on a closed header otherwise.
+        setCollapsedEpics((prev) => {
+          if (!prev.has(issue.id)) return prev
+          const next = new Set(prev)
+          next.delete(issue.id)
+          return next
+        })
+        // Defer the scroll so the (potential) re-expand has rendered.
+        requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-swimlane-id="${issue.id}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+        return
+      }
+      setSelectedIssue(issue)
+    },
+    [groupByEpic],
   )
   const toggleTocOpen = useCallback(
     () => mutateParams((p) => setBool(p, 'toc', !tocOpen, true)),
@@ -284,7 +316,7 @@ export default function BoardPage() {
           taskish={taskish}
           childrenMap={childrenMap}
           allIssuesById={allIssuesById}
-          onIssueClick={setSelectedIssue}
+          onIssueClick={handleTocClick}
           collapsed={!tocOpen}
           onToggleCollapse={toggleTocOpen}
         />
@@ -329,7 +361,7 @@ export default function BoardPage() {
           <div ref={dragScrollRef} className="h-full overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="flex h-full min-w-max gap-4">
-                {STATUSES.map((status) => (
+                {BOARD_COLUMN_ORDER.map((status) => (
                   <BoardColumn
                     key={status}
                     status={status}

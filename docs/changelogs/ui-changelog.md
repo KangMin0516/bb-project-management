@@ -18,6 +18,27 @@
 
 ## Timeline
 
+### 2026-05-22 — Board TOC: click an Epic scrolls to its swimlane in Group: Epic mode (PM-75)
+**Changed.** Clicking any row in `BoardTocSidebar` previously opened `IssueDetailPanel` via `setSelectedIssue`. For Tasks and Sub-tasks that makes sense, but for Epics the user's most likely intent is "take me to that swimlane on the board" — the TOC is acting as a navigator, not a details shortcut. With 20+ swimlanes on a real project, scrolling by hand to find the right Epic after seeing it in the TOC was wasted motion.
+
+`BoardPage` now wraps the TOC's `onIssueClick` in `handleTocClick`. When `groupByEpic === true` and the clicked issue is `type: 'EPIC'`, it auto-expands the lane (if collapsed) and does a `scrollIntoView({ behavior: 'smooth', block: 'start' })` on the swimlane's wrapper — identified by a new `data-swimlane-id={epicId}` attribute added in `SwimlaneBoardView`. The lane-expand happens via the existing `collapsedEpics` state; the scroll is deferred one frame with `requestAnimationFrame` so the (potential) re-expand is in the DOM first.
+
+Everything else falls through to the original `setSelectedIssue` behaviour: non-Epic rows (Module, Task, Sub-task), and Epic clicks in flat mode (where there's no swimlane to scroll to). Clicking the swimlane title bar **inside** the board still opens the panel — that's the explicit "show me this Epic's details" affordance and stays unchanged.
+
+- Source: `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx` (added `data-swimlane-id` on the lane wrapper), `packages/web/src/pages/BoardPage.tsx` (`handleTocClick` smart handler).
+
+### 2026-05-22 — Board: move Recheck column right after To Do (PM-73)
+**Changed.** Kanban column order on the Board view was `Backlog → To Do → In Progress → Review/QA → Recheck → Done → Canceled` (mirrors the BE `IssueStatus` enum declaration). PMs wanted `Recheck` next to `To Do` because work that bounced back from QA is equally "pick this up next" — having it five columns over meant scrolling past Review/QA every time.
+
+Introduced a new `BOARD_COLUMN_ORDER` constant decoupled from `STATUSES`. `BoardPage` (flat mode) and `SwimlaneRow` (Group: Epic mode) iterate the new constant for column rendering only. Sort behaviour (`status:asc` in Lists / BE / MCP), status dropdowns, GitHub integration mapping, and analytics charts continue to use `STATUSES` — they need workflow order, not column-visibility order.
+
+- Source: `packages/web/src/shared/config/constants.ts` (new `BOARD_COLUMN_ORDER`), `packages/web/src/pages/BoardPage.tsx` (column iter), `packages/web/src/features/issue/components/board/SwimlaneRow.tsx` (column iter).
+
+### 2026-05-22 — Board swimlane: drop the per-card Epic chip (PM-72)
+**Changed.** When the board is in swimlane mode (Group: Epic), every card already sits under a header that names the Epic (`PM-17 Bugs (26 work items)` etc.), so the inline `EpicChip` on each TASK/BUG card was duplicating that information and adding visual noise. `IssueCard` gains an opt-in `hideEpicChip` prop; `SwimlaneRow` hard-codes it on every render. Flat mode is unaffected — the chip still appears there because no other surface tells the user which Epic a card belongs to. Tradeoff: PMs in swimlane mode can no longer one-click reparent via the chip; they drag the card to another lane or open the detail panel — both pre-existing affordances.
+
+- Source: `packages/web/src/features/issue/components/board/IssueCard.tsx` (new `hideEpicChip` prop guards the existing chip render), `packages/web/src/features/issue/components/board/SwimlaneRow.tsx` (passes `hideEpicChip`).
+
 ### 2026-05-22 — Board: `Sub-tasks` toggle to surface every issue including sub-tasks (PM-70)
 **Added.** `BoardToolbar` gains a `Sub-tasks` toggle (icon `ListTree`, default OFF, URL state `?subtasks=1`) that, when ON, renders SUB_TASK rows as full board cards instead of leaving them buried behind the per-Task expand chevron. Useful on projects where most work is broken down — flipping it on lets a PM see every unit of work without clicking through.
 

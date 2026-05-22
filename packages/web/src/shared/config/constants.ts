@@ -1,5 +1,14 @@
 export const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW_QA', 'RECHECK', 'DONE', 'CANCELED'] as const
 
+/**
+ * Kanban column order on the Board view. Differs from `STATUSES` (which
+ * mirrors the BE enum declaration order for sorting consistency):
+ * `RECHECK` sits right after `TODO` so PMs see "things to look at again"
+ * next to "things to start" instead of buried near `DONE`. Used by both
+ * the flat board (BoardPage) and the swimlane rows (SwimlaneRow).
+ */
+export const BOARD_COLUMN_ORDER = ['BACKLOG', 'TODO', 'RECHECK', 'IN_PROGRESS', 'REVIEW_QA', 'DONE', 'CANCELED'] as const
+
 export const STATUS_LABELS: Record<string, string> = {
   BACKLOG: 'Backlog',
   TODO: 'To Do',

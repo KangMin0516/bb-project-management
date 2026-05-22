@@ -22,6 +22,15 @@
 
 ## Timeline
 
+### 2026-05-22 — Issue detail children list adapts to the parent's hierarchy level (PM-74)
+**Changed.** `IssueSubtasks` (the children list rendered in `IssueDetailPanel` for every non-SUB_TASK issue) always said "Sub-tasks (N)" and always created a `SUB_TASK` from the inline `+ Add` button — regardless of whether the parent was a DOMAIN (Module), EPIC, or TASK. Opening an Epic that contained 9 TASK children showed them under the label "Sub-tasks (9)", which was wrong terminology and miscued the mental model.
+
+Now the component takes a `parentType` prop and derives both the section heading and the created type from it: `DOMAIN → "Epics" + create EPIC`, `EPIC → "Tasks" + create TASK`, `TASK/BUG → "Sub-tasks" + create SUB_TASK` (unchanged). The inline input placeholder and Add-button text follow ("Task title", "+ Add task", etc.). `IssueDetailPanel` passes `parentType={issue.type}` on every render.
+
+Tree expansion (each TASK row expanding to show its own SUB_TASK rows beneath) is deferred — Phase 1 ships a flat list at the right level. If PMs ask for the drill-down after using the panel, the existing Board-card expand pattern (`useQuery(['issue', id, 'children'])`) ports over cleanly.
+
+- Source: `packages/web/src/features/issue/components/detail/IssueSubtasks.tsx` (new `parentType` prop + `deriveChildSpec` helper), `packages/web/src/features/issue/components/IssueDetailPanel.tsx` (pass `parentType={issue.type}`).
+
 ### 2026-05-22 — Delete module + unlink epic from module on Table of Content
 **Added.** `TableOfContentPage` now exposes two missing destructive-ish actions PMs were asking for: a trash icon on every `ModuleCard` header to delete the module, and an `Unlink` icon on each `EpicRow` (visible on hover) to remove that epic from its current module. Both go through `confirmDialog()` so the user knows what happens before they click — module-delete shows the epic count and explicitly says they will be kept under "Unassigned Epics", and epic-unlink mentions the epic itself is not deleted, only re-parented to `null`.
 

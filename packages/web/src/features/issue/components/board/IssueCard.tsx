@@ -35,6 +35,9 @@ interface IssueCardProps {
   epics?: Issue[]
   /** Called when the user picks a new Epic from the chip. */
   onEpicChange?: (issueId: string, newParentId: string | null) => void
+  /** Hide the inline Epic chip — used when the parent context already
+   *  surfaces the Epic (e.g. a swimlane header in Group: Epic mode). */
+  hideEpicChip?: boolean
 }
 
 export default memo(function IssueCard({
@@ -51,6 +54,7 @@ export default memo(function IssueCard({
   isFocused,
   epics,
   onEpicChange,
+  hideEpicChip,
 }: IssueCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -111,7 +115,7 @@ export default memo(function IssueCard({
           <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
             {projectKey}-{issue.number}
           </span>
-          {(issue.type === 'TASK' || issue.type === 'BUG') && onEpicChange && epics && (
+          {!hideEpicChip && (issue.type === 'TASK' || issue.type === 'BUG') && onEpicChange && epics && (
             <EpicChip
               issue={issue}
               epics={epics}

@@ -168,6 +168,7 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
                   projectId={projectId}
                   parentId={issue.id}
                   parentStatus={d.status}
+                  parentType={issue.type}
                   children={detail?.children}
                   isCreating={createSubtask.isPending}
                   onCreate={(data) => createSubtask.mutate(data)}
