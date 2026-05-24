@@ -166,6 +166,18 @@ Section order inside the popover is identical on every page: Status → Priority
 
 - Source: `packages/web/src/shared/ui/FilterBar.tsx` (Module section + setModuleId + domainId in badge count), `packages/web/src/features/issue/components/board/BoardToolbar.tsx`, `packages/web/src/features/issue/components/list/IssuesToolbar.tsx`, `packages/web/src/features/calendar/components/CalendarHeader.tsx`, `packages/web/src/features/calendar/hooks/useCalendarData.ts` (accepts `includeArchived`), `packages/web/src/features/timeline/components/TimelineHeader.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/pages/CalendarPage.tsx` (archived URL state + label/component/TOC fetches), `packages/web/src/pages/TimelinePage.tsx` (same fetches).
 
+### 2026-05-24 — Timeline drag: free-form ranges + bar body move (PM-65 follow-up #3)
+**Changed.** PM-65 originally anchored every "create dates" drag to today via a single icon at the today column. The follow-ups (`3cc7d45`, `617c699`) cleaned up edge handles and discoverability, but PMs still couldn't paint a `[Jun 1, Jun 5]` range from cold — the gesture had to start at today. Loosened the model to whatever the cursor picks:
+
+1. **Empty issue: free-form range.** Mousedown anywhere on a row with no dates → `create-free` mode. Anchor is the mousedown date, cursor follows the mouse; on release the pair is normalised to `[min, max]`. Same-day drop auto-expands to a 1-day bar so the user always sees a visible result. Row cursor is `crosshair`; the old today-anchored `MoveHorizontal` icon is removed (the whole row is the affordance now).
+2. **Bar body move.** Both-dates bars accept mousedown on the body → `move-bar` mode. `delta = cursor - anchor` in days; both `startDate` and `dueDate` shift by the same delta. Cursor is `grab` on hover, `grabbing` while dragging. Edge handles still win when they overlap (they're `<button>`s and we gate the row/bar handlers with `closest('button')`).
+3. **Edge handles unchanged.** `set-start` / `set-due` still drag the bar's free edges; pre-existing dates anchor the opposite side.
+4. **Preview label follows the cursor.** The floating `{start} → {due}` label used to render at `dueDate ?? startDate` (i.e. the *anchor* edge for one-sided gestures), which felt detached from where the user was actually dragging. Now it tracks the live cursor date, clamped inside the chart range.
+
+Click-vs-drag remains gated by the 3 px movement threshold so a non-drag mousedown on a bar still opens `IssueDetailPanel`. `Escape` and `window.blur` cancel mid-gesture as before. No backend change — every gesture commits via the existing `PATCH /api/projects/:projectId/issues/:issueId`. `SharedTimelinePage` is unaffected (it doesn't pass a `drag` prop).
+
+- Source: `packages/web/src/features/timeline/hooks/useTimelineDateDrag.ts` (mode taxonomy → `create-free` / `set-due` / `set-start` / `move-bar`; `originalStart` / `originalDue` captured at mousedown for delta math; `cursor` exposed on the session), `packages/web/src/features/timeline/components/TimelineChart.tsx` (row-level `onMouseDown` for empty rows, bar-body `onMouseDown` for both-dates issues, `closest('button')` gate, `PreviewLabel` now takes `cursor`).
+
 ### 2026-05-22 — Timeline drag affordance: always expose both edges (PM-65 follow-up)
 **Fixed.** Initial PM-65 commit (`beecdf6`) only rendered the **missing-date** edge handle for one-sided issues, so an issue with `dueDate` set but no `startDate` showed only a *left* handle (for setting the missing startDate) — there was no way to grab the visible right edge to adjust the existing dueDate. User reported it via hover on a dueDate-only bar.
 

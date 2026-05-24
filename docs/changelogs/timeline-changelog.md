@@ -15,6 +15,18 @@
 
 ## Timeline
 
+### 2026-05-24 — Free-form drag-to-schedule + bar body move (PM-65 follow-up #3)
+**Changed.** Drag-to-set-dates used to anchor to today (`create-from-today`) and only resize/extend from bar edges. PMs couldn't paint a future-only range like `[Jun 1, Jun 5]` in one gesture, and there was no way to shift a both-dates bar without two separate edge drags. Now:
+
+- Empty rows accept mousedown **anywhere** → `[mousedown date, mouseup date]` as the new range (`create-free` mode).
+- Bars with both dates accept mousedown on the **body** → both dates shift by the cursor delta (`move-bar` mode), cursor changes to `grab` / `grabbing`.
+- Edge handles continue to resize one side only (`set-start` / `set-due`).
+- Floating preview label tracks the cursor instead of staying glued to the anchor edge.
+
+Today aiming aid removed — the row itself is now the affordance. See [`ui-changelog.md`](./ui-changelog.md#2026-05-24--timeline-drag-free-form-ranges--bar-body-move-pm-65-follow-up-3) for the full mode taxonomy.
+
+- Source: `packages/web/src/features/timeline/hooks/useTimelineDateDrag.ts`, `packages/web/src/features/timeline/components/TimelineChart.tsx`.
+
 ### 2026-05-21 — Exclude DOMAIN from Calendar + Timeline planning views (PM-56 follow-up)
 **Changed.** `useFilteredIssues` (shared by Calendar and Timeline) now hides `DOMAIN` (Module) rows by default — they're organisational containers, not work items, and shouldn't appear as Timeline bars / Calendar chips. Verified Timeline page renders 0 DOMAIN rows on the PITB project. Users who explicitly add `DOMAIN` to the `type` filter still see them (opt-in).
 - Source: `packages/web/src/features/timeline/hooks/useFilteredIssues.ts`.
@@ -41,6 +53,7 @@
 
 ## Open questions / known issues
 
-- **No drag-to-edit dates.** Dates are read-only on the timeline; users edit via the issue detail panel and the timeline re-renders.
 - **Hard ruler granularity.** Day-level. No week/month zoom yet.
 - **Dependency visualization.** `issue_links` of type `BLOCKS` are stored but not rendered as arrows between bars yet — feature flagged for a later iteration.
+- **No auto-scroll during drag.** Cursor stops at the chart edge; users have to release + re-grab to extend past the visible range. Plan §6 marked this as Phase 2 polish.
+- **Cross-view cache invalidation.** Drag mutations invalidate the `['issues', projectId, 'timeline']` query key only. Board / Calendar / Lists query keys remain stale until their next fetch.

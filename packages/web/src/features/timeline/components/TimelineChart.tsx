@@ -1,5 +1,4 @@
 import { useRef } from 'react'
-import { MoveHorizontal } from 'lucide-react'
 import type { Issue } from '@/features/issue/api'
 import { STATUS_BAR_COLORS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
@@ -13,6 +12,7 @@ interface DragApi {
   session: {
     issue: Issue
     mode: DragMode
+    cursor: Date
     passedThreshold: boolean
   } | null
   previewDates: { startDate: Date | null; dueDate: Date | null } | null
@@ -41,11 +41,13 @@ interface TimelineChartProps {
  * the inner wrapper triggers the outer container's horizontal scroll when
  * the timeline is wider than the viewport.
  *
- * When a `drag` API is supplied, every row also renders affordances
- * (today-anchored icon on empty issues, edge handles on bars) that the
- * `useTimelineDateDrag` hook turns into start/due-date mutations. The
- * drag overlay is the chart's `innerRef` — `useTimelineDateDrag` uses its
- * `getBoundingClientRect()` for pixel-to-day math.
+ * When a `drag` API is supplied, every row participates in three free-form
+ * gestures handled by `useTimelineDateDrag`:
+ *  - empty issue row → mousedown anywhere draws a new `[start, due]` range
+ *  - bar body (both dates) → mousedown shifts both dates together
+ *  - bar edge handles → mousedown resizes that side only
+ * The drag overlay uses the chart's `innerRef` `getBoundingClientRect()`
+ * for pixel-to-day math.
  */
 export default function TimelineChart({
   rows,
@@ -178,6 +180,23 @@ function ChartRow({
       : issue
   const barStyle = computeBarStyle(displayIssue, startDate, endDate)
   const isDot = !displayIssue.dueDate
+  const hasNoDates = !issue.startDate && !issue.dueDate
+  const canMoveBar = !!issue.startDate && !!issue.dueDate
+  const dragEnabled = !!drag && !drag.disabled && !drag.session
+
+  const handleRowMouseDown = (e: React.MouseEvent) => {
+    if (!dragEnabled || !hasNoDates) return
+    // Let buttons (edge handles) and the bar itself receive mousedown first.
+    if ((e.target as HTMLElement).closest('button')) return
+    if (innerRef.current) drag!.startDrag(e, issue, 'create-free', innerRef.current)
+  }
+
+  const handleBarMouseDown = (e: React.MouseEvent) => {
+    if (!dragEnabled || !canMoveBar) return
+    if ((e.target as HTMLElement).closest('button')) return
+    if (innerRef.current) drag!.startDrag(e, issue, 'move-bar', innerRef.current)
+  }
+
   return (
     <div
       className={cn(
@@ -185,8 +204,10 @@ function ChartRow({
         isEpic
           ? 'border-gray-200 dark:border-gray-700 bg-primary-50/40 dark:bg-primary-900/20'
           : 'border-gray-100 dark:border-gray-700',
+        hasNoDates && dragEnabled && 'cursor-crosshair hover:bg-gray-50/60 dark:hover:bg-gray-800/40',
       )}
       style={{ height: rowHeight }}
+      onMouseDown={handleRowMouseDown}
     >
       <WeekGridlines weeks={weeks} muted={!isEpic} />
       {todayVisible && (
@@ -196,43 +217,45 @@ function ChartRow({
       {/* Real bar — dims during drag of this row */}
       <div
         className={cn(
-          'absolute top-1/2 -translate-y-1/2 cursor-pointer transition-all z-[2]',
+          'absolute top-1/2 -translate-y-1/2 transition-all z-[2]',
           isEpic && 'ring-1 ring-primary-300 dark:ring-primary-600',
           isDot ? (isEpic ? 'rounded-full h-3.5' : 'rounded-full h-3') : 'rounded-md h-5',
           STATUS_BAR_COLORS[issue.status] || 'bg-gray-400/80',
+          canMoveBar && dragEnabled
+            ? 'cursor-grab active:cursor-grabbing'
+            : 'cursor-pointer',
           isDraggingThis
             ? 'opacity-30 pointer-events-none'
             : 'hover:brightness-110 hover:shadow-md',
         )}
         style={{ left: barStyle.left, width: barStyle.width, minWidth: barStyle.minWidth }}
+        onMouseDown={handleBarMouseDown}
         onClick={() => !isDraggingThis && onSelectIssue(issue)}
         onMouseEnter={(e) => onHover(issue.id, e)}
         onMouseMove={(e) => onHover(issue.id, e)}
         onMouseLeave={() => onHover(null)}
       />
 
-      {/* Drag affordances — always rendered when drag is enabled so the
-          empty-issue today icon remains a visible hint. CSS opacity +
-          group-hover handles the show/hide. Hide while another drag is
-          in flight so the user can't accidentally chain gestures. */}
-      {drag && !drag.disabled && !drag.session && (
-        <DragAffordances
-          issue={issue}
+      {/* Edge handles on visible bars — only for issues with at least one date.
+          Empty issues drag from the row itself (handleRowMouseDown). */}
+      {dragEnabled && (issue.startDate || issue.dueDate) && (
+        <BarEdgeHandles
           isEpic={isEpic}
           barStyle={barStyle}
-          todayOffset={todayOffset}
-          todayVisible={todayVisible}
+          startLabel={issue.startDate ? 'Drag to change start date' : 'Drag to set start date'}
+          dueLabel={issue.dueDate ? 'Drag to change due date' : 'Drag to set due date'}
           onStart={(mode, e) => {
-            if (innerRef.current) drag.startDrag(e, issue, mode, innerRef.current)
+            if (innerRef.current) drag!.startDrag(e, issue, mode, innerRef.current)
           }}
         />
       )}
 
-      {/* Live ghost cursor label during drag */}
-      {isDraggingThis && drag?.previewDates && (
+      {/* Live cursor label during drag */}
+      {isDraggingThis && drag?.previewDates && drag.session && (
         <PreviewLabel
           startDate={drag.previewDates.startDate}
           dueDate={drag.previewDates.dueDate}
+          cursor={drag.session.cursor}
           rangeStart={startDate}
           rangeEnd={endDate}
         />
@@ -241,46 +264,19 @@ function ChartRow({
   )
 }
 
-function DragAffordances({
-  issue,
+function BarEdgeHandles({
   isEpic,
   barStyle,
-  todayOffset,
-  todayVisible,
+  startLabel,
+  dueLabel,
   onStart,
 }: {
-  issue: Issue
   isEpic: boolean
   barStyle: { left: string; width: string; minWidth: string }
-  todayOffset: number
-  todayVisible: boolean
+  startLabel: string
+  dueLabel: string
   onStart: (mode: DragMode, e: React.MouseEvent) => void
 }) {
-  // Empty issue → drag affordance at today's column position. Always
-  // mounted (when today is visible) at a faint default opacity so PMs
-  // see it as a hint even before they hover, then opacity-100 on
-  // row-hover. The icon at `todayOffset` is intentionally not at the
-  // createdAt-fallback dot — the gesture's anchor is today, not the
-  // issue's creation date, so positioning the affordance at today
-  // teaches the gesture by example.
-  if (!issue.startDate && !issue.dueDate) {
-    if (!todayVisible) return null
-    return (
-      <button
-        type="button"
-        onMouseDown={(e) => onStart('create-from-today', e)}
-        title="Drag to set start/due dates from today"
-        className="absolute top-1/2 z-[3] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 opacity-40 shadow-sm ring-1 ring-gray-300 dark:ring-gray-600 transition-opacity hover:opacity-100 group-hover:opacity-100"
-        style={{ left: `${todayOffset}%` }}
-      >
-        <MoveHorizontal className="h-3 w-3" />
-      </button>
-    )
-  }
-
-  // Bar visible — always expose both edges. set-start updates startDate
-  // (or fills it in if missing); set-due updates dueDate (or fills it in).
-  // The hook's resolveDates preserves whichever date isn't being dragged.
   const heightClass = isEpic ? 'h-3.5' : 'h-5'
   return (
     <>
@@ -289,7 +285,7 @@ function DragAffordances({
         left={barStyle.left}
         width={barStyle.width}
         heightClass={heightClass}
-        label={issue.startDate ? 'Drag to change start date' : 'Drag to set start date'}
+        label={startLabel}
         onMouseDown={(e) => onStart('set-start', e)}
       />
       <EdgeHandle
@@ -297,7 +293,7 @@ function DragAffordances({
         left={barStyle.left}
         width={barStyle.width}
         heightClass={heightClass}
-        label={issue.dueDate ? 'Drag to change due date' : 'Drag to set due date'}
+        label={dueLabel}
         onMouseDown={(e) => onStart('set-due', e)}
       />
     </>
@@ -342,22 +338,26 @@ function EdgeHandle({
 function PreviewLabel({
   startDate,
   dueDate,
+  cursor,
   rangeStart,
   rangeEnd,
 }: {
   startDate: Date | null
   dueDate: Date | null
+  cursor: Date
   rangeStart: Date
   rangeEnd: Date
 }) {
   const range = rangeEnd.getTime() - rangeStart.getTime()
   if (range === 0) return null
-  const anchor = dueDate ?? startDate
-  if (!anchor) return null
-  const offset = ((anchor.getTime() - rangeStart.getTime()) / range) * 100
+  const clamped = Math.max(
+    rangeStart.getTime(),
+    Math.min(cursor.getTime(), rangeEnd.getTime()),
+  )
+  const offset = ((clamped - rangeStart.getTime()) / range) * 100
   return (
     <span
-      className="absolute top-1 z-[5] -translate-x-1/2 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white shadow"
+      className="absolute top-1 z-[5] -translate-x-1/2 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white shadow whitespace-nowrap"
       style={{ left: `${offset}%` }}
     >
       {startDate ? formatDate(startDate) : '—'} → {dueDate ? formatDate(dueDate) : '—'}

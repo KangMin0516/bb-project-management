@@ -8,23 +8,23 @@ import { DAY_MS, pixelToDate, startOfDay } from '@/features/timeline/lib'
 import type { TimelineDateRange } from '@/features/timeline/hooks/useTimelineDateRange'
 
 /**
- * Three gestures the chart can dispatch into the hook:
+ * Four gestures the chart can dispatch into the hook:
  *
- *  - `create-from-today`: empty issue. Mousedown on the today icon, then
- *    drag in either direction; `resolveDates` picks orientation based on
- *    cursor vs anchor at commit time.
+ *  - `create-free`: empty issue. Mousedown anywhere on the row. Anchor and
+ *    cursor are both free pixel-derived dates; at commit time they're
+ *    normalised to `[min, max]` for `startDate`/`dueDate`. A same-day drop
+ *    expands to a 1-day bar so the user always gets a visible range.
  *  - `set-due`: drag the **right** edge of any visible bar → updates `dueDate`.
  *    Existing `startDate` (if any) is preserved and clamps the floor.
  *  - `set-start`: drag the **left** edge of any visible bar → updates
  *    `startDate`. Existing `dueDate` (if any) is preserved and clamps the
  *    ceiling. Setting startDate on a dueDate-only issue fills the missing
  *    date; same edge on a both-dates issue resizes it.
- *
- * The mode is determined by which affordance the user clicked, not by the
- * issue's current date state — so PMs can always grab the visible edge of
- * any bar to adjust its end-points.
+ *  - `move-bar`: drag the **body** of a bar with both dates → shifts both
+ *    by the same number of days. Anchor is the mousedown date, delta =
+ *    `cursor - anchor` in days, new dates = `originals + delta`.
  */
-export type DragMode = 'create-from-today' | 'set-due' | 'set-start'
+export type DragMode = 'create-free' | 'set-due' | 'set-start' | 'move-bar'
 
 interface PreviewDates {
   startDate: Date | null
@@ -42,6 +42,9 @@ interface DragSession {
   chartEl: HTMLElement
   /** True once the user has moved past the 3px threshold (`MOVE_THRESHOLD_PX`). */
   passedThreshold: boolean
+  /** Captured at mousedown; `move-bar` shifts these by (cursor - anchor) days. */
+  originalStart: Date | null
+  originalDue: Date | null
 }
 
 const MOVE_THRESHOLD_PX = 3
@@ -115,7 +118,7 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
 
   /** Resolve the (startDate, dueDate) pair from the current session. */
   const resolveDates = useCallback((s: DragSession): PreviewDates => {
-    const { issue, mode, anchor, cursor } = s
+    const { issue, mode, anchor, cursor, originalStart, originalDue } = s
     const existingStart = issue.startDate
       ? startOfDay(new Date(issue.startDate))
       : null
@@ -124,12 +127,11 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
       : null
 
     switch (mode) {
-      case 'create-from-today': {
-        // anchor = today; direction picked from cursor vs anchor
-        if (cursor >= anchor) {
-          return { startDate: anchor, dueDate: maxDate(cursor, addDays(anchor, 1)) }
-        }
-        return { startDate: minDate(cursor, addDays(anchor, -1)), dueDate: anchor }
+      case 'create-free': {
+        const lo = minDate(anchor, cursor)
+        const hi = maxDate(anchor, cursor)
+        const due = hi.getTime() === lo.getTime() ? addDays(lo, 1) : hi
+        return { startDate: lo, dueDate: due }
       }
       case 'set-due': {
         // Only dueDate moves. startDate (if any) stays put and clamps lower.
@@ -147,6 +149,15 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
           dueDate: existingDue,
         }
       }
+      case 'move-bar': {
+        const deltaDays = Math.round(
+          (cursor.getTime() - anchor.getTime()) / DAY_MS,
+        )
+        return {
+          startDate: originalStart ? addDays(originalStart, deltaDays) : null,
+          dueDate: originalDue ? addDays(originalDue, deltaDays) : null,
+        }
+      }
     }
   }, [])
 
@@ -161,20 +172,36 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
     ) => {
       e.preventDefault()
       e.stopPropagation()
-      const anchor = anchorForMode(mode, issue)
+      const rect = chartEl.getBoundingClientRect()
+      const offset = e.clientX - rect.left
+      const mouseDate = pixelToDate(
+        offset,
+        dateRange.startDate,
+        dateRange.endDate,
+        rect.width,
+      )
+      const originalStart = issue.startDate
+        ? startOfDay(new Date(issue.startDate))
+        : null
+      const originalDue = issue.dueDate
+        ? startOfDay(new Date(issue.dueDate))
+        : null
+      const anchor = computeAnchor(mode, originalStart, originalDue, mouseDate)
       const next: DragSession = {
         issue,
         mode,
         anchor,
-        cursor: anchor,
+        cursor: mouseDate,
         startMouseX: e.clientX,
         chartEl,
         passedThreshold: false,
+        originalStart,
+        originalDue,
       }
       sessionRef.current = next
       setSession(next)
     },
-    [],
+    [dateRange.startDate, dateRange.endDate],
   )
 
   // Attach document-level listeners only while dragging. Capture the cursor's
@@ -246,18 +273,20 @@ export function useTimelineDateDrag({ projectId, dateRange }: UseTimelineDateDra
   }
 }
 
-function anchorForMode(mode: DragMode, issue: Issue): Date {
+function computeAnchor(
+  mode: DragMode,
+  originalStart: Date | null,
+  originalDue: Date | null,
+  mouseDate: Date,
+): Date {
   switch (mode) {
-    case 'create-from-today':
-      return startOfDay(new Date())
+    case 'create-free':
+    case 'move-bar':
+      return mouseDate
     case 'set-due':
-      return issue.startDate
-        ? startOfDay(new Date(issue.startDate))
-        : startOfDay(new Date(issue.dueDate ?? issue.createdAt))
+      return originalStart ?? originalDue ?? mouseDate
     case 'set-start':
-      return issue.dueDate
-        ? startOfDay(new Date(issue.dueDate))
-        : startOfDay(new Date(issue.startDate ?? issue.createdAt))
+      return originalDue ?? originalStart ?? mouseDate
   }
 }
 
