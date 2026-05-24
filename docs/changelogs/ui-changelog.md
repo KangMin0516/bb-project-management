@@ -166,6 +166,19 @@ Section order inside the popover is identical on every page: Status → Priority
 
 - Source: `packages/web/src/shared/ui/FilterBar.tsx` (Module section + setModuleId + domainId in badge count), `packages/web/src/features/issue/components/board/BoardToolbar.tsx`, `packages/web/src/features/issue/components/list/IssuesToolbar.tsx`, `packages/web/src/features/calendar/components/CalendarHeader.tsx`, `packages/web/src/features/calendar/hooks/useCalendarData.ts` (accepts `includeArchived`), `packages/web/src/features/timeline/components/TimelineHeader.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/pages/CalendarPage.tsx` (archived URL state + label/component/TOC fetches), `packages/web/src/pages/TimelinePage.tsx` (same fetches).
 
+### 2026-05-24 — Spec progress strip + items panel + Rollup page (PM-82)
+**Added.** Companion UI for the new SpecItem checklist (see [`specification-changelog.md`](./specification-changelog.md#2026-05-24--specitem-checklist--ai-suggest--spec-rollup-view-pm-82)).
+
+- **Progress strip** on `SpecificationsPage` — `SpecProgressBar` (stacked DONE / IN_PROG / BACKLOG / UNPLANNED), `Sparkles` "Suggest items" button, and a `ListChecks` "Items" toggle. Always rendered so the AI-suggest trigger is reachable even before the first checkbox lands; the bar shows an empty-state hint when total = 0.
+- **SpecItemPanel** (right column, toggleable, sits left of the comments panel): list of every active SpecItem with status badge, filterable by `All / Done / In progress / Backlog / Unplanned`. Each row shows linked issues (with a confirm-pending unlink button) and `+ Link` / `+ New issue` actions.
+- **LinkIssueToItemModal**: command-palette-style modal that lazy-loads project issues (200-cap) and filters client-side by free text (matches `#42`, key, or partial title). Excludes already-linked issues. Wires to `specRepository.linkIssueToItem`.
+- **SpecAiSuggestModal**: one-shot LLM extract → checkable list → "Insert into content" appends `- [ ] <text>` lines to the markdown (under the matching `## section heading` when the LLM provided one, otherwise at the doc tail). Fires automatically on open; default-selects every suggestion so PM unticks rejects rather than ticks keepers.
+- **`SpecRollupPage`** (`/projects/:projectId/spec-rollup`): every spec in one list with its stacked progress bar + done count + status badge + last-updated marker. Sortable by progress / recent / title (URL param `?sort=`). Each row deep-links into the SpecificationsPage for that spec. New sidebar entry "Spec Rollup" with the `ListChecks` icon, slotted under "Specs".
+
+Default UX flow is markdown-first: PM types `- [ ]` in the textarea editor, save, and the server rewrites the line with an inline `<!-- spec-item:<uuid> -->` marker (invisible in preview). "AI Suggest" is the opt-in shortcut for large specs.
+
+- Source: `packages/web/src/features/specification/components/SpecProgressBar.tsx`, `SpecItemPanel.tsx`, `LinkIssueToItemModal.tsx`, `SpecAiSuggestModal.tsx`, `packages/web/src/features/specification/lib/itemStatus.ts` (all new), `packages/web/src/features/specification/api.ts` (types + endpoints), `packages/web/src/features/specification/repository.ts`, `packages/web/src/pages/SpecificationsPage.tsx` (progress strip + panel wiring), `packages/web/src/pages/SpecRollupPage.tsx` (new), `packages/web/src/app/router/index.tsx` (`spec-rollup` route), `packages/web/src/widgets/AppLayout/AppLayout.tsx` (sidebar entry).
+
 ### 2026-05-24 — Timeline drag: free-form ranges + bar body move (PM-65 follow-up #3)
 **Changed.** PM-65 originally anchored every "create dates" drag to today via a single icon at the today column. The follow-ups (`3cc7d45`, `617c699`) cleaned up edge handles and discoverability, but PMs still couldn't paint a `[Jun 1, Jun 5]` range from cold — the gesture had to start at today. Loosened the model to whatever the cursor picks:
 

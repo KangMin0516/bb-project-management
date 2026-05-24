@@ -35,6 +35,16 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 
 ## Timeline
 
+### 2026-05-24 — SpecItem ↔ Issue link mirror (PM-82)
+**Added.** External API surfaces the new SpecItem-to-Issue link CRUD so MCP agents can wire freshly-created issues to a spec's individual checkbox-line requirements (not just the spec as a whole). Two new routes:
+- `POST /api/external/projects/:projectKey/specs/:specId/items/:itemId/issues` `{ issueId }` — link an issue to a SpecItem (idempotent; returns 400 on duplicate).
+- `DELETE /api/external/projects/:projectKey/specs/:specId/items/:itemId/issues/:linkId`.
+
+Both resolve `projectKey → projectId` and delegate to `SpecItemIssueLinkService` which validates that the spec item belongs to the project (404 otherwise) and the issue belongs to the same project (404 otherwise) to avoid cross-project leaks. The internal `GET /specs/:specId` response (also externally accessible) now includes the spec's `items[]` so agents have a discoverable item list to link against without a separate roundtrip. See [`specification-changelog.md`](./specification-changelog.md#2026-05-24--specitem-checklist--ai-suggest--spec-rollup-view-pm-82) for the data model.
+- DTO: `packages/api/src/external/dto/external-link-spec-item-issue.dto.ts`.
+- Controller: `packages/api/src/external/external.controller.ts`.
+- Service: `packages/api/src/external/external.service.ts` (`linkIssueToSpecItem`, `unlinkIssueFromSpecItem`).
+
 ### 2026-05-21 — `DOMAIN` issue type + Table of Content + bulk-set-module endpoints (PR1: BE)
 **Added.** The shared `IssueType` enum now includes `DOMAIN`, so external `create_issue` / `update_issue` / `list_issues` accept `type=DOMAIN` for free via the regenerated Prisma client (no DTO change needed). Two new endpoints scoped to MCP / agent callers:
 - `GET /api/external/projects/:projectKey/table-of-content` — returns the project's `Domain → Epic` outline plus an `orphanEpics` bucket for Epics that haven't been assigned a Module yet. Lets agents reason about scope without paging the full issue list.

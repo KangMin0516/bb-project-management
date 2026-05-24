@@ -14,12 +14,15 @@ import {
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SpecificationService } from './specification.service.js';
+import { SpecItemIssueLinkService } from './spec-item-issue-link.service.js';
+import { SpecSuggestService } from './spec-suggest.service.js';
 import { CreateSpecificationDto } from './dto/create-specification.dto.js';
 import { UpdateSpecificationDto } from './dto/update-specification.dto.js';
 import {
   CreateSpecCommentDto,
   UpdateSpecCommentDto,
 } from './dto/create-spec-comment.dto.js';
+import { LinkSpecItemIssueDto } from './dto/link-spec-item-issue.dto.js';
 import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 
@@ -28,7 +31,11 @@ import { ProjectMemberGuard } from '../common/guards/project-member.guard.js';
 @Controller('projects/:projectId/specifications')
 @UseGuards(ProjectMemberGuard)
 export class SpecificationController {
-  constructor(private service: SpecificationService) {}
+  constructor(
+    private service: SpecificationService,
+    private itemLinks: SpecItemIssueLinkService,
+    private suggest: SpecSuggestService,
+  ) {}
 
   // ─── Specification CRUD ──────────────────────────────────
 
@@ -151,5 +158,35 @@ export class SpecificationController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.service.removeComment(projectId, specId, commentId, user.sub);
+  }
+
+  // ─── SpecItem ↔ Issue links ──────────────────────────────
+
+  @Post(':specId/items/:itemId/issues')
+  linkIssueToItem(
+    @Param('projectId') projectId: string,
+    @Param('specId') specId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: LinkSpecItemIssueDto,
+  ) {
+    return this.itemLinks.create(projectId, specId, itemId, dto.issueId);
+  }
+
+  @Delete(':specId/items/:itemId/issues/:linkId')
+  unlinkIssueFromItem(
+    @Param('projectId') projectId: string,
+    @Param('specId') specId: string,
+    @Param('itemId') itemId: string,
+    @Param('linkId') linkId: string,
+  ) {
+    return this.itemLinks.remove(projectId, specId, itemId, linkId);
+  }
+
+  @Post(':specId/suggest-items')
+  suggestItems(
+    @Param('projectId') projectId: string,
+    @Param('specId') specId: string,
+  ) {
+    return this.suggest.suggestItems(projectId, specId);
   }
 }

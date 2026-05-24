@@ -50,11 +50,39 @@ export interface SpecIssueLink {
   issue: { id: string; number: number; title: string; status: string; priority: string }
 }
 
+export interface SpecItemIssueSummary {
+  id: string
+  number: number
+  title: string
+  status: string
+  priority: string
+  assigneeId: string | null
+}
+
+export interface SpecItemIssueLink {
+  id: string
+  createdAt: string
+  issue: SpecItemIssueSummary
+}
+
+export interface SpecItem {
+  id: string
+  marker: string
+  text: string
+  order: number
+  sectionId: string | null
+  archivedAt: string | null
+  createdAt: string
+  updatedAt: string
+  issueLinks: SpecItemIssueLink[]
+}
+
 export interface SpecDetail extends SpecListItem {
   content: string
   sections: SpecSection[]
   comments: SpecComment[]
   issueLinks?: SpecIssueLink[]
+  items?: SpecItem[]
 }
 
 export const specApi = {
@@ -99,4 +127,30 @@ export const specApi = {
 
   deleteComment: (projectId: string, specId: string, commentId: string) =>
     api.delete(`/projects/${projectId}/specifications/${specId}/comments/${commentId}`),
+
+  // SpecItem ↔ Issue links
+  linkIssueToItem: (projectId: string, specId: string, itemId: string, issueId: string) =>
+    api
+      .post<{ data: SpecItemIssueLink }>(
+        `/projects/${projectId}/specifications/${specId}/items/${itemId}/issues`,
+        { issueId },
+      )
+      .then((r) => r.data.data),
+
+  unlinkIssueFromItem: (
+    projectId: string,
+    specId: string,
+    itemId: string,
+    linkId: string,
+  ) =>
+    api.delete(
+      `/projects/${projectId}/specifications/${specId}/items/${itemId}/issues/${linkId}`,
+    ),
+
+  suggestItems: (projectId: string, specId: string) =>
+    api
+      .post<{ data: { text: string; sectionTitle?: string }[] }>(
+        `/projects/${projectId}/specifications/${specId}/suggest-items`,
+      )
+      .then((r) => r.data.data),
 }

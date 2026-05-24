@@ -17,6 +17,7 @@ const GlobalDashboardPage = lazy(() => import('@/pages/GlobalDashboardPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const CredentialsPage = lazy(() => import('@/pages/CredentialsPage'))
 const SpecificationsPage = lazy(() => import('@/pages/SpecificationsPage'))
+const SpecRollupPage = lazy(() => import('@/pages/SpecRollupPage'))
 const TableOfContentPage = lazy(() => import('@/pages/TableOfContentPage'))
 const TimelinePage = lazy(() => import('@/pages/TimelinePage'))
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'))
@@ -90,6 +91,7 @@ export function AppRouter() {
             <Route path="lists" element={<IssuesPage />} />
             <Route path="issues" element={<IssuesPage />} />
             <Route path="specs" element={<SpecificationsPage />} />
+            <Route path="spec-rollup" element={<SpecRollupPage />} />
             <Route path="table-of-content" element={<TableOfContentPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="timeline" element={<TimelinePage />} />

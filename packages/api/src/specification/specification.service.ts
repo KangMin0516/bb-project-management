@@ -13,10 +13,14 @@ import type {
   CreateSpecCommentDto,
   UpdateSpecCommentDto,
 } from './dto/create-spec-comment.dto.js';
+import { SpecItemService } from './spec-item.service.js';
 
 @Injectable()
 export class SpecificationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private specItemService: SpecItemService,
+  ) {}
 
   // ─── Helpers ─────────────────────────────────────────────
 
@@ -108,7 +112,7 @@ export class SpecificationService {
 
   async create(projectId: string, userId: string, dto: CreateSpecificationDto) {
     return this.prisma.$transaction(async (tx) => {
-      const spec = await tx.specification.create({
+      const created = await tx.specification.create({
         data: {
           title: dto.title,
           content: dto.content,
@@ -122,8 +126,23 @@ export class SpecificationService {
         },
       });
 
-      await this.syncSections(tx, spec.id, dto.content);
-      return spec;
+      await this.syncSections(tx, created.id, dto.content);
+      const { markedContent } = await this.specItemService.upsertFromContent(
+        tx,
+        created.id,
+        dto.content,
+      );
+
+      // Persist the rewritten markdown if the parser injected new marker comments
+      // so subsequent edits round-trip without re-allocating UUIDs.
+      if (markedContent !== dto.content) {
+        return tx.specification.update({
+          where: { id: created.id },
+          data: { content: markedContent },
+          include: { creator: { select: USER_SELECT } },
+        });
+      }
+      return created;
     });
   }
 
@@ -188,6 +207,27 @@ export class SpecificationService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        items: {
+          where: { archivedAt: null },
+          orderBy: { order: 'asc' },
+          include: {
+            issueLinks: {
+              include: {
+                issue: {
+                  select: {
+                    id: true,
+                    number: true,
+                    title: true,
+                    status: true,
+                    priority: true,
+                    assigneeId: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        },
       },
     });
 
@@ -202,23 +242,29 @@ export class SpecificationService {
     await this.findSpecOrThrow(specId, projectId);
 
     return this.prisma.$transaction(async (tx) => {
-      const spec = await tx.specification.update({
+      let nextContent = dto.content;
+
+      if (dto.content !== undefined) {
+        await this.syncSections(tx, specId, dto.content);
+        const { markedContent } = await this.specItemService.upsertFromContent(
+          tx,
+          specId,
+          dto.content,
+        );
+        nextContent = markedContent;
+      }
+
+      return tx.specification.update({
         where: { id: specId },
         data: {
           ...(dto.title !== undefined && { title: dto.title }),
-          ...(dto.content !== undefined && { content: dto.content }),
+          ...(nextContent !== undefined && { content: nextContent }),
           ...(dto.category !== undefined && { category: dto.category }),
           ...(dto.status !== undefined && { status: dto.status }),
           ...(dto.order !== undefined && { order: dto.order }),
         },
         include: { creator: { select: USER_SELECT } },
       });
-
-      if (dto.content !== undefined) {
-        await this.syncSections(tx, specId, dto.content);
-      }
-
-      return spec;
     });
   }
 

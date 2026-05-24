@@ -183,6 +183,7 @@ model Issue {
   sourceLinks   IssueLink[]         @relation("SourceLinks")
   targetLinks   IssueLink[]         @relation("TargetLinks")
   specLinks     IssueSpecLink[]
+  specItemLinks SpecItemIssueLink[]
   githubPrLinks GitHubPrIssueLink[]
 
   @@unique([projectId, number])
@@ -579,6 +580,7 @@ model Specification {
   sections   SpecSection[]
   comments   SpecComment[]
   issueLinks IssueSpecLink[]
+  items      SpecItem[]
 
   @@index([projectId, status])
   @@map("specifications")
@@ -594,11 +596,55 @@ model SpecSection {
   specId String        @map("spec_id")
   spec   Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
 
-  comments SpecComment[]
+  comments  SpecComment[]
+  specItems SpecItem[]
 
   @@unique([specId, sectionId])
   @@index([specId, order])
   @@map("spec_sections")
+}
+
+/// Tracked requirement item parsed from a `- [ ]` checkbox line inside a Specification.content.
+/// Anchored to the markdown by a `marker` UUID embedded as `<!-- spec-item:<uuid> -->`
+/// after the checkbox text so it survives re-orderings and text edits. When a marker
+/// disappears from the content, the row is archived (soft-delete) so its issue links
+/// are preserved if the PM restores the line later.
+model SpecItem {
+  id     String @id @default(uuid())
+  marker String @db.VarChar(64)
+  text   String @db.VarChar(500)
+  order  Int    @default(0)
+
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  specId String        @map("spec_id")
+  spec   Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
+
+  sectionId String?      @map("section_id")
+  section   SpecSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  issueLinks SpecItemIssueLink[]
+
+  @@unique([specId, marker])
+  @@index([specId, archivedAt])
+  @@map("spec_items")
+}
+
+model SpecItemIssueLink {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  specItemId String   @map("spec_item_id")
+  specItem   SpecItem @relation(fields: [specItemId], references: [id], onDelete: Cascade)
+
+  issueId String @map("issue_id")
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([specItemId, issueId])
+  @@index([issueId])
+  @@map("spec_item_issue_links")
 }
 
 model SpecComment {

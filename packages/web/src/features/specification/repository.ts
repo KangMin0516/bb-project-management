@@ -31,6 +31,13 @@ export const specRepository = {
   /** Export to Markdown. */
   downloadOne: specApi.downloadOne,
   downloadAll: specApi.downloadAll,
+
+  /** SpecItem ↔ Issue links. */
+  linkIssueToItem: specApi.linkIssueToItem,
+  unlinkIssueFromItem: specApi.unlinkIssueFromItem,
+
+  /** AI-driven item extraction from the spec body. */
+  suggestItems: specApi.suggestItems,
 }
 
 export type SpecRepository = typeof specRepository

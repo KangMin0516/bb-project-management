@@ -9,6 +9,7 @@ import { CreateIssueUseCase } from '../issue/application/create-issue.use-case.j
 import { IssueQueryService } from '../issue/application/issue-query.service.js';
 import { UpdateIssueUseCase } from '../issue/application/update-issue.use-case.js';
 import { SpecificationService } from '../specification/specification.service.js';
+import { SpecItemIssueLinkService } from '../specification/spec-item-issue-link.service.js';
 import { IssueSpecLinkService } from '../issue-spec-link/issue-spec-link.service.js';
 import { CommentService } from '../comment/comment.service.js';
 import { IssueRuleService } from '../issue-rule/issue-rule.service.js';
@@ -43,6 +44,7 @@ export class ExternalService {
     private issueQueryService: IssueQueryService,
     private specificationService: SpecificationService,
     private issueSpecLinkService: IssueSpecLinkService,
+    private specItemIssueLinkService: SpecItemIssueLinkService,
     private commentService: CommentService,
     private issueRuleService: IssueRuleService,
     private uploadService: UploadService,
@@ -1116,6 +1118,48 @@ export class ExternalService {
       issueNumber,
     );
     return this.issueSpecLinkService.remove(projectId, issueId, linkId);
+  }
+
+  // ─── SpecItem ↔ Issue links (external mirror) ─────────────
+
+  async linkIssueToSpecItem(
+    projectKey: string,
+    specId: string,
+    itemId: string,
+    issueId: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.specItemIssueLinkService.create(
+      project.id,
+      specId,
+      itemId,
+      issueId,
+    );
+  }
+
+  async unlinkIssueFromSpecItem(
+    projectKey: string,
+    specId: string,
+    itemId: string,
+    linkId: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true },
+    });
+    if (!project)
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    return this.specItemIssueLinkService.remove(
+      project.id,
+      specId,
+      itemId,
+      linkId,
+    );
   }
 
   // ─── New: comment + project meta (Phase 1 for bbpm-internal-mcp) ──

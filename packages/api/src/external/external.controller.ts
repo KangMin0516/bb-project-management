@@ -17,6 +17,7 @@ import { ExternalUpdateIssueDto } from './dto/external-update-issue.dto.js';
 import { ExternalCreateSpecDto } from './dto/external-create-spec.dto.js';
 import { ExternalUpdateSpecDto } from './dto/external-update-spec.dto.js';
 import { ExternalCreateIssueSpecLinkDto } from './dto/external-create-issue-spec-link.dto.js';
+import { ExternalLinkSpecItemIssueDto } from './dto/external-link-spec-item-issue.dto.js';
 import { ExternalCreateCommentDto } from './dto/external-create-comment.dto.js';
 import { ExternalAttachImageDto } from './dto/external-attach-image.dto.js';
 import { ApiKeyGuard } from '../api-key/api-key.guard.js';
@@ -197,6 +198,36 @@ export class ExternalController {
     return this.externalService.deleteIssueSpecLink(
       projectKey,
       issueNumber,
+      linkId,
+    );
+  }
+
+  @Post('projects/:projectKey/specs/:specId/items/:itemId/issues')
+  linkIssueToSpecItem(
+    @Param('projectKey') projectKey: string,
+    @Param('specId') specId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: ExternalLinkSpecItemIssueDto,
+  ) {
+    return this.externalService.linkIssueToSpecItem(
+      projectKey,
+      specId,
+      itemId,
+      dto.issueId,
+    );
+  }
+
+  @Delete('projects/:projectKey/specs/:specId/items/:itemId/issues/:linkId')
+  unlinkIssueFromSpecItem(
+    @Param('projectKey') projectKey: string,
+    @Param('specId') specId: string,
+    @Param('itemId') itemId: string,
+    @Param('linkId') linkId: string,
+  ) {
+    return this.externalService.unlinkIssueFromSpecItem(
+      projectKey,
+      specId,
+      itemId,
       linkId,
     );
   }

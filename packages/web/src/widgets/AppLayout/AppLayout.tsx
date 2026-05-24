@@ -201,6 +201,7 @@ export default function AppLayout() {
     ? [
         { to: `/projects/${projectId}`, icon: LayoutDashboard, label: 'Dashboard' },
         { to: `/projects/${projectId}/specs`, icon: FileText, label: 'Specs' },
+        { to: `/projects/${projectId}/spec-rollup`, icon: ListChecks, label: 'Spec Rollup' },
         { to: `/projects/${projectId}/table-of-content`, icon: ListTree, label: 'Module' },
         { to: `/projects/${projectId}/board`, icon: FolderKanban, label: 'Board' },
         { to: `/projects/${projectId}/lists`, icon: List, label: 'Lists' },

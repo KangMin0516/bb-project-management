@@ -13,6 +13,6 @@ import { QuickIssueService } from './quick-issue.service.js';
     AnthropicAdapter,
     { provide: AI_COMPLETION_PORT, useExisting: AnthropicAdapter },
   ],
-  exports: [QuickIssueService],
+  exports: [QuickIssueService, AI_COMPLETION_PORT],
 })
 export class QuickIssueModule {}
