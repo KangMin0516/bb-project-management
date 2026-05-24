@@ -24,7 +24,9 @@ RULES:
 - 'sectionTitle' should mirror the nearest H2/H3 heading verbatim (or omit if at the top of the doc).
 - Return at most 30 items. If the doc is short, return fewer.`;
 
-interface SuggestedItem {
+/** Public shape: controller returns Promise<SuggestedItem[]>, so the interface
+ *  must be exportable for `nest build` (TS4053 — "name … cannot be named"). */
+export interface SuggestedItem {
   text: string;
   sectionTitle?: string;
 }
