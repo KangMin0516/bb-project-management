@@ -11,15 +11,20 @@ interface TimelineLabelColumnProps {
   rowHeight: number
   width: number
   collapsed: boolean
+  isResizing?: boolean
   onToggleCollapsed: () => void
   onSelectIssue: (issue: Issue) => void
   onToggleEpic: (key: string) => void
+  /** Mousedown on the right-edge resize handle. Wired in TimelinePage. */
+  onResizeStart?: (e: React.MouseEvent) => void
 }
 
 /**
  * Sticky left column listing issues / group headers. Click an issue row to
  * open the detail panel; click the chevron on an EPIC row to expand or
- * collapse its children.
+ * collapse its children. When `onResizeStart` is provided and the column is
+ * expanded, a 4 px draggable handle sits on the right edge so PMs can dial
+ * the column width to taste (persisted by the parent).
  */
 export default function TimelineLabelColumn({
   rows,
@@ -28,13 +33,19 @@ export default function TimelineLabelColumn({
   rowHeight,
   width,
   collapsed,
+  isResizing,
   onToggleCollapsed,
   onSelectIssue,
   onToggleEpic,
+  onResizeStart,
 }: TimelineLabelColumnProps) {
   return (
     <div
-      className="shrink-0 sticky left-0 z-10 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-[width] duration-200"
+      className={cn(
+        'shrink-0 sticky left-0 z-10 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800',
+        // Skip the width transition while the user is actively dragging — otherwise the column lags behind the cursor.
+        !isResizing && 'transition-[width] duration-200',
+      )}
       style={{ width }}
     >
       <div className="sticky top-0 z-20 h-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2 flex items-center justify-between">
@@ -68,6 +79,24 @@ export default function TimelineLabelColumn({
           onToggleEpic={onToggleEpic}
         />
       ))}
+
+      {/* Right-edge resize handle — only when expanded and parent wired the callback. */}
+      {!collapsed && onResizeStart && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize Issues column"
+          onMouseDown={onResizeStart}
+          className={cn(
+            'absolute top-0 right-0 h-full w-1 cursor-col-resize z-30',
+            'after:absolute after:top-0 after:right-0 after:h-full after:w-px after:transition-colors',
+            isResizing
+              ? 'after:bg-primary-500'
+              : 'after:bg-transparent hover:after:bg-primary-500/60',
+          )}
+          title="Drag to resize"
+        />
+      )}
     </div>
   )
 }

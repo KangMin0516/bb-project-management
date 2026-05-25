@@ -15,6 +15,11 @@
 
 ## Timeline
 
+### 2026-05-25 — Resizable left "Issues" column
+**Added.** Previously the Issues column toggled between 280 px (expanded) and 48 px (collapsed) and had no in-between. PMs on wider screens wanted more room for long issue titles; on smaller monitors they wanted to claw back chart real estate without fully collapsing. Now the right edge of the expanded column is a drag handle (4 px hit area, primary-coloured on hover). Drag horizontally to set the width between 160–640 px; the choice persists to `localStorage['timeline-labels-width']` and survives page reloads. The collapse toggle still snaps to 48 px → restoring shows the last-dragged width. `SharedTimelinePage` does not receive the resize callback so the public read-only view keeps fixed widths (no UX surprise for guests).
+
+- Source: `packages/web/src/features/timeline/components/TimelineLabelColumn.tsx` (`onResizeStart` / `isResizing` props + absolute-positioned right-edge handle), `packages/web/src/pages/TimelinePage.tsx` (`labelWidthExpanded` state, document-level mousemove/up wiring, `clampLabelWidth`, body cursor lock during drag).
+
 ### 2026-05-24 — Free-form drag-to-schedule + bar body move (PM-65 follow-up #3)
 **Changed.** Drag-to-set-dates used to anchor to today (`create-from-today`) and only resize/extend from bar edges. PMs couldn't paint a future-only range like `[Jun 1, Jun 5]` in one gesture, and there was no way to shift a both-dates bar without two separate edge drags. Now:
 

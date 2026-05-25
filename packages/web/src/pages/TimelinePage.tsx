@@ -28,10 +28,18 @@ import {
   useProjectRole,
 } from '@/features/share-link/hooks/useProjectRole'
 
-const LABEL_WIDTH_EXPANDED = 280
+const LABEL_WIDTH_DEFAULT = 280
+const LABEL_WIDTH_MIN = 160
+const LABEL_WIDTH_MAX = 640
 const LABEL_WIDTH_COLLAPSED = 48
 const ROW_HEIGHT = 36
 const LABELS_COLLAPSED_KEY = 'timeline-labels-collapsed'
+const LABEL_WIDTH_KEY = 'timeline-labels-width'
+
+function clampLabelWidth(n: number): number {
+  if (!Number.isFinite(n)) return LABEL_WIDTH_DEFAULT
+  return Math.min(LABEL_WIDTH_MAX, Math.max(LABEL_WIDTH_MIN, Math.round(n)))
+}
 
 /**
  * Composition root for the project timeline. All data, filtering, and
@@ -50,7 +58,12 @@ export default function TimelinePage() {
   const [labelsCollapsed, setLabelsCollapsed] = useState<boolean>(
     () => localStorage.getItem(LABELS_COLLAPSED_KEY) === 'true',
   )
+  const [labelWidthExpanded, setLabelWidthExpanded] = useState<number>(() =>
+    clampLabelWidth(Number(localStorage.getItem(LABEL_WIDTH_KEY)) || LABEL_WIDTH_DEFAULT),
+  )
+  const [isResizingLabels, setIsResizingLabels] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   const toggleLabelsCollapsed = useCallback(() => {
     setLabelsCollapsed((prev) => {
@@ -60,7 +73,44 @@ export default function TimelinePage() {
     })
   }, [])
 
-  const labelWidth = labelsCollapsed ? LABEL_WIDTH_COLLAPSED : LABEL_WIDTH_EXPANDED
+  const startLabelResize = useCallback(
+    (e: React.MouseEvent) => {
+      if (labelsCollapsed) return
+      e.preventDefault()
+      e.stopPropagation()
+      dragStartRef.current = { startX: e.clientX, startWidth: labelWidthExpanded }
+      setIsResizingLabels(true)
+      const onMove = (ev: MouseEvent) => {
+        const start = dragStartRef.current
+        if (!start) return
+        const next = clampLabelWidth(start.startWidth + (ev.clientX - start.startX))
+        setLabelWidthExpanded(next)
+      }
+      const onUp = () => {
+        const start = dragStartRef.current
+        if (start) {
+          // Read latest width from the closure-free DOM lookup via state setter trick.
+          setLabelWidthExpanded((w) => {
+            localStorage.setItem(LABEL_WIDTH_KEY, String(w))
+            return w
+          })
+        }
+        dragStartRef.current = null
+        setIsResizingLabels(false)
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [labelsCollapsed, labelWidthExpanded],
+  )
+
+  const labelWidth = labelsCollapsed ? LABEL_WIDTH_COLLAPSED : labelWidthExpanded
 
   const projectRole = useProjectRole(projectId)
   const canShare = isPmOrAdmin(projectRole)
@@ -211,9 +261,11 @@ export default function TimelinePage() {
                 rowHeight={ROW_HEIGHT}
                 width={labelWidth}
                 collapsed={labelsCollapsed}
+                isResizing={isResizingLabels}
                 onToggleCollapsed={toggleLabelsCollapsed}
                 onSelectIssue={setSelectedIssue}
                 onToggleEpic={toggleEpicCollapse}
+                onResizeStart={startLabelResize}
               />
               <TimelineChart
                 rows={rows}
