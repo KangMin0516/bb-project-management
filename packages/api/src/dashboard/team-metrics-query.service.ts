@@ -56,6 +56,7 @@ export class TeamMetricsQueryService {
           name: true,
           avatar: true,
           memberships: {
+            where: { project: { archivedAt: null } },
             select: {
               role: true,
               project: { select: { id: true, name: true, key: true } },
@@ -70,17 +71,26 @@ export class TeamMetricsQueryService {
           assigneeId: { not: null },
           focusDate: { gte: todayStart, lte: todayEnd },
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         _count: true,
       }),
       this.prisma.issue.groupBy({
         by: ['assigneeId'],
-        where: { assigneeId: { not: null }, status: IssueStatus.IN_PROGRESS },
+        where: {
+          assigneeId: { not: null },
+          status: IssueStatus.IN_PROGRESS,
+          project: { archivedAt: null },
+        },
         _count: true,
       }),
       this.prisma.issue.groupBy({
         by: ['assigneeId'],
-        where: { assigneeId: { not: null }, status: IssueStatus.TODO },
+        where: {
+          assigneeId: { not: null },
+          status: IssueStatus.TODO,
+          project: { archivedAt: null },
+        },
         _count: true,
       }),
       this.prisma.activity.groupBy({
@@ -89,6 +99,7 @@ export class TeamMetricsQueryService {
           field: 'status',
           newValue: IssueStatus.DONE,
           createdAt: { gte: todayStart, lte: todayEnd },
+          issue: { project: { archivedAt: null } },
         },
         _count: { _all: true },
       }),
@@ -98,6 +109,7 @@ export class TeamMetricsQueryService {
           assigneeId: { not: null },
           dueDate: { lt: todayStart },
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         _count: true,
       }),
@@ -106,23 +118,31 @@ export class TeamMetricsQueryService {
         where: {
           assigneeId: { not: null },
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         _count: true,
       }),
       this.prisma.issue.groupBy({
         by: ['assigneeId', 'status'],
-        where: { assigneeId: { not: null } },
+        where: {
+          assigneeId: { not: null },
+          project: { archivedAt: null },
+        },
         _count: true,
       }),
       this.prisma.activity.groupBy({
         by: ['userId'],
-        where: { createdAt: { gte: twentyFourHoursAgo } },
+        where: {
+          createdAt: { gte: twentyFourHoursAgo },
+          issue: { project: { archivedAt: null } },
+        },
         _count: { _all: true },
       }),
       this.prisma.issue.count({
         where: {
           assigneeId: null,
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
       }),
       this.prisma.issue.groupBy({
@@ -130,6 +150,7 @@ export class TeamMetricsQueryService {
         where: {
           assigneeId: { not: null },
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         _count: true,
       }),
@@ -313,6 +334,7 @@ export class TeamMetricsQueryService {
           where: {
             assigneeId: userId,
             status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+            project: { archivedAt: null },
           },
           include: this.memberIssueInclude,
           orderBy: [
@@ -323,7 +345,11 @@ export class TeamMetricsQueryService {
           take: TeamMetricsQueryService.MAX_MEMBER_ISSUES,
         }),
         this.prisma.activity.findMany({
-          where: { userId, createdAt: { gte: sevenDaysAgo } },
+          where: {
+            userId,
+            createdAt: { gte: sevenDaysAgo },
+            issue: { project: { archivedAt: null } },
+          },
           include: {
             issue: {
               select: {
@@ -343,6 +369,7 @@ export class TeamMetricsQueryService {
             field: 'status',
             newValue: IssueStatus.DONE,
             createdAt: { gte: todayStart, lte: todayEnd },
+            issue: { project: { archivedAt: null } },
           },
         }),
         user.slackUserId
@@ -390,6 +417,7 @@ export class TeamMetricsQueryService {
         where: {
           assigneeId: userId,
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         include: this.memberIssueInclude,
         orderBy: [
@@ -408,7 +436,9 @@ export class TeamMetricsQueryService {
 
   async getTeamIssues(filter: string) {
     const { todayStart, todayEnd } = this.getDateRanges();
-    const baseWhere: Record<string, unknown> = {};
+    const baseWhere: Record<string, unknown> = {
+      project: { archivedAt: null },
+    };
 
     switch (filter) {
       case 'overdue':

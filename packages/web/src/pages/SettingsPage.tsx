@@ -10,6 +10,7 @@ import { useProjectLabels } from '@/features/project/hooks/useProjectLabels'
 import { useProjectComponents } from '@/features/project/hooks/useProjectComponents'
 import { useJoinRequests } from '@/features/project/hooks/useJoinRequests'
 import { useProjectMutations } from '@/features/project/hooks/useProjectMutations'
+import { useArchiveProject } from '@/features/project/hooks/useArchiveProject'
 import GeneralSection from '@/features/project/components/settings/GeneralSection'
 import MembersSection from '@/features/project/components/settings/MembersSection'
 import JoinRequestsSection from '@/features/project/components/settings/JoinRequestsSection'
@@ -71,6 +72,7 @@ export default function SettingsPage() {
 
   const joinRequests = useJoinRequests(resolvedId, isAdminOrPm)
   const projectMutations = useProjectMutations(resolvedId, () => navigate('/'))
+  const archive = useArchiveProject(resolvedId, () => navigate('/projects'))
 
   // Deep-link to the requests section (?tab=requests) — scroll once visible.
   useEffect(() => {
@@ -185,7 +187,13 @@ export default function SettingsPage() {
           </section>
 
         <section id="danger" className="scroll-mt-6">
-          <DangerZoneSection onDelete={() => projectMutations.remove.mutate()} />
+          <DangerZoneSection
+            onDelete={() => projectMutations.remove.mutate()}
+            openIssueCount={project?._count.issues}
+            onArchive={
+              currentUser?.isSuperuser ? () => archive.mutate() : undefined
+            }
+          />
         </section>
       </div>
     </div>

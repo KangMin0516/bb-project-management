@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { Project, ProjectDomainError } from './project.entity.js';
+import { ProjectArchivedEvent } from './events/project-archived.event.js';
 import { ProjectCreatedEvent } from './events/project-created.event.js';
+import { ProjectUnarchivedEvent } from './events/project-unarchived.event.js';
 
 const base = {
   id: 'p-1',
@@ -88,5 +90,55 @@ describe('Project.update', () => {
   it('rejects empty name on update', () => {
     const p = Project.create(base);
     expect(() => p.update({ name: '  ' })).toThrow(ProjectDomainError);
+  });
+});
+
+describe('Project.archive / unarchive', () => {
+  it('flips archived state + records the actor and emits an event', () => {
+    const p = Project.create(base);
+    p.pullEvents(); // drain ProjectCreated
+    expect(p.isArchived).toBe(false);
+
+    p.archive('u-9');
+
+    expect(p.isArchived).toBe(true);
+    expect(p.archivedById).toBe('u-9');
+    expect(p.archivedAt).toBeInstanceOf(Date);
+    const events = p.pullEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toBeInstanceOf(ProjectArchivedEvent);
+  });
+
+  it('rejects archive when already archived', () => {
+    const p = Project.create(base);
+    p.archive('u-1');
+    expect(() => p.archive('u-2')).toThrow(ProjectDomainError);
+  });
+
+  it('rejects unarchive when not archived', () => {
+    const p = Project.create(base);
+    expect(() => p.unarchive('u-1')).toThrow(ProjectDomainError);
+  });
+
+  it('unarchive clears the actor and emits ProjectUnarchivedEvent', () => {
+    const p = Project.create(base);
+    p.archive('u-1');
+    p.pullEvents();
+
+    p.unarchive('u-9');
+
+    expect(p.isArchived).toBe(false);
+    expect(p.archivedById).toBeNull();
+    expect(p.archivedAt).toBeNull();
+    const events = p.pullEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toBeInstanceOf(ProjectUnarchivedEvent);
+  });
+
+  it('archive bumps updatedAt', () => {
+    const start = new Date('2026-01-01T00:00:00Z');
+    const p = Project.create(base, start);
+    p.archive('u-1', new Date('2026-02-01T00:00:00Z'));
+    expect(p.updatedAt.toISOString()).toBe('2026-02-01T00:00:00.000Z');
   });
 });

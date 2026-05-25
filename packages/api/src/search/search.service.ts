@@ -26,7 +26,7 @@ export class SearchService {
   async searchIssues(userId: string, query: string) {
     return this.prisma.issue.findMany({
       where: {
-        project: { members: { some: { userId } } },
+        project: { members: { some: { userId } }, archivedAt: null },
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
           { description: { contains: query, mode: 'insensitive' } },
@@ -57,7 +57,11 @@ export class SearchService {
    * Scope: only projects the caller is a member of (workspace
    * superuser sees every project). No leak across tenants.
    */
-  async searchAll(userId: string, query: string, limit = 20): Promise<SearchResult[]> {
+  async searchAll(
+    userId: string,
+    query: string,
+    limit = 20,
+  ): Promise<SearchResult[]> {
     const q = query.trim();
     if (q.length < 2) return [];
 
@@ -67,9 +71,14 @@ export class SearchService {
     });
     const isSuperuser = !!user?.isSuperuser;
 
+    // Even for superusers, exclude archived projects from global search.
+    // Archived content stays reachable via the Archived tab + direct
+    // navigation; we don't want it bleeding into ⌘K results.
     const projectScope = isSuperuser
-      ? {}
-      : { project: { members: { some: { userId } } } };
+      ? { project: { archivedAt: null } }
+      : {
+          project: { members: { some: { userId } }, archivedAt: null },
+        };
 
     const [issues, comments, specs] = await Promise.all([
       this.prisma.issue.findMany({

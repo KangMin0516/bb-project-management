@@ -72,6 +72,7 @@ export class MgmtDigestService {
 
   private async getProjectStats(todayStart: Date): Promise<ProjectStats[]> {
     const projects = await this.prisma.project.findMany({
+      where: { archivedAt: null },
       select: { id: true, name: true, key: true },
     });
 
@@ -145,17 +146,19 @@ export class MgmtDigestService {
             assigneeId: user.id,
             focusDate: today,
             status: { notIn: ['DONE', 'CANCELED'] },
+            project: { archivedAt: null },
           },
         }),
         this.prisma.issue.count({
           where: {
             assigneeId: user.id,
             status: 'IN_PROGRESS',
+            project: { archivedAt: null },
           },
         }),
         this.prisma.activity.findMany({
           where: {
-            issue: { assigneeId: user.id },
+            issue: { assigneeId: user.id, project: { archivedAt: null } },
             field: 'status',
             newValue: 'DONE',
             createdAt: { gte: todayStart },
@@ -182,6 +185,7 @@ export class MgmtDigestService {
       where: {
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
+        project: { archivedAt: null },
       },
       include: {
         assignee: { select: { name: true } },
@@ -204,7 +208,7 @@ export class MgmtDigestService {
   private async getStalledIssues(threeDaysAgo: Date): Promise<StalledIssue[]> {
     // IN_PROGRESS issues where the latest activity is older than 3 days
     const inProgressIssues = await this.prisma.issue.findMany({
-      where: { status: 'IN_PROGRESS' },
+      where: { status: 'IN_PROGRESS', project: { archivedAt: null } },
       include: {
         assignee: { select: { name: true } },
         project: { select: { key: true } },
@@ -237,6 +241,7 @@ export class MgmtDigestService {
       where: {
         assigneeId: null,
         status: { notIn: ['DONE', 'CANCELED'] },
+        project: { archivedAt: null },
       },
     });
   }

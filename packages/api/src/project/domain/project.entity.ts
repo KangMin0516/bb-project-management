@@ -1,7 +1,13 @@
 import { validateProjectKey, type ProjectKeyError } from './project-key.vo.js';
+import { ProjectArchivedEvent } from './events/project-archived.event.js';
 import { ProjectCreatedEvent } from './events/project-created.event.js';
+import { ProjectUnarchivedEvent } from './events/project-unarchived.event.js';
 
-export type ProjectDomainErrorCode = ProjectKeyError | 'INVARIANT';
+export type ProjectDomainErrorCode =
+  | ProjectKeyError
+  | 'INVARIANT'
+  | 'ALREADY_ARCHIVED'
+  | 'NOT_ARCHIVED';
 
 export class ProjectDomainError extends Error {
   constructor(
@@ -18,6 +24,8 @@ export interface ProjectProps {
   name: string;
   key: string;
   description: string | null;
+  archivedAt: Date | null;
+  archivedById: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +64,8 @@ export class Project {
       name,
       key: input.key,
       description: (input.description ?? '').trim() || null,
+      archivedAt: null,
+      archivedById: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -89,6 +99,15 @@ export class Project {
   }
   get updatedAt() {
     return this.props.updatedAt;
+  }
+  get archivedAt() {
+    return this.props.archivedAt;
+  }
+  get archivedById() {
+    return this.props.archivedById;
+  }
+  get isArchived() {
+    return this.props.archivedAt !== null;
   }
 
   toJSON(): Readonly<ProjectProps> {
@@ -125,6 +144,39 @@ export class Project {
       this.props.description = desc;
     }
     this.props.updatedAt = now;
+  }
+
+  /**
+   * Archive the project. Idempotent at the use-case layer is preferred
+   * over silent no-op here, so a second archive throws — the controller
+   * maps this to a 409.
+   */
+  archive(actorId: string, now: Date = new Date()): void {
+    if (this.props.archivedAt !== null) {
+      throw new ProjectDomainError(
+        'ALREADY_ARCHIVED',
+        'Project is already archived',
+      );
+    }
+    this.props.archivedAt = now;
+    this.props.archivedById = actorId;
+    this.props.updatedAt = now;
+    this._events.push(
+      new ProjectArchivedEvent(this.props.id, this.props.key, actorId, now),
+    );
+  }
+
+  /** Reverse `archive`. Throws if the project is not currently archived. */
+  unarchive(actorId: string, now: Date = new Date()): void {
+    if (this.props.archivedAt === null) {
+      throw new ProjectDomainError('NOT_ARCHIVED', 'Project is not archived');
+    }
+    this.props.archivedAt = null;
+    this.props.archivedById = null;
+    this.props.updatedAt = now;
+    this._events.push(
+      new ProjectUnarchivedEvent(this.props.id, this.props.key, actorId, now),
+    );
   }
 }
 

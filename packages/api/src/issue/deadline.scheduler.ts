@@ -33,7 +33,9 @@ export class DeadlineScheduler {
   async run(): Promise<void> {
     try {
       const now = new Date();
-      const warnHorizon = new Date(now.getTime() + DeadlineScheduler.WARN_BEFORE_MS);
+      const warnHorizon = new Date(
+        now.getTime() + DeadlineScheduler.WARN_BEFORE_MS,
+      );
 
       // Two windows: due within next 24h (warning) and already past due
       // (overdue). One round-trip each. Issues with no assignee fall
@@ -43,6 +45,7 @@ export class DeadlineScheduler {
           status: { notIn: ['DONE', 'CANCELED'] },
           archivedAt: null,
           dueDate: { not: null, lte: warnHorizon },
+          project: { archivedAt: null },
         },
         select: {
           id: true,

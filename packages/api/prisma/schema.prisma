@@ -53,6 +53,7 @@ model User {
   oauthAccessTokens         OAuthAccessToken[]
   oauthRefreshTokens        OAuthRefreshToken[]
   createdShareLinks         ShareLink[]          @relation("CreatedShareLinks")
+  archivedProjects          Project[]            @relation("ArchivedByUser")
 
   @@map("users")
 }
@@ -60,13 +61,16 @@ model User {
 // ─── Project ────────────────────────────────────────────────
 
 model Project {
-  id          String   @id @default(uuid())
-  name        String
-  key         String   @unique
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  name         String
+  key          String    @unique
+  description  String?
+  archivedAt   DateTime? @map("archived_at")
+  archivedById String?   @map("archived_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  archivedBy        User?                @relation("ArchivedByUser", fields: [archivedById], references: [id], onDelete: SetNull)
   members           ProjectMember[]
   issues            Issue[]
   labels            Label[]
@@ -78,6 +82,7 @@ model Project {
   joinRequests      ProjectJoinRequest[]
   shareLinks        ShareLink[]
 
+  @@index([archivedAt])
   @@map("projects")
 }
 

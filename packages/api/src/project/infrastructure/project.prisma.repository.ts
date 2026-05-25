@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Project } from '../domain/project.entity.js';
 import type {
+  ArchivedProjectView,
   DefaultLabelSeed,
   ProjectRepository,
   ProjectWithCounts,
@@ -44,6 +45,8 @@ export class ProjectPrismaRepository implements ProjectRepository {
       data: {
         name: props.name,
         description: props.description,
+        archivedAt: props.archivedAt,
+        archivedById: props.archivedById,
       },
     });
   }
@@ -95,7 +98,10 @@ export class ProjectPrismaRepository implements ProjectRepository {
 
   async listForUser(userId: string): Promise<ProjectWithCounts[]> {
     return this.prisma.project.findMany({
-      where: { members: { some: { userId } } },
+      where: {
+        members: { some: { userId } },
+        archivedAt: null,
+      },
       include: { _count: { select: { issues: true, members: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -105,6 +111,7 @@ export class ProjectPrismaRepository implements ProjectRepository {
     userId: string,
   ): Promise<ProjectWithMembership[]> {
     const rows = await this.prisma.project.findMany({
+      where: { archivedAt: null },
       include: {
         _count: { select: { issues: true, members: true } },
         members: {
@@ -134,16 +141,68 @@ export class ProjectPrismaRepository implements ProjectRepository {
     }));
   }
 
-  async findWithDetails(idOrKey: string): Promise<ProjectWithDetails | null> {
-    const where = UUID_RE.test(idOrKey) ? { id: idOrKey } : { key: idOrKey };
-    return this.prisma.project.findUnique({
-      where,
+  async findWithDetails(
+    idOrKey: string,
+    opts?: { includeArchived?: boolean },
+  ): Promise<ProjectWithDetails | null> {
+    const base = UUID_RE.test(idOrKey) ? { id: idOrKey } : { key: idOrKey };
+    const row = await this.prisma.project.findUnique({
+      where: base,
       include: {
         members: MEMBER_INCLUDE,
         labels: true,
         _count: { select: { issues: true } },
       },
     });
+    if (!row) return null;
+    if (row.archivedAt !== null && !opts?.includeArchived) return null;
+    return row;
+  }
+
+  async listArchived(): Promise<ArchivedProjectView[]> {
+    // Two queries instead of `include: { issues }` so we don't materialise
+    // every DONE Issue row just to count it (a long-lived project
+    // archived with 5k DONE issues would otherwise pull 5k ids).
+    // Both counts exclude soft-deleted issues (Issue.archivedAt) so the
+    // tab reflects what would be visible if the project were unarchived,
+    // not the lifetime issue count.
+    const rows = await this.prisma.project.findMany({
+      where: { archivedAt: { not: null } },
+      include: {
+        archivedBy: { select: { id: true, name: true, email: true } },
+        _count: { select: { issues: { where: { archivedAt: null } } } },
+      },
+      orderBy: { archivedAt: 'desc' },
+    });
+    const projectIds = rows.map((r) => r.id);
+    const doneByProject = projectIds.length
+      ? await this.prisma.issue.groupBy({
+          by: ['projectId'],
+          where: {
+            projectId: { in: projectIds },
+            status: 'DONE',
+            archivedAt: null,
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const doneMap = new Map(
+      doneByProject.map((r) => [r.projectId, r._count._all]),
+    );
+    return rows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      key: p.key,
+      description: p.description,
+      // archivedAt is guaranteed non-null by the where filter, but the
+      // generated type is still Date|null — assert here.
+      archivedAt: p.archivedAt as Date,
+      archivedBy: p.archivedBy,
+      issueCount: {
+        total: p._count.issues,
+        done: doneMap.get(p.id) ?? 0,
+      },
+    }));
   }
 
   async loadUpdateView(id: string): Promise<ProjectWithMembersAndCount | null> {
@@ -174,6 +233,8 @@ interface PrismaProjectRow {
   name: string;
   key: string;
   description: string | null;
+  archivedAt: Date | null;
+  archivedById: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -184,6 +245,8 @@ function toDomain(row: PrismaProjectRow): Project {
     name: row.name,
     key: row.key,
     description: row.description,
+    archivedAt: row.archivedAt,
+    archivedById: row.archivedById,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

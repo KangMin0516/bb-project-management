@@ -62,13 +62,7 @@ export class ShareLinkPublicController {
   @UseGuards(ShareAuthGuard)
   async getProject(@Param('token') token: string, @Req() req: Request) {
     const claims = this.getValidatedClaims(req);
-    const link = await this.requireFreshLink(claims, token);
-    const project = await this.prisma.project.findUnique({
-      where: { id: link.projectId },
-      select: { key: true, name: true },
-    });
-    if (!project)
-      throw new GoneException('This share link is no longer available');
+    const { link, project } = await this.requireFreshLink(claims, token);
     const creator = await this.prisma.user.findUnique({
       where: { id: link.createdById },
       select: { name: true },
@@ -86,7 +80,7 @@ export class ShareLinkPublicController {
   @UseGuards(ShareAuthGuard)
   async getTimeline(@Param('token') token: string, @Req() req: Request) {
     const claims = this.getValidatedClaims(req);
-    const link = await this.requireFreshLink(claims, token);
+    const { link } = await this.requireFreshLink(claims, token);
     if (!link.scopes.includes('TIMELINE'))
       throw new ForbiddenException(
         'This share link does not include the timeline scope',
@@ -110,7 +104,9 @@ export class ShareLinkPublicController {
    * Bind the JWT's `shareLinkId` to the path's `:token`, then re-verify
    * the row is still usable. Prevents an attacker from holding a JWT
    * for link A and then accessing link B by swapping the URL — and also
-   * makes revoke effective without waiting for JWT expiry.
+   * makes revoke effective without waiting for JWT expiry. Archived
+   * projects 410-Gone here so every share-scoped read inherits the
+   * archive check. Returns the project too so handlers don't re-query.
    */
   private async requireFreshLink(claims: SharePayload, pathToken: string) {
     const link = await this.repo.findByToken(pathToken);
@@ -119,7 +115,13 @@ export class ShareLinkPublicController {
     const state = canUnlock(link, new Date());
     if (!state.ok)
       throw new GoneException('This share link is no longer available');
-    return link;
+    const project = await this.prisma.project.findUnique({
+      where: { id: link.projectId },
+      select: { id: true, key: true, name: true, archivedAt: true },
+    });
+    if (!project || project.archivedAt !== null)
+      throw new GoneException('This share link is no longer available');
+    return { link, project };
   }
 }
 

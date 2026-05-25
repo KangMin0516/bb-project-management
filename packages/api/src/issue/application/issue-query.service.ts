@@ -324,9 +324,9 @@ export class IssueQueryService {
 
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
-      select: { id: true, key: true },
+      select: { id: true, key: true, archivedAt: true },
     });
-    if (!project) return null;
+    if (!project || project.archivedAt !== null) return null;
 
     // Membership check via either project member or workspace superuser.
     const [member, user] = await Promise.all([

@@ -23,7 +23,7 @@ export class UserMetricsQueryService {
     todayEnd.setUTCHours(23, 59, 59, 999);
 
     const memberships = await this.prisma.projectMember.findMany({
-      where: { userId },
+      where: { userId, project: { archivedAt: null } },
       include: {
         project: { select: { id: true, name: true, key: true } },
       },

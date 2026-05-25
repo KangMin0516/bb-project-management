@@ -68,7 +68,11 @@ function makePrisma(): PrismaService {
   return {
     project: {
       findUnique: jest.fn(() =>
-        Promise.resolve({ key: 'PITB', name: 'PITB Project' }),
+        Promise.resolve({
+          key: 'PITB',
+          name: 'PITB Project',
+          archivedAt: null,
+        }),
       ),
     },
     user: {

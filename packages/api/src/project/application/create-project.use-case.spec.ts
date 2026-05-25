@@ -17,6 +17,8 @@ function makeRepo(
       name: project.name,
       key: project.key,
       description: project.description,
+      archivedAt: null,
+      archivedById: null,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
       members: members.map((userId) => ({
@@ -31,6 +33,7 @@ function makeRepo(
     listAllWithMembership: jest.fn(async () => []),
     findWithDetails: jest.fn(),
     loadUpdateView: jest.fn(),
+    listArchived: jest.fn(async () => []),
     listActiveSuperuserIds: jest.fn(async () => []),
     ...overrides,
   } as unknown as ProjectRepository;

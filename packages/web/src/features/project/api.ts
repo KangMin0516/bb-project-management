@@ -65,6 +65,16 @@ export interface JoinRequest {
   project?: { id: string; name: string; key: string }
 }
 
+export interface ArchivedProject {
+  id: string
+  name: string
+  key: string
+  description: string | null
+  archivedAt: string
+  archivedBy: { id: string; name: string; email: string } | null
+  issueCount: { total: number; done: number }
+}
+
 export const projectApi = {
   list: () =>
     api.get<{ data: Project[] }>('/projects').then((r) => r.data.data),
@@ -78,6 +88,16 @@ export const projectApi = {
     api.patch<{ data: ProjectDetail }>(`/projects/${id}`, data).then((r) => r.data.data),
   delete: (id: string) =>
     api.delete(`/projects/${id}`),
+
+  // Archive (superuser-only) — soft-delete a project. The detail
+  // response uses the same shape as create/update; archived rows are
+  // listed via the dedicated `archived` endpoint below.
+  archive: (id: string) =>
+    api.post<{ data: ProjectDetail }>(`/projects/${id}/archive`).then((r) => r.data.data),
+  unarchive: (id: string) =>
+    api.post<{ data: ProjectDetail }>(`/projects/${id}/unarchive`).then((r) => r.data.data),
+  listArchived: () =>
+    api.get<{ data: ArchivedProject[] }>('/projects/archived').then((r) => r.data.data),
 
   listMembers: (projectId: string) =>
     api.get<{ data: ProjectMember[] }>(`/projects/${projectId}/members`).then((r) => r.data.data),

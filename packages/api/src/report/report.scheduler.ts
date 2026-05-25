@@ -41,7 +41,7 @@ export class ReportScheduler {
   @Cron('0 * * * * *')
   async checkAndQueueReports() {
     const configs = await this.prisma.dailyReportConfig.findMany({
-      where: { enabled: true },
+      where: { enabled: true, project: { archivedAt: null } },
     });
 
     for (const config of configs) {

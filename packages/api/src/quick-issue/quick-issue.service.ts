@@ -50,9 +50,10 @@ export class QuickIssueService {
   ): Promise<ParseResult> {
     const parsed = parseText(text);
 
-    // Get user's projects
+    // Get user's projects (active only — quick-issue should never
+    // create issues in an archived project).
     const userProjects = await this.prisma.project.findMany({
-      where: { members: { some: { userId } } },
+      where: { members: { some: { userId } }, archivedAt: null },
       select: { id: true, key: true, name: true, description: true },
       orderBy: { name: 'asc' },
     });

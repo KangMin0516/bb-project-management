@@ -124,14 +124,17 @@ export class UnlockShareLinkUseCase {
 
     // Fetch project + creator name to put in the response payload. JWT
     // itself doesn't carry these — strings can change, JWT shouldn't.
+    // Archived projects 410-Gone: a share link to a retired project
+    // must not let an external (un-authenticated) viewer load it.
     const project = await this.prisma.project.findUnique({
       where: { id: link.projectId },
       select: {
         key: true,
         name: true,
+        archivedAt: true,
       },
     });
-    if (!project)
+    if (!project || project.archivedAt !== null)
       throw new GoneException('This share link is no longer available');
 
     const creator = await this.prisma.user.findUnique({

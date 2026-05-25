@@ -12,7 +12,13 @@ type Issue = {
 
 const mkService = (issues: Issue[]) => {
   const prisma = {
-    project: { findUnique: jest.fn(async () => ({ id: 'p1', key: 'PM' })) },
+    project: {
+      findUnique: jest.fn(async () => ({
+        id: 'p1',
+        key: 'PM',
+        archivedAt: null,
+      })),
+    },
     issue: {
       findMany: jest.fn(async () => issues),
       count: jest.fn(async () => issues.length),
@@ -21,6 +27,7 @@ const mkService = (issues: Issue[]) => {
   // Only PrismaService is exercised by listIssues; the rest are stubs.
   return new ExternalService(
     prisma as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,

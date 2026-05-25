@@ -819,6 +819,7 @@ export class StandupService {
         where: {
           assigneeId: userId,
           status: { notIn: [IssueStatus.DONE, IssueStatus.CANCELED] },
+          project: { archivedAt: null },
         },
         include: { project: { select: { key: true, name: true } } },
         orderBy: [
@@ -832,6 +833,7 @@ export class StandupService {
           assigneeId: userId,
           status: IssueStatus.DONE,
           updatedAt: { gte: todayStart, lte: todayEnd },
+          project: { archivedAt: null },
         },
         include: { project: { select: { key: true, name: true } } },
         orderBy: [{ project: { name: 'asc' } }, { updatedAt: 'desc' }],

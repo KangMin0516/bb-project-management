@@ -1,4 +1,9 @@
-import { projectApi, type Project, type ProjectWithJoinStatus } from '@/features/project/api'
+import {
+  projectApi,
+  type ArchivedProject,
+  type Project,
+  type ProjectWithJoinStatus,
+} from '@/features/project/api'
 
 /**
  * Repository layer for Project. Mirrors the Issue repository pattern:
@@ -22,6 +27,13 @@ export const projectRepository = {
   create: projectApi.create,
   update: projectApi.update,
   remove: projectApi.delete,
+
+  /** Archive (superuser-only). */
+  archive: projectApi.archive,
+  unarchive: projectApi.unarchive,
+  listArchived(): Promise<ArchivedProject[]> {
+    return projectApi.listArchived()
+  },
 
   /** Member management. */
   listMembers: projectApi.listMembers,

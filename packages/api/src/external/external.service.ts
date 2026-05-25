@@ -107,6 +107,23 @@ export class ExternalService {
     return { projectId: project.id, issueId: issue.id };
   }
 
+  /**
+   * Resolve a project key for READ endpoints — rejects archived
+   * projects so MCP/external clients see archived projects as 404.
+   * Write paths use the plain `findUnique` so superusers can still
+   * clean up data after archive.
+   */
+  private async requireActiveProjectId(projectKey: string): Promise<string> {
+    const project = await this.prisma.project.findUnique({
+      where: { key: projectKey },
+      select: { id: true, archivedAt: true },
+    });
+    if (!project || project.archivedAt !== null) {
+      throw new NotFoundException(`Project "${projectKey}" not found`);
+    }
+    return project.id;
+  }
+
   async createIssue(
     dto: ExternalCreateIssueDto,
     creatorId: string,
@@ -436,15 +453,11 @@ export class ExternalService {
   }
 
   async getIssue(projectKey: string, issueNumber: number) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
+    const projectId = await this.requireActiveProjectId(projectKey);
 
     const issue = await this.prisma.issue.findUnique({
       where: {
-        projectId_number: { projectId: project.id, number: issueNumber },
+        projectId_number: { projectId, number: issueNumber },
       },
       include: {
         assignee: { select: { id: true, email: true, name: true } },
@@ -493,6 +506,7 @@ export class ExternalService {
     page = 1,
     limit = 50,
   ) {
+    await this.requireActiveProjectId(projectKey);
     const { issueId } = await this.resolveProjectAndIssue(
       projectKey,
       issueNumber,
@@ -520,6 +534,7 @@ export class ExternalService {
     page = 1,
     limit = 50,
   ) {
+    await this.requireActiveProjectId(projectKey);
     const { issueId } = await this.resolveProjectAndIssue(
       projectKey,
       issueNumber,
@@ -544,9 +559,15 @@ export class ExternalService {
   async getDigest(projectKey: string, days = 7) {
     const project = await this.prisma.project.findUnique({
       where: { key: projectKey },
-      select: { id: true, key: true, name: true, description: true },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        description: true,
+        archivedAt: true,
+      },
     });
-    if (!project)
+    if (!project || project.archivedAt !== null)
       throw new NotFoundException(`Project "${projectKey}" not found`);
 
     const now = new Date();
@@ -791,12 +812,7 @@ export class ExternalService {
     },
     callerUserId?: string,
   ) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true, key: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
+    const projectId = await this.requireActiveProjectId(projectKey);
 
     // ─── Build where ───────────────────────────────────────────
     const where: {
@@ -810,7 +826,7 @@ export class ExternalService {
       dueDate?: { gte: Date; lte: Date } | { lt: Date };
       archivedAt: null;
     } = {
-      projectId: project.id,
+      projectId,
       archivedAt: null,
     };
 
@@ -867,7 +883,7 @@ export class ExternalService {
 
     // ─── Summary mode — short-circuit before listing rows ──────
     if (params.mode === 'summary') {
-      return this.listIssuesSummary(where, project.key, now);
+      return this.listIssuesSummary(where, projectKey, now);
     }
 
     // ─── Field projection ──────────────────────────────────────
@@ -931,7 +947,7 @@ export class ExternalService {
     // simpler `labels: [{...}]` MCP/LLM clients actually want.
     const flatten = (i: Record<string, unknown>) => {
       const out: Record<string, unknown> = { ...i };
-      out.key = `${project.key}-${i.number as number}`;
+      out.key = `${projectKey}-${i.number as number}`;
       if (wantLabels && Array.isArray(i.labels)) {
         out.labels = (i.labels as Array<{ label: unknown }>).map(
           (l) => l.label,
@@ -1024,33 +1040,18 @@ export class ExternalService {
   }
 
   async listSpecs(projectKey: string, category?: string, status?: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
-    return this.specificationService.findAll(project.id, { category, status });
+    const projectId = await this.requireActiveProjectId(projectKey);
+    return this.specificationService.findAll(projectId, { category, status });
   }
 
   async getSpec(projectKey: string, specId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
-    return this.specificationService.findOne(project.id, specId);
+    const projectId = await this.requireActiveProjectId(projectKey);
+    return this.specificationService.findOne(projectId, specId);
   }
 
   async getSpecMarkdown(projectKey: string, specId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
-    return this.specificationService.exportOne(project.id, specId);
+    const projectId = await this.requireActiveProjectId(projectKey);
+    return this.specificationService.exportOne(projectId, specId);
   }
 
   async createSpec(
@@ -1101,6 +1102,7 @@ export class ExternalService {
   }
 
   async listIssueSpecLinks(projectKey: string, issueNumber: number) {
+    await this.requireActiveProjectId(projectKey);
     const { projectId, issueId } = await this.resolveProjectAndIssue(
       projectKey,
       issueNumber,
@@ -1194,7 +1196,10 @@ export class ExternalService {
    */
   async listProjectsForUser(userId: string) {
     const projects = await this.prisma.project.findMany({
-      where: { members: { some: { userId } } },
+      where: {
+        members: { some: { userId } },
+        archivedAt: null,
+      },
       select: {
         id: true,
         key: true,
@@ -1242,10 +1247,12 @@ export class ExternalService {
     const where: {
       assigneeId: string;
       archivedAt: null;
+      project: { archivedAt: null };
       status?: IssueStatus;
     } = {
       assigneeId: userId,
       archivedAt: null,
+      project: { archivedAt: null },
     };
     if (params.status) where.status = params.status as IssueStatus;
 
@@ -1520,6 +1527,7 @@ export class ExternalService {
    * inline at create time and ones attached later.
    */
   async listAttachments(projectKey: string, issueNumber: number) {
+    await this.requireActiveProjectId(projectKey);
     const { issueId } = await this.resolveProjectAndIssue(
       projectKey,
       issueNumber,
@@ -1571,9 +1579,10 @@ export class ExternalService {
     const safeLimit = Math.min(Math.max(params.limit ?? 25, 1), 100);
     const q = params.q.trim();
 
-    // Restrict to projects the caller can read.
+    // Restrict to projects the caller can read. Archived projects are
+    // invisible to MCP search — superuser-only access from the Web app.
     const memberships = await this.prisma.projectMember.findMany({
-      where: { userId },
+      where: { userId, project: { archivedAt: null } },
       select: { projectId: true, project: { select: { key: true } } },
     });
     const accessibleProjectIds = memberships.map((m) => m.projectId);
@@ -1649,15 +1658,10 @@ export class ExternalService {
   }
 
   async listMembers(projectKey: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
+    const projectId = await this.requireActiveProjectId(projectKey);
 
     const members = await this.prisma.projectMember.findMany({
-      where: { projectId: project.id },
+      where: { projectId },
       include: {
         user: { select: { id: true, name: true, email: true, avatar: true } },
       },
@@ -1673,15 +1677,10 @@ export class ExternalService {
   }
 
   async listLabels(projectKey: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
+    const projectId = await this.requireActiveProjectId(projectKey);
 
     return this.prisma.label.findMany({
-      where: { projectId: project.id },
+      where: { projectId },
       select: { id: true, name: true, color: true },
       orderBy: { name: 'asc' },
     });
@@ -1693,13 +1692,8 @@ export class ExternalService {
    * can reason about scope without fetching every Issue.
    */
   async getTableOfContent(projectKey: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { key: projectKey },
-      select: { id: true },
-    });
-    if (!project)
-      throw new NotFoundException(`Project "${projectKey}" not found`);
-    return this.issueQueryService.findTableOfContent(project.id);
+    const projectId = await this.requireActiveProjectId(projectKey);
+    return this.issueQueryService.findTableOfContent(projectId);
   }
 
   /**

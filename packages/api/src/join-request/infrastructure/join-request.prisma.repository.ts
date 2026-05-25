@@ -113,18 +113,23 @@ export class JoinRequestPrismaRepository implements JoinRequestRepository {
   }
 
   async resolveProjectId(idOrKey: string): Promise<string | null> {
+    // Archived projects are invisible to join-request flow — a user with
+    // a stale URL must not be able to lodge a join request that lingers
+    // in the admin queue.
     if (UUID_RE.test(idOrKey)) {
       const found = await this.prisma.project.findUnique({
         where: { id: idOrKey },
-        select: { id: true },
+        select: { id: true, archivedAt: true },
       });
-      return found?.id ?? null;
+      if (!found || found.archivedAt !== null) return null;
+      return found.id;
     }
     const found = await this.prisma.project.findUnique({
       where: { key: idOrKey },
-      select: { id: true },
+      select: { id: true, archivedAt: true },
     });
-    return found?.id ?? null;
+    if (!found || found.archivedAt !== null) return null;
+    return found.id;
   }
 
   async loadProjectMeta(projectId: string) {
