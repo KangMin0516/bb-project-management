@@ -43,6 +43,20 @@ interface CreateIssueModalProps {
 const UNASSIGNED = '__unassigned__'
 const NO_PARENT = '__none__'
 const NO_REVIEWER = '__no_reviewer__'
+const CREATE_ISSUE_DRAFT_VERSION = 1
+
+interface CreateIssueDraft {
+  version: number
+  title: string
+  description: string
+  priority: string
+  type: string
+  assigneeId: string
+  reviewerAssigneeId: string | null
+  labelIds: string[]
+  componentIds: string[]
+  parentId: string
+}
 
 export default function CreateIssueModal({ projectId, defaultStatus, defaultParentId, defaultType, onClose, onCreated }: CreateIssueModalProps) {
   const { open, requestClose } = useDeferredClose(onClose)
@@ -62,7 +76,9 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
   const [componentIds, setComponentIds] = useState<string[]>([])
   const [parentId, setParentId] = useState(defaultParentId ?? '')
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
+  const [draftHydrated, setDraftHydrated] = useState(false)
   const queryClient = useQueryClient()
+  const draftStorageKey = useMemo(() => `create-issue-draft:${projectId}`, [projectId])
 
   const { data: members } = useQuery({
     queryKey: ['members', projectId],
@@ -94,13 +110,74 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
   // description the touched flag latches true and we never overwrite
   // their input, even across subsequent type changes.
   const [descriptionTouched, setDescriptionTouched] = useState(false)
+
   useEffect(() => {
+    const raw = localStorage.getItem(draftStorageKey)
+    if (!raw) {
+      setDraftHydrated(true)
+      return
+    }
+    try {
+      const parsed = JSON.parse(raw) as CreateIssueDraft
+      if (parsed.version !== CREATE_ISSUE_DRAFT_VERSION) {
+        localStorage.removeItem(draftStorageKey)
+        setDraftHydrated(true)
+        return
+      }
+      setTitle(parsed.title || '')
+      setDescription(parsed.description || '')
+      setPriority(parsed.priority || 'MEDIUM')
+      setType(parsed.type || (defaultType ?? 'TASK'))
+      setAssigneeId(parsed.assigneeId || '')
+      setReviewerAssigneeId(parsed.reviewerAssigneeId ?? currentUserId)
+      setLabelIds(Array.isArray(parsed.labelIds) ? parsed.labelIds : [])
+      setComponentIds(Array.isArray(parsed.componentIds) ? parsed.componentIds : [])
+      setParentId(parsed.parentId || '')
+      setDescriptionTouched(Boolean(parsed.description))
+    } catch {
+      localStorage.removeItem(draftStorageKey)
+    } finally {
+      setDraftHydrated(true)
+    }
+  }, [currentUserId, defaultType, draftStorageKey])
+
+  useEffect(() => {
+    if (!draftHydrated) return
     if (descriptionTouched) return
     const match = templates?.find((t) => t.type === type)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (match?.description) setDescription(match.description)
     else setDescription('')
-  }, [type, templates, descriptionTouched])
+  }, [type, templates, descriptionTouched, draftHydrated])
+
+  useEffect(() => {
+    if (!draftHydrated) return
+    const draft: CreateIssueDraft = {
+      version: CREATE_ISSUE_DRAFT_VERSION,
+      title,
+      description,
+      priority,
+      type,
+      assigneeId,
+      reviewerAssigneeId,
+      labelIds,
+      componentIds,
+      parentId,
+    }
+    localStorage.setItem(draftStorageKey, JSON.stringify(draft))
+  }, [
+    assigneeId,
+    componentIds,
+    description,
+    draftHydrated,
+    draftStorageKey,
+    labelIds,
+    parentId,
+    priority,
+    reviewerAssigneeId,
+    title,
+    type,
+  ])
 
   const parentOptions = useMemo(() => {
     if (!issuesData?.items) return []
@@ -123,6 +200,7 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
   const mutation = useMutation({
     mutationFn: (data: CreateIssuePayload) => issueRepository.create(projectId, data),
     onSuccess: (data) => {
+      localStorage.removeItem(draftStorageKey)
       queryClient.invalidateQueries({ queryKey: ['board', projectId] })
       queryClient.invalidateQueries({ queryKey: ['issues', projectId] })
       onCreated?.(data.id)
@@ -399,7 +477,10 @@ export default function CreateIssueModal({ projectId, defaultStatus, defaultPare
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={requestClose}
+              onClick={() => {
+                localStorage.removeItem(draftStorageKey)
+                requestClose()
+              }}
               className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel

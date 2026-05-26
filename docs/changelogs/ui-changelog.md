@@ -29,6 +29,17 @@ Behavior details:
 
 - Source: `packages/web/src/features/issue/components/detail/IssueDescription.tsx`.
 
+### 2026-05-26 — Create Issue modal now restores full form draft
+
+**Added.** Create Issue modal now persists a full UI-only draft in `localStorage` (title, description, type, priority, assignee, reviewer, parent, labels, components). If the modal is closed accidentally (outside click / close icon), reopening restores the previous in-progress form.
+
+Behavior details:
+- Draft key is scoped per project (`create-issue-draft:<projectId>`).
+- Draft is cleared after successful `Create`.
+- Draft is also cleared on explicit `Cancel`, so cancel remains a hard reset action.
+
+- Source: `packages/web/src/features/issue/components/CreateIssueModal.tsx`.
+
 ### 2026-05-26 — Editor upload progress + presigned-S3 backend ready (PM-101)
 
 **Added.** Image/video uploads from the rich-text editor now report real progress as a thin bar (`xx%`) below the editor while bytes stream. Uses axios `onUploadProgress` on the existing `POST /upload` multipart endpoint — no infra change required. The bar disappears as soon as the last in-flight upload finishes.
