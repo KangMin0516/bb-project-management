@@ -34,6 +34,8 @@ interface SwimlaneBoardViewProps {
   domainFilter?: string | null
   /** Available epics for the inline "change Epic" chip on cards. */
   epics?: Issue[]
+  members?: { id: string; name: string; avatar: string | null }[]
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
   /** Lifted collapse state — toolbar Expand/Collapse all needs to mutate it. */
   collapsedEpics: Set<string>
   onCollapseToggle: (epicId: string | null) => void
@@ -64,6 +66,8 @@ export default function SwimlaneBoardView({
   epicOwnersFilter,
   domainFilter,
   epics,
+  members,
+  onAssigneeChange,
   collapsedEpics,
   onCollapseToggle,
   onSwimlaneReorder,
@@ -287,6 +291,8 @@ export default function SwimlaneBoardView({
                         onChildStatusToggle={onChildStatusToggle}
                         epics={epics}
                         onEpicChange={onEpicChange}
+                        members={members}
+                        onAssigneeChange={onAssigneeChange}
                         dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                         onMoveUp={isFirst ? undefined : () => moveLane('up')}
                         onMoveDown={isLast ? undefined : () => moveLane('down')}
@@ -318,6 +324,8 @@ export default function SwimlaneBoardView({
                 onChildStatusToggle={onChildStatusToggle}
                 epics={epics}
                 onEpicChange={onEpicChange}
+                members={members}
+                onAssigneeChange={onAssigneeChange}
                 registerScrollContainer={registerScrollContainer}
                 unregisterScrollContainer={unregisterScrollContainer}
                 onColumnsScroll={onColumnsScroll}

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import type { Issue } from '@/features/issue/api'
 import type { ChildIssue } from './types'
 import { cn } from '@/shared/lib/utils'
-import { useImagePreviewStore } from '@/shared/lib/imagePreview'
 import { PRIORITY_COLORS, TYPE_ICONS, STATUS_COLORS, STATUS_LABELS } from '@/shared/config/constants'
 import { getDueBadge, isIssueOverdue } from '@/shared/lib/time'
 import { ChevronRight, ChevronDown, Check } from 'lucide-react'
@@ -18,6 +17,13 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/ui/command'
+import UserAvatar from '@/entities/user/UserAvatar'
+
+interface Member {
+  id: string
+  name: string
+  avatar: string | null
+}
 
 interface IssueCardProps {
   issue: Issue
@@ -38,6 +44,10 @@ interface IssueCardProps {
   /** Hide the inline Epic chip — used when the parent context already
    *  surfaces the Epic (e.g. a swimlane header in Group: Epic mode). */
   hideEpicChip?: boolean
+  /** Project members for the inline assignee picker on the avatar. */
+  members?: Member[]
+  /** Called when the user picks a new assignee from the avatar popover. */
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
 }
 
 export default memo(function IssueCard({
@@ -55,6 +65,8 @@ export default memo(function IssueCard({
   epics,
   onEpicChange,
   hideEpicChip,
+  members,
+  onAssigneeChange,
 }: IssueCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -204,7 +216,7 @@ export default memo(function IssueCard({
               </span>
             )}
           </div>
-          {(issue.assignee || displayList.length > 0) && (() => {
+          {(issue.assignee || displayList.length > 0 || members) && (() => {
             // Collect unique sub-task assignees that differ from the task assignee
             const subAssignees = new Map<string, { name: string; avatar: string | null }>()
             for (const child of displayList) {
@@ -218,9 +230,8 @@ export default memo(function IssueCard({
                 {extras.map((a) => (
                   <div
                     key={a.name}
-                    className={cn('flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[8px] font-medium text-gray-500 dark:text-gray-400 overflow-hidden ring-1 ring-white dark:ring-gray-700 opacity-50', a.avatar && 'cursor-pointer hover:opacity-80')}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[8px] font-medium text-gray-500 dark:text-gray-400 overflow-hidden ring-1 ring-white dark:ring-gray-700 opacity-50"
                     title={a.name}
-                    onClick={(e) => { if (a.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(a.avatar, a.name) } }}
                   >
                     {a.avatar ? (
                       <img src={a.avatar} alt={a.name} className="h-full w-full object-cover" />
@@ -229,19 +240,11 @@ export default memo(function IssueCard({
                     )}
                   </div>
                 ))}
-                {issue.assignee && (
-                  <div
-                    className={cn('flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[10px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden ring-1 ring-white dark:ring-gray-700 z-10', issue.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
-                    title={issue.assignee.name}
-                    onClick={(e) => { if (issue.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(issue.assignee.avatar, issue.assignee.name) } }}
-                  >
-                    {issue.assignee.avatar ? (
-                      <img src={issue.assignee.avatar} alt={issue.assignee.name} className="h-full w-full object-cover" />
-                    ) : (
-                      issue.assignee.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                )}
+                <AssigneePopover
+                  issue={issue}
+                  members={members}
+                  onAssigneeChange={onAssigneeChange}
+                />
               </div>
             )
           })()}
@@ -295,9 +298,8 @@ export default memo(function IssueCard({
               />
               {child.assignee && (
                 <div
-                  className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden', child.assignee.avatar && 'cursor-pointer hover:ring-2 hover:ring-primary-300')}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden"
                   title={child.assignee.name}
-                  onClick={(e) => { if (child.assignee?.avatar) { e.stopPropagation(); useImagePreviewStore.getState().open(child.assignee.avatar, child.assignee.name) } }}
                 >
                   {child.assignee.avatar ? (
                     <img src={child.assignee.avatar} alt={child.assignee.name} className="h-full w-full object-cover" />
@@ -313,6 +315,77 @@ export default memo(function IssueCard({
     </div>
   )
 })
+
+function AssigneePopover({
+  issue,
+  members,
+  onAssigneeChange,
+}: {
+  issue: Issue
+  members?: Member[]
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const canPick = !!(members && onAssigneeChange)
+
+  const trigger = (
+    <div
+      className={cn(
+        'rounded-full ring-1 ring-white dark:ring-gray-700 z-10',
+        canPick && 'cursor-pointer hover:ring-2 hover:ring-primary-300',
+      )}
+      title={issue.assignee ? issue.assignee.name : 'Unassigned'}
+    >
+      <UserAvatar user={issue.assignee ?? null} size="md" />
+    </div>
+  )
+
+  if (!canPick) return trigger
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
+          className="rounded-full p-0 focus:outline-none"
+        >
+          {trigger}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="end" onClick={(e) => e.stopPropagation()}>
+        <Command>
+          <CommandInput placeholder="Search member..." />
+          <CommandList>
+            <CommandEmpty>No matches</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="Unassigned"
+                onSelect={() => { onAssigneeChange(issue.id, null); setOpen(false) }}
+              >
+                <Check className={cn('h-4 w-4 mr-1', !issue.assigneeId ? 'opacity-100' : 'opacity-0')} />
+                <UserAvatar user={null} size="xs" />
+                <span className="ml-1.5">Unassigned</span>
+              </CommandItem>
+              {members.map((m) => (
+                <CommandItem
+                  key={m.id}
+                  value={m.name}
+                  onSelect={() => { onAssigneeChange(issue.id, m.id); setOpen(false) }}
+                >
+                  <Check className={cn('h-4 w-4 mr-1', issue.assigneeId === m.id ? 'opacity-100' : 'opacity-0')} />
+                  <UserAvatar user={m} size="xs" />
+                  <span className="ml-1.5 truncate">{m.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 const NO_EPIC = '__none__'
 

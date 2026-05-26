@@ -88,10 +88,10 @@ export function useBoardMutations(projectId: string) {
   })
 
   const updateIssue = useMutation({
-    mutationFn: (args: { issueId: string; data: { status?: string; parentId?: string | null } }) =>
+    mutationFn: (args: { issueId: string; data: { status?: string; parentId?: string | null; assigneeId?: string | null } }) =>
       issueRepository.update(projectId, args.issueId, args.data),
     onMutate: async ({ issueId, data }) => {
-      if (data.status === undefined && data.parentId === undefined) return { prev: undefined }
+      if (data.status === undefined && data.parentId === undefined && data.assigneeId === undefined) return { prev: undefined }
       await queryClient.cancelQueries({ queryKey: boardKeyPrefix })
       const prev = snapshotBoards()
       // Find the issue's current status/order in any board cache so we can

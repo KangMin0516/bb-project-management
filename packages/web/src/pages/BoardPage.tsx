@@ -359,6 +359,7 @@ export default function BoardPage() {
               onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
               onSwimlaneReorder={(epicId, status, order) => reorder.mutate({ issueId: epicId, status, order })}
               onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
+              onAssigneeChange={(issueId, assigneeId) => updateIssue.mutate({ issueId, data: { assigneeId } })}
               onAddClick={(status, parentId) => setCreateModal({ status, parentId })}
               childrenMap={childrenMap}
               expandedIssues={expandedIssues}
@@ -368,6 +369,7 @@ export default function BoardPage() {
               epicOwnersFilter={filters.epicOwners}
               domainFilter={filters.domainId}
               epics={boardEpics}
+              members={assignedMembers}
               collapsedEpics={collapsedEpics}
               onCollapseToggle={toggleCollapse}
               epicAncestorMap={epicAncestorMap}
@@ -399,6 +401,8 @@ export default function BoardPage() {
                     focusedIssueId={focusedIssueId}
                     epics={boardEpics}
                     onEpicChange={(issueId, newParentId) => updateIssue.mutate({ issueId, data: { parentId: newParentId } })}
+                    members={assignedMembers}
+                    onAssigneeChange={(issueId, assigneeId) => updateIssue.mutate({ issueId, data: { assigneeId } })}
                   />
                 ))}
               </div>

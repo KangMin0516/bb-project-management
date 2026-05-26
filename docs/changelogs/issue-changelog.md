@@ -22,6 +22,11 @@
 
 ## Timeline
 
+### 2026-05-26 — Board IssueCard: avatar click opens assignee picker (PM-100)
+**Changed.** Clicking the assignee avatar on a board card previously opened an image preview. It now opens a Popover with a searchable Command list of project members, letting the user re-assign (or unassign) the issue directly from the card without opening the detail panel. The image-preview click was removed from sub-task extra avatars as well — those remain non-interactive. The `updateIssue` board mutation was extended to accept `assigneeId` so the same optimistic-update path handles assignee changes.
+
+- Source: `packages/web/src/features/issue/components/board/IssueCard.tsx` (new `AssigneePopover` component, `members` + `onAssigneeChange` props), `packages/web/src/features/issue/components/board/BoardColumn.tsx`, `packages/web/src/features/issue/components/board/SwimlaneRow.tsx`, `packages/web/src/features/issue/components/board/SwimlaneBoardView.tsx` (prop threading), `packages/web/src/pages/BoardPage.tsx` (wire `assignedMembers` + handler), `packages/web/src/features/issue/hooks/useBoardMutations.ts` (add `assigneeId` to update payload type).
+
 ### 2026-05-22 — Global search endpoint across issues, comments, specs (PM-80 BE)
 **Added.** `SearchService.searchAll(userId, q, limit)` + `GET /api/search?q=…` return cross-project hits from three sources at once:
 - **Issues** — match on `title` (score 100) or `description` (score 50), archived rows excluded

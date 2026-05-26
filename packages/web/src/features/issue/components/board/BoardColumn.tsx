@@ -23,6 +23,8 @@ interface BoardColumnProps {
   focusedIssueId?: string | null
   epics?: Issue[]
   onEpicChange?: (issueId: string, newParentId: string | null) => void
+  members?: { id: string; name: string; avatar: string | null }[]
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
 }
 
 export default memo(function BoardColumn({
@@ -40,6 +42,8 @@ export default memo(function BoardColumn({
   focusedIssueId,
   epics,
   onEpicChange,
+  members,
+  onAssigneeChange,
 }: BoardColumnProps) {
   return (
     <div className="flex h-full w-[260px] shrink-0 flex-col rounded-xl bg-gray-100 dark:bg-gray-800">
@@ -92,6 +96,8 @@ export default memo(function BoardColumn({
                       isFocused={focusedIssueId === issue.id}
                       epics={epics}
                       onEpicChange={onEpicChange}
+                      members={members}
+                      onAssigneeChange={onAssigneeChange}
                     />
                   </div>
                 )}

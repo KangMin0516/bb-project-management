@@ -18,6 +18,11 @@
 
 ## Timeline
 
+### 2026-05-26 — SearchInput: debounce + clear button
+**Changed.** `SearchInput` (used on Board, Issues list, Calendar, Timeline) now debounces the `onChange` callback by 300 ms so keystroke-by-keystroke filtering no longer fires on every character. A clear (×) button appears when the input is non-empty, letting users reset search instantly without selecting-all and deleting. The parent-controlled `value` is still synced back into local state so external "Clear all filters" resets work correctly.
+
+- Source: `packages/web/src/shared/ui/FilterBar.tsx` (`SearchInput` — add local state + debounce effect + clear button).
+
 ### 2026-05-22 — Specs page: dark-mode active row + collapse animations
 **Fixed.** Three follow-ups on the Specifications page reported via the in-app annotation tool:
 

@@ -40,6 +40,8 @@ interface SwimlaneRowProps {
   onChildStatusToggle: (child: ChildIssue) => void
   epics?: Issue[]
   onEpicChange?: (issueId: string, newParentId: string | null) => void
+  members?: { id: string; name: string; avatar: string | null }[]
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
   /** Drag handle for reordering the whole swimlane (from dnd Draggable). */
   dragHandleProps?: DraggableProvidedDragHandleProps
   /** Move this swimlane up/down by one position. Undefined when at the edge. */
@@ -68,6 +70,8 @@ export default memo(function SwimlaneRow({
   onChildStatusToggle,
   epics,
   onEpicChange,
+  members,
+  onAssigneeChange,
   dragHandleProps,
   onMoveUp,
   onMoveDown,
@@ -265,6 +269,8 @@ export default memo(function SwimlaneRow({
                                 compact
                                 epics={epics}
                                 onEpicChange={onEpicChange}
+                                members={members}
+                                onAssigneeChange={onAssigneeChange}
                                 hideEpicChip
                               />
                             </div>
