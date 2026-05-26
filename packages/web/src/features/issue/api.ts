@@ -251,8 +251,18 @@ export interface PresignResult {
 }
 
 export const uploadApi = {
-  /** Legacy multipart upload — still used by the side-panel attachment list. */
-  upload: (file: File, opts?: { issueId?: string; commentId?: string }) => {
+  /**
+   * Multipart upload through the API server. Used everywhere by default
+   * (editor + side-panel attachment list) — direct-to-S3 presigned PUT
+   * exists in `presign`/`putToS3`/`confirm` below but requires bucket
+   * CORS to be configured, so the editor stays on multipart until ops
+   * unlocks it. `onProgress` reports bytes uploaded to the API server
+   * (the API→S3 leg is invisible to us — close enough for UX).
+   */
+  upload: (
+    file: File,
+    opts?: { issueId?: string; commentId?: string; onProgress?: (pct: number) => void },
+  ) => {
     const formData = new FormData()
     formData.append('file', file)
     const params = new URLSearchParams()
@@ -260,6 +270,11 @@ export const uploadApi = {
     if (opts?.commentId) params.set('commentId', opts.commentId)
     return api.post<{ data: Attachment }>(`/upload?${params}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: opts?.onProgress
+        ? (e) => {
+            if (e.total) opts.onProgress!(Math.round((e.loaded / e.total) * 100))
+          }
+        : undefined,
     }).then((r) => r.data.data)
   },
 

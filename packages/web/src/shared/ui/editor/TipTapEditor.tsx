@@ -304,7 +304,7 @@ export default function TipTapEditor({
     setUploadProgress(0)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.presignedUpload(prepared, {
+      const result = await issueRepository.uploadFile(prepared, {
         issueId,
         onProgress: setUploadProgress,
       })
@@ -333,7 +333,7 @@ export default function TipTapEditor({
     setUploadProgress(0)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.presignedUpload(prepared, {
+      const result = await issueRepository.uploadFile(prepared, {
         issueId,
         onProgress: setUploadProgress,
       })
