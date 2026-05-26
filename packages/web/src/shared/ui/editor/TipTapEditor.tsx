@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -131,6 +131,8 @@ export default function TipTapEditor({
 }: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingCount, setUploadingCount] = useState(0)
+  const isUploading = uploadingCount > 0
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialContent = useMemo(() => markdownToHtml(content), [])
 
@@ -263,31 +265,75 @@ export default function TipTapEditor({
     if (editor && onReady) onReady(editor)
   }, [editor, onReady])
 
+  const replaceNodeSrc = useCallback((placeholderSrc: string, finalSrc: string, type: 'image' | 'video') => {
+    if (!editor) return
+    const tr = editor.state.tr
+    let replaced = false
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === type && node.attrs.src === placeholderSrc) {
+        tr.setNodeAttribute(pos, 'src', finalSrc)
+        replaced = true
+      }
+    })
+    if (replaced) editor.view.dispatch(tr)
+  }, [editor])
+
+  const removeNode = useCallback((placeholderSrc: string, type: 'image' | 'video') => {
+    if (!editor) return
+    const tr = editor.state.tr
+    const toDelete: { pos: number; size: number }[] = []
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === type && node.attrs.src === placeholderSrc) {
+        toDelete.push({ pos, size: node.nodeSize })
+      }
+    })
+    for (const { pos, size } of toDelete.reverse()) {
+      tr.delete(pos, pos + size)
+    }
+    if (toDelete.length) editor.view.dispatch(tr)
+  }, [editor])
+
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return
+    const placeholderSrc = `data:uploading:img:${Date.now()}:${Math.random()}`
+    editor.chain().focus().setImage({ src: placeholderSrc }).run()
+    setUploadingCount((c) => c + 1)
     try {
       const prepared = await prepareForUpload(file)
       const result = await issueRepository.uploadFile(prepared)
       if (result.url) {
-        editor.chain().focus().setImage({ src: result.url }).run()
+        replaceNodeSrc(placeholderSrc, result.url, 'image')
+      } else {
+        removeNode(placeholderSrc, 'image')
       }
     } catch (err) {
+      removeNode(placeholderSrc, 'image')
       useToastStore.getState().addToast(getErrorMessage(err, 'Image upload failed'), 'error')
+    } finally {
+      setUploadingCount((c) => c - 1)
     }
-  }, [editor])
+  }, [editor, replaceNodeSrc, removeNode])
 
   const handleVideoUpload = useCallback(async (file: File) => {
     if (!editor) return
+    const placeholderSrc = `data:uploading:vid:${Date.now()}:${Math.random()}`
+    editor.chain().focus().setVideo({ src: placeholderSrc }).run()
+    setUploadingCount((c) => c + 1)
     try {
       const prepared = await prepareForUpload(file)
       const result = await issueRepository.uploadFile(prepared)
       if (result.url) {
-        editor.chain().focus().setVideo({ src: result.url }).run()
+        replaceNodeSrc(placeholderSrc, result.url, 'video')
+      } else {
+        removeNode(placeholderSrc, 'video')
       }
     } catch (err) {
+      removeNode(placeholderSrc, 'video')
       useToastStore.getState().addToast(getErrorMessage(err, 'Video upload failed'), 'error')
+    } finally {
+      setUploadingCount((c) => c - 1)
     }
-  }, [editor])
+  }, [editor, replaceNodeSrc, removeNode])
 
   const handleImageButtonClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -318,6 +364,7 @@ export default function TipTapEditor({
           editor={editor}
           onImageClick={handleImageButtonClick}
           onVideoClick={handleVideoButtonClick}
+          isUploading={isUploading}
         />
       )}
       <MediaBubbleMenu editor={editor} />
@@ -327,6 +374,7 @@ export default function TipTapEditor({
         type="file"
         accept="image/*"
         className="hidden"
+        disabled={isUploading}
         onChange={handleFileSelect}
       />
       <input
@@ -334,6 +382,7 @@ export default function TipTapEditor({
         type="file"
         accept="video/*"
         className="hidden"
+        disabled={isUploading}
         onChange={handleVideoSelect}
       />
     </div>

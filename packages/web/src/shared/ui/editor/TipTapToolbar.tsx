@@ -17,12 +17,14 @@ import {
   Table,
   Undo,
   Redo,
+  Loader2,
 } from 'lucide-react'
 
 interface TipTapToolbarProps {
   editor: Editor
   onImageClick?: () => void
   onVideoClick?: () => void
+  isUploading?: boolean
 }
 
 interface ToolbarButton {
@@ -32,7 +34,7 @@ interface ToolbarButton {
   isActive?: () => boolean
 }
 
-export default function TipTapToolbar({ editor, onImageClick, onVideoClick }: TipTapToolbarProps) {
+export default function TipTapToolbar({ editor, onImageClick, onVideoClick, isUploading }: TipTapToolbarProps) {
   const groups: ToolbarButton[][] = [
     // Text formatting
     [
@@ -123,9 +125,10 @@ export default function TipTapToolbar({ editor, onImageClick, onVideoClick }: Ti
         isActive: () => editor.isActive('link'),
       },
       {
-        icon: <Image className="h-3.5 w-3.5" />,
-        title: 'Image',
+        icon: isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />,
+        title: isUploading ? 'Uploading…' : 'Image',
         action: () => {
+          if (isUploading) return
           if (onImageClick) {
             onImageClick()
           } else {
@@ -135,9 +138,10 @@ export default function TipTapToolbar({ editor, onImageClick, onVideoClick }: Ti
         },
       },
       {
-        icon: <Video className="h-3.5 w-3.5" />,
-        title: 'Video',
+        icon: isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />,
+        title: isUploading ? 'Uploading…' : 'Video',
         action: () => {
+          if (isUploading) return
           if (onVideoClick) {
             onVideoClick()
           } else {
