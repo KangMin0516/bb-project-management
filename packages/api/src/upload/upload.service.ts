@@ -190,6 +190,99 @@ export class UploadService {
     });
   }
 
+  /**
+   * Issue a presigned S3 URL the browser can use to PUT a file directly
+   * to object storage, bypassing the API. The DB row is only created
+   * later in `commitAttachment` — until then the object lives in S3
+   * orphaned. That tradeoff (orphan vs double-trip latency) is worth it
+   * for 30MB+ media: we save the entire API-side memory buffer and the
+   * second leg of the network hop.
+   *
+   * Validation mirrors `upload()` — same size cap, same blocked ext /
+   * MIME list — because the same restrictions apply regardless of how
+   * the bytes reach S3.
+   */
+  async presignAttachment(input: {
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+  }) {
+    if (!this.storage.isConfigured()) {
+      throw new BadRequestException('File storage not configured');
+    }
+
+    if (input.fileSize > MAX_FILE_SIZE) {
+      throw new BadRequestException('File size exceeds 50MB limit');
+    }
+
+    const ext = extname(input.fileName).toLowerCase();
+    if (BLOCKED_ATTACHMENT_EXTS.includes(ext)) {
+      throw new BadRequestException(`File type ${ext} is not allowed`);
+    }
+    if (BLOCKED_ATTACHMENT_MIMES.includes(input.mimeType)) {
+      throw new BadRequestException(
+        `MIME type ${input.mimeType} is not allowed`,
+      );
+    }
+
+    const key = `attachments/${randomUUID()}${ext}`;
+    const url = await this.storage.presignPut({
+      key,
+      contentType: input.mimeType,
+    });
+
+    return { key, url, publicUrl: this.storage.keyToUrl(key) };
+  }
+
+  /**
+   * Create the Attachment DB row after a successful direct-to-S3 PUT.
+   * Caller passes back the storage `key` issued by `presignAttachment`
+   * so we never trust browser-supplied URLs. `fileSize` / `mimeType` /
+   * `fileName` are re-validated for the same reason.
+   */
+  async commitAttachment(
+    input: {
+      key: string;
+      fileName: string;
+      fileSize: number;
+      mimeType: string;
+      issueId?: string;
+      commentId?: string;
+    },
+    uploaderId: string,
+  ) {
+    if (!this.storage.isConfigured()) {
+      throw new BadRequestException('File storage not configured');
+    }
+    if (!input.key.startsWith('attachments/')) {
+      throw new BadRequestException('Invalid storage key');
+    }
+    if (input.fileSize > MAX_FILE_SIZE) {
+      throw new BadRequestException('File size exceeds 50MB limit');
+    }
+    const ext = extname(input.fileName).toLowerCase();
+    if (BLOCKED_ATTACHMENT_EXTS.includes(ext)) {
+      throw new BadRequestException(`File type ${ext} is not allowed`);
+    }
+    if (BLOCKED_ATTACHMENT_MIMES.includes(input.mimeType)) {
+      throw new BadRequestException(
+        `MIME type ${input.mimeType} is not allowed`,
+      );
+    }
+
+    return this.prisma.attachment.create({
+      data: {
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+        url: this.storage.keyToUrl(input.key),
+        uploaderId,
+        issueId: input.issueId || null,
+        commentId: input.commentId || null,
+      },
+    });
+  }
+
   async remove(id: string, userId: string) {
     const attachment = await this.prisma.attachment.findUnique({
       where: { id },

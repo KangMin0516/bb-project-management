@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -19,6 +20,8 @@ import { UploadService } from './upload.service.js';
 import { CurrentUser, type JwtPayload } from '../common/decorators/index.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { AVATAR_MAX_SIZE, ATTACHMENT_MAX_SIZE } from '../common/constants.js';
+import { PresignUploadDto } from './dto/presign-upload.dto.js';
+import { ConfirmUploadDto } from './dto/confirm-upload.dto.js';
 
 @ApiTags('Upload')
 @ApiBearerAuth()
@@ -84,6 +87,27 @@ export class UploadController {
       throw new BadRequestException('File is required');
     }
     return this.uploadService.upload(file, user.sub, { issueId, commentId });
+  }
+
+  /**
+   * Mint a presigned S3 PUT URL the browser uploads to directly.
+   * No DB row is created here — `/upload/confirm` finishes the flow
+   * after the browser PUT completes. Used by the rich-text editor to
+   * stream large media (≥30 MB) without buffering through the API.
+   */
+  @Post('presign')
+  presign(@Body() dto: PresignUploadDto) {
+    return this.uploadService.presignAttachment(dto);
+  }
+
+  /**
+   * Second leg of the presigned-PUT flow: persist the Attachment row
+   * once the browser PUT to S3 has returned 200. Server re-validates
+   * extension / MIME / size — never trust the browser-supplied URL.
+   */
+  @Post('confirm')
+  confirm(@Body() dto: ConfirmUploadDto, @CurrentUser() user: JwtPayload) {
+    return this.uploadService.commitAttachment(dto, user.sub);
   }
 
   @Delete(':id')

@@ -6,6 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Readable } from 'node:stream';
 import type {
   DownloadResult,
@@ -100,6 +101,31 @@ export class S3Adapter implements FileStoragePort {
     // confirmed the host is S3.
     const parsed = new URL(url);
     return parsed.pathname.replace(/^\/+/, '');
+  }
+
+  keyToUrl(key: string): string {
+    return this.urlFor(key);
+  }
+
+  async presignPut(input: {
+    key: string;
+    contentType: string;
+    expiresIn?: number;
+  }): Promise<string> {
+    // S3 caps signed-URL lifetimes at 7 days (604800s). Default to
+    // 15 minutes — enough for a single 50MB browser PUT even on slow
+    // connections, short enough that a leaked URL stops being useful
+    // quickly.
+    const expiresIn = Math.min(Math.max(input.expiresIn ?? 900, 60), 3600);
+    return getSignedUrl(
+      this.s3,
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: input.key,
+        ContentType: input.contentType,
+      }),
+      { expiresIn },
+    );
   }
 
   // Test seam — subclasses can stub the URL format without touching

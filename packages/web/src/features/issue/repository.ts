@@ -1,4 +1,4 @@
-import { issueApi, uploadApi, type Issue, type PaginatedIssues } from '@/features/issue/api'
+import { issueApi, uploadApi, type Attachment, type Issue, type PaginatedIssues } from '@/features/issue/api'
 
 /**
  * Repository layer for Issue. Wraps the raw HTTP client with typed,
@@ -120,6 +120,36 @@ export const issueRepository = {
   /** File attachments (uploaded against an issueId or commentId). */
   uploadFile: uploadApi.upload,
   removeFile: uploadApi.delete,
+
+  /**
+   * Direct-to-S3 upload via presigned URL. Used by the rich-text editor
+   * where large media (≥30 MB) would otherwise have to round-trip
+   * through the API server. Returns the same Attachment shape as the
+   * legacy multipart upload so callers stay interchangeable.
+   *
+   * `onProgress` fires while bytes are streaming to S3 (presign +
+   * confirm phases are effectively instant). Throws on any failure;
+   * the caller is responsible for cleaning up its in-editor placeholder.
+   */
+  async presignedUpload(
+    file: File,
+    opts: { issueId?: string; commentId?: string; onProgress?: (pct: number) => void } = {},
+  ): Promise<Attachment> {
+    const { url, key } = await uploadApi.presign({
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+    })
+    await uploadApi.putToS3(url, file, opts.onProgress)
+    return uploadApi.confirm({
+      key,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+      issueId: opts.issueId,
+      commentId: opts.commentId,
+    })
+  },
 }
 
 export type IssueRepository = typeof issueRepository

@@ -18,6 +18,21 @@
 
 ## Timeline
 
+### 2026-05-26 — Direct-to-S3 presigned uploads for editor media (PM-101)
+
+**Changed.** Image and video uploads from the rich-text editor now go browser → S3 directly via a presigned PUT URL, instead of browser → API → S3 (the double-hop the legacy multipart endpoint took). For the 30 MB+ video clips users were actually pasting, this removes both the full in-memory buffer on the API server (Multer `memoryStorage`) and the second network leg, cutting end-to-end upload time roughly in half on slow uplinks.
+
+The flow has three steps:
+1. `POST /upload/presign` — server mints a short-lived (15 min, capped 1 h) S3 PUT URL after validating filename extension, MIME, and size against the same blocklist `/upload` already enforces.
+2. Browser PUTs the bytes straight to S3 over XHR so we can surface real progress.
+3. `POST /upload/confirm` — server re-validates (never trusts browser-supplied URLs), then creates the Attachment row pointing at the same canonical `https://<bucket>.s3.<region>.amazonaws.com/<key>` shape `upload()` would have produced. The TipTap editor still inserts a placeholder node on insert and swaps the src on confirm, so the auto-save-to-attachments behaviour from the prior commit keeps working.
+
+Progress is shown as a thin bar with `xx%` below the editor while bytes stream. The side-panel attachment list keeps the old multipart endpoint — small files there don't justify two extra round-trips.
+
+**Note:** the S3 bucket needs a CORS rule allowing `PUT` from the web origin (Origin → `AllowedOrigins`, methods `PUT`, headers `Content-Type`). Without it, the browser request fails before reaching S3 and the user sees a generic "S3 upload network error" toast.
+
+- Source: `packages/api/src/common/ports/file-storage.port.ts`, `packages/api/src/upload/infrastructure/s3.adapter.ts`, `packages/api/src/upload/upload.service.ts`, `packages/api/src/upload/upload.controller.ts`, `packages/api/src/upload/dto/presign-upload.dto.ts`, `packages/api/src/upload/dto/confirm-upload.dto.ts`, `packages/web/src/features/issue/api.ts`, `packages/web/src/features/issue/repository.ts`, `packages/web/src/shared/ui/editor/TipTapEditor.tsx`
+
 ### 2026-05-26 — Fix: SearchInput double-debounce + project switcher cmdk race
 
 **Fixed.**

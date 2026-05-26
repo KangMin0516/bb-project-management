@@ -134,6 +134,7 @@ export default function TipTapEditor({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingCount, setUploadingCount] = useState(0)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const isUploading = uploadingCount > 0
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialContent = useMemo(() => markdownToHtml(content), [])
@@ -300,9 +301,13 @@ export default function TipTapEditor({
     const placeholderSrc = `data:uploading:img:${Date.now()}:${Math.random()}`
     editor.chain().focus().setImage({ src: placeholderSrc }).run()
     setUploadingCount((c) => c + 1)
+    setUploadProgress(0)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.uploadFile(prepared, issueId ? { issueId } : undefined)
+      const result = await issueRepository.presignedUpload(prepared, {
+        issueId,
+        onProgress: setUploadProgress,
+      })
       if (result.url) {
         replaceNodeSrc(placeholderSrc, result.url, 'image')
       } else {
@@ -312,18 +317,26 @@ export default function TipTapEditor({
       removeNode(placeholderSrc, 'image')
       useToastStore.getState().addToast(getErrorMessage(err, 'Image upload failed'), 'error')
     } finally {
-      setUploadingCount((c) => c - 1)
+      setUploadingCount((c) => {
+        const next = c - 1
+        if (next === 0) setUploadProgress(null)
+        return next
+      })
     }
-  }, [editor, replaceNodeSrc, removeNode])
+  }, [editor, replaceNodeSrc, removeNode, issueId])
 
   const handleVideoUpload = useCallback(async (file: File) => {
     if (!editor) return
     const placeholderSrc = `data:uploading:vid:${Date.now()}:${Math.random()}`
     editor.chain().focus().setVideo({ src: placeholderSrc }).run()
     setUploadingCount((c) => c + 1)
+    setUploadProgress(0)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.uploadFile(prepared, issueId ? { issueId } : undefined)
+      const result = await issueRepository.presignedUpload(prepared, {
+        issueId,
+        onProgress: setUploadProgress,
+      })
       if (result.url) {
         replaceNodeSrc(placeholderSrc, result.url, 'video')
       } else {
@@ -333,9 +346,13 @@ export default function TipTapEditor({
       removeNode(placeholderSrc, 'video')
       useToastStore.getState().addToast(getErrorMessage(err, 'Video upload failed'), 'error')
     } finally {
-      setUploadingCount((c) => c - 1)
+      setUploadingCount((c) => {
+        const next = c - 1
+        if (next === 0) setUploadProgress(null)
+        return next
+      })
     }
-  }, [editor, replaceNodeSrc, removeNode])
+  }, [editor, replaceNodeSrc, removeNode, issueId])
 
   const handleImageButtonClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -371,6 +388,17 @@ export default function TipTapEditor({
       )}
       <MediaBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
+      {isUploading && uploadProgress !== null && (
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+          <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div
+              className="h-full bg-primary-500 transition-[width] duration-150"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          <span className="tabular-nums">{uploadProgress}%</span>
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"

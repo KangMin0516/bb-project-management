@@ -67,4 +67,22 @@ export interface FileStoragePort {
    * as one this adapter produced.
    */
   urlToKey(url: string): string;
+
+  /**
+   * Inverse of urlToKey — produce the canonical public URL for a storage
+   * key. Used after a direct-to-storage upload to persist the same URL
+   * shape that `upload()` would have returned.
+   */
+  keyToUrl(key: string): string;
+
+  /**
+   * Issue a presigned PUT URL the browser can use to upload bytes
+   * directly to storage, bypassing the API server. `expiresIn` is in
+   * seconds; adapter clamps to its own safe maximum.
+   */
+  presignPut(input: {
+    key: string;
+    contentType: string;
+    expiresIn?: number;
+  }): Promise<string>;
 }

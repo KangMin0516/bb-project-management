@@ -241,7 +241,17 @@ export const issueApi = {
     api.delete(`/projects/${projectId}/issues/${issueId}/spec-links/${linkId}`),
 }
 
+export interface PresignResult {
+  /** Storage key, must be passed back to /upload/confirm. */
+  key: string
+  /** Presigned URL the browser PUTs the bytes to. */
+  url: string
+  /** Public URL the Attachment row will end up with. */
+  publicUrl: string
+}
+
 export const uploadApi = {
+  /** Legacy multipart upload — still used by the side-panel attachment list. */
   upload: (file: File, opts?: { issueId?: string; commentId?: string }) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -252,6 +262,45 @@ export const uploadApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data.data)
   },
+
+  /** Ask the API to mint a presigned PUT URL for direct browser→S3 upload. */
+  presign: (input: { fileName: string; fileSize: number; mimeType: string }) =>
+    api.post<{ data: PresignResult }>(`/upload/presign`, input).then((r) => r.data.data),
+
+  /**
+   * PUT the file bytes straight to S3. Uses XMLHttpRequest so we can
+   * surface upload progress to the user — axios doesn't expose progress
+   * on cross-origin no-credentials requests reliably across browsers.
+   */
+  putToS3: (presignedUrl: string, file: File, onProgress?: (pct: number) => void) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', presignedUrl, true)
+      xhr.setRequestHeader('Content-Type', file.type)
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        })
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve()
+        else reject(new Error(`S3 upload failed: ${xhr.status} ${xhr.statusText}`))
+      }
+      xhr.onerror = () => reject(new Error('S3 upload network error'))
+      xhr.onabort = () => reject(new Error('S3 upload aborted'))
+      xhr.send(file)
+    }),
+
+  /** Finalise the presigned-PUT flow — creates the Attachment row. */
+  confirm: (input: {
+    key: string
+    fileName: string
+    fileSize: number
+    mimeType: string
+    issueId?: string
+    commentId?: string
+  }) => api.post<{ data: Attachment }>(`/upload/confirm`, input).then((r) => r.data.data),
+
   delete: (id: string) =>
     api.delete(`/upload/${id}`),
 }
