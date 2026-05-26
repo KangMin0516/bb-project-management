@@ -20,6 +20,16 @@
 
 ## Timeline
 
+### 2026-05-26 — Overdue alerts: exclude Epic + show status inline
+**Changed.** A PM reviewing the morning Overdue block in `#safari_general` flagged that the 18-item list was 11 items of noise (6 Epic containers + 5 already-in-`REVIEW_QA`) versus 7 actual stalled tasks. Two adjustments to make the alert actionable:
+
+1. **`type = EPIC` excluded from all overdue queries.** Epic-typed issues are containers whose `dueDate` rolls up the latest child due. Treating the Epic itself as overdue is double-counting — the child tasks already surface. Applied to:
+   - `report.service.ts` morning + evening project reports
+   - `mgmt-digest.service.ts` `getOverdueIssues`
+2. **Status surfaced inline on every overdue row.** `REVIEW_QA`/`RECHECK` items are *technically* overdue (dev hand-off was supposed to be by the due date) but the dev doesn't have action left — the QA does. Rather than filtering these out (which would hide the QA backlog), we now print the status next to each line so the reader can tell "untouched" (`BACKLOG`/`TODO`) from "with QA" (`REVIEW_QA`/`RECHECK`) at a glance. Applied to morning, evening, and mgmt-digest overdue blocks; `OverdueIssue` view-model gained a `status: string` field.
+
+- Source: `packages/api/src/report/report.service.ts` (two `findMany` where clauses), `packages/api/src/report/mgmt-digest.service.ts` (`getOverdueIssues` filter + view-model carries `status`), `packages/api/src/report/formatters/morning.formatter.ts`, `evening.formatter.ts`, `mgmt-digest.formatter.ts` (status in the rendered line).
+
 ### 2026-04-24 — Management digest morning + evening (e5402a6)
 **Added.** Twice-daily Slack message to `MGMT_DIGEST_CHANNEL_ID` (configurable, defaults disabled with `MGMT_DIGEST_ENABLED=false`). Sends at:
 - `0 30 7 * * 1-5` Asia/Seoul — morning recap of yesterday + today's outlook.

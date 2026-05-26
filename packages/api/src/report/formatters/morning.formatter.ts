@@ -79,7 +79,9 @@ export function formatMorningReport(
             day: 'numeric',
           })
         : '';
-      return `  ${link}  ${i.title}    :bust_in_silhouette: ${assignee}    :calendar: Due: ${dueStr}`;
+      // Surface current status so REVIEW_QA/RECHECK items are visible at a
+      // glance — PM 입장에서 "이미 검수 단계인지" 여부가 즉시 보여야 한다.
+      return `  ${link}  ${i.title}    ${i.status}  :bust_in_silhouette: ${assignee}    :calendar: Due: ${dueStr}`;
     });
 
     pushMrkdwnSections(

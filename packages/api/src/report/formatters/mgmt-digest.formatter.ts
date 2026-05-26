@@ -26,6 +26,7 @@ export interface OverdueIssue {
   title: string;
   assigneeName: string | null;
   dueDate: Date;
+  status: string;
 }
 
 export interface StalledIssue {
@@ -108,7 +109,7 @@ export function formatMorningDigest(
         day: 'numeric',
       });
       alertLines.push(
-        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
+        `  ${link}  ${i.title}  ${i.status}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
       );
     }
   }
@@ -208,7 +209,7 @@ export function formatEveningDigest(
         day: 'numeric',
       });
       alertLines.push(
-        `  ${link}  ${i.title}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
+        `  ${link}  ${i.title}  ${i.status}  :bust_in_silhouette: ${i.assigneeName ?? 'Unassigned'}  :calendar: ${due}`,
       );
     }
   }

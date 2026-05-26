@@ -183,6 +183,7 @@ export class MgmtDigestService {
   private async getOverdueIssues(todayStart: Date): Promise<OverdueIssue[]> {
     const issues = await this.prisma.issue.findMany({
       where: {
+        type: { not: 'EPIC' },
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
         project: { archivedAt: null },
@@ -202,6 +203,7 @@ export class MgmtDigestService {
       title: i.title,
       assigneeName: i.assignee?.name ?? null,
       dueDate: i.dueDate!,
+      status: i.status,
     }));
   }
 

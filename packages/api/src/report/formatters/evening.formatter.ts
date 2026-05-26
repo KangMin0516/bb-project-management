@@ -83,7 +83,9 @@ export function formatEveningReport(
             day: 'numeric',
           })
         : '';
-      return `  ${link}  ${i.title}       :bust_in_silhouette: ${assignee}  :calendar: ${dueStr}`;
+      // Show status (e.g. REVIEW_QA, RECHECK, BACKLOG) inline so PM can tell
+      // "untouched" from "already in review" without clicking through.
+      return `  ${link}  ${i.title}    ${i.status}   :bust_in_silhouette: ${assignee}  :calendar: ${dueStr}`;
     });
     pushMrkdwnSections(
       blocks,

@@ -133,6 +133,9 @@ export class ReportService {
       where: {
         projectId,
         archivedAt: null,
+        // EPIC 자체는 자식 이슈를 묶는 컨테이너라 epic.dueDate 기준 overdue는
+        // PM 입장에서 실제 작업 단위가 아니다. 자식 이슈는 그대로 잡힌다.
+        type: { not: 'EPIC' },
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
       },
@@ -229,11 +232,13 @@ export class ReportService {
 
     // Overdue — same scope as In progress. Archived overdue rows are
     // historical drift; surfacing them in the daily report just
-    // creates noise the team can't act on anymore.
+    // creates noise the team can't act on anymore. EPIC도 자식 이슈를
+    // 묶는 컨테이너라 epic 자체의 dueDate 기준 overdue는 의미가 약하다.
     const overdueIssues = await this.prisma.issue.findMany({
       where: {
         projectId,
         archivedAt: null,
+        type: { not: 'EPIC' },
         dueDate: { lt: todayStart },
         status: { notIn: ['DONE', 'CANCELED'] },
       },
