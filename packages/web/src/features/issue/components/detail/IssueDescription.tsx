@@ -17,6 +17,8 @@ interface IssueDescriptionProps {
   onEditingChange?: (editing: boolean) => void
   /** When provided, the editor offers @-mentions for these members. */
   members?: ProjectMember[]
+  /** When provided, uploaded media is auto-associated with issue attachments. */
+  issueId?: string
 }
 
 /**
@@ -24,7 +26,7 @@ interface IssueDescriptionProps {
  * open the global lightbox; editing mode mounts a full TipTap editor with
  * explicit Save/Cancel — Esc cancels without saving.
  */
-export default function IssueDescription({ description, onSave, onEditingChange, members }: IssueDescriptionProps) {
+export default function IssueDescription({ description, onSave, onEditingChange, members, issueId }: IssueDescriptionProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
@@ -70,9 +72,10 @@ export default function IssueDescription({ description, onSave, onEditingChange,
               placeholder="Add description... (@ to mention)"
               minHeight="150px"
               onMentionsChange={setMentionedUserIds}
+              issueId={issueId}
             />
           ) : (
-            <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" />
+            <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" issueId={issueId} />
           )}
           <div className="mt-2 flex gap-2">
             <button

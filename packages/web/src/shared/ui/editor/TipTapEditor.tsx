@@ -44,6 +44,7 @@ interface TipTapEditorProps {
   minHeight?: string
   onSubmit?: () => void
   onReady?: (editor: Editor) => void
+  issueId?: string
 }
 
 /**
@@ -128,6 +129,7 @@ export default function TipTapEditor({
   minHeight = '150px',
   onSubmit,
   onReady,
+  issueId,
 }: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -300,7 +302,7 @@ export default function TipTapEditor({
     setUploadingCount((c) => c + 1)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.uploadFile(prepared)
+      const result = await issueRepository.uploadFile(prepared, issueId ? { issueId } : undefined)
       if (result.url) {
         replaceNodeSrc(placeholderSrc, result.url, 'image')
       } else {
@@ -321,7 +323,7 @@ export default function TipTapEditor({
     setUploadingCount((c) => c + 1)
     try {
       const prepared = await prepareForUpload(file)
-      const result = await issueRepository.uploadFile(prepared)
+      const result = await issueRepository.uploadFile(prepared, issueId ? { issueId } : undefined)
       if (result.url) {
         replaceNodeSrc(placeholderSrc, result.url, 'video')
       } else {

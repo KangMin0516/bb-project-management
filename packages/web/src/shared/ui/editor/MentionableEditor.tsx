@@ -13,6 +13,7 @@ interface MentionableEditorProps {
   onSubmit?: () => void
   /** Called whenever the picked-mention set changes. */
   onMentionsChange?: (userIds: string[]) => void
+  issueId?: string
 }
 
 function htmlToPlainText(html: string): string {
@@ -35,6 +36,7 @@ export default function MentionableEditor({
   minHeight,
   onSubmit,
   onMentionsChange,
+  issueId,
 }: MentionableEditorProps) {
   const [showMentions, setShowMentions] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')
@@ -133,6 +135,7 @@ export default function MentionableEditor({
         minHeight={minHeight}
         onSubmit={onSubmit}
         onReady={(editor) => { editorRef.current = editor }}
+        issueId={issueId}
       />
       {showMentions && filteredMembers.length > 0 && (
         <div className="absolute z-10 mt-1 w-72 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">

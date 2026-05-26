@@ -22,6 +22,14 @@
 
 ## Timeline
 
+### 2026-05-26 — Attachment UX: auto-save from description editor + delete guard
+
+**Added / Changed.**
+1. **Auto-save to attachments** — images and videos uploaded through the description editor are now automatically associated with the issue's attachment list. Achieved by threading an `issueId` prop down through `IssueDescription` → `MentionableEditor` → `TipTapEditor`, then passing it to `issueRepository.uploadFile({ issueId })`. No additional API call; the existing upload endpoint already handles the association when `issueId` is provided.
+2. **Delete guard for embedded files** — deleting an attachment that is currently embedded in the description now shows a destructive `confirmDialog` ("This file is currently used in the description. Deleting it will break the image/video there. Continue?"). The check compares the attachment URL against the raw description HTML. Non-embedded files are deleted immediately as before.
+
+- Source: `packages/web/src/features/issue/components/IssueDetailPanel.tsx` (thread `issueId` into `IssueDescription`; replace inline `onDelete` with async guard using `confirmDialog`), `packages/web/src/features/issue/components/detail/IssueDescription.tsx` (add `issueId?` prop, forward to both editor variants), `packages/web/src/shared/ui/editor/MentionableEditor.tsx` (add `issueId?` prop, forward to `TipTapEditor`), `packages/web/src/shared/ui/editor/TipTapEditor.tsx` (add `issueId?` prop, pass to both upload handlers).
+
 ### 2026-05-26 — Board IssueCard: avatar click opens assignee picker (PM-100)
 **Changed.** Clicking the assignee avatar on a board card previously opened an image preview. It now opens a Popover with a searchable Command list of project members, letting the user re-assign (or unassign) the issue directly from the card without opening the detail panel. The image-preview click was removed from sub-task extra avatars as well — those remain non-interactive. The `updateIssue` board mutation was extended to accept `assigneeId` so the same optimistic-update path handles assignee changes.
 

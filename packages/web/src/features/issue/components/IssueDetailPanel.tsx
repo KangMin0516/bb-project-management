@@ -22,6 +22,7 @@ import ActivityTab from '@/features/issue/components/ActivityTab'
 import LinkedIssues from '@/features/issue/components/LinkedIssues'
 import LinkedPullRequests from '@/features/issue/components/LinkedPullRequests'
 import IssueCommentsReadOnly from '@/features/issue/components/detail/IssueCommentsReadOnly'
+import { confirmDialog } from '@/shared/ui/confirm-dialog'
 
 interface IssueDetailPanelProps {
   projectId: string
@@ -155,13 +156,27 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
                 }
                 onEditingChange={setDescriptionEditing}
                 members={members ?? []}
+                issueId={d.id}
               />
 
               <IssueAttachments
                 attachments={detail?.attachments}
                 uploading={uploadAttachment.isPending}
                 onUpload={(file) => uploadAttachment.mutate(file)}
-                onDelete={(id) => deleteAttachment.mutate(id)}
+                onDelete={async (id) => {
+                  const att = detail?.attachments?.find((a) => a.id === id)
+                  const isEmbedded = att && d.description && d.description.includes(att.url)
+                  if (isEmbedded) {
+                    const confirmed = await confirmDialog({
+                      title: 'File is embedded in description',
+                      description: 'This file is currently used in the description. Deleting it will break the image/video there. Continue?',
+                      confirmLabel: 'Delete anyway',
+                      destructive: true,
+                    })
+                    if (!confirmed) return
+                  }
+                  deleteAttachment.mutate(id)
+                }}
               />
 
               {issue.type !== 'SUB_TASK' && (
