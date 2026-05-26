@@ -18,6 +18,17 @@
 
 ## Timeline
 
+### 2026-05-26 — Issue description draft survives accidental sheet close
+
+**Added.** Issue detail description editor now persists an unsaved draft in `localStorage` while the user types. If the issue sheet is closed accidentally (click outside / close button / route switch) before Save, reopening the same issue restores that draft when entering edit mode.
+
+Behavior details:
+- Draft key is scoped per issue (`issue-description-draft:<issueId>`) to avoid leaking text across issues.
+- Draft auto-clears when the current text becomes equal to the saved server description.
+- `Save` and `Cancel` both clear the stored draft so explicit user actions remain the source of truth.
+
+- Source: `packages/web/src/features/issue/components/detail/IssueDescription.tsx`.
+
 ### 2026-05-26 — Editor upload progress + presigned-S3 backend ready (PM-101)
 
 **Added.** Image/video uploads from the rich-text editor now report real progress as a thin bar (`xx%`) below the editor while bytes stream. Uses axios `onUploadProgress` on the existing `POST /upload` multipart endpoint — no infra change required. The bar disappears as soon as the last in-flight upload finishes.

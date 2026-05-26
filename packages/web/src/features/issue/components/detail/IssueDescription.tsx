@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import MarkdownViewer from '@/shared/ui/markdown/MarkdownViewer'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
 import MentionableEditor from '@/shared/ui/editor/MentionableEditor'
@@ -30,9 +30,34 @@ export default function IssueDescription({ description, onSave, onEditingChange,
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
+  const draftStorageKey = useMemo(
+    () => (issueId ? `issue-description-draft:${issueId}` : null),
+    [issueId],
+  )
+
+  const readStoredDraft = useCallback(() => {
+    if (!draftStorageKey) return null
+    return localStorage.getItem(draftStorageKey)
+  }, [draftStorageKey])
+
+  const clearStoredDraft = useCallback(() => {
+    if (!draftStorageKey) return
+    localStorage.removeItem(draftStorageKey)
+  }, [draftStorageKey])
+
+  const writeDraft = useCallback((next: string) => {
+    setDraft(next)
+    if (!draftStorageKey) return
+    if (!next || next === (description ?? '')) {
+      localStorage.removeItem(draftStorageKey)
+      return
+    }
+    localStorage.setItem(draftStorageKey, next)
+  }, [description, draftStorageKey])
 
   const enterEdit = () => {
-    setDraft(description ?? '')
+    const storedDraft = readStoredDraft()
+    setDraft(storedDraft ?? (description ?? ''))
     setMentionedUserIds([])
     setEditing(true)
     onEditingChange?.(true)
@@ -67,7 +92,7 @@ export default function IssueDescription({ description, onSave, onEditingChange,
           {members && members.length > 0 ? (
             <MentionableEditor
               content={draft}
-              onChange={setDraft}
+              onChange={writeDraft}
               members={members}
               placeholder="Add description... (@ to mention)"
               minHeight="150px"
@@ -75,19 +100,26 @@ export default function IssueDescription({ description, onSave, onEditingChange,
               issueId={issueId}
             />
           ) : (
-            <TipTapEditor content={draft} onChange={setDraft} placeholder="Add description..." minHeight="150px" issueId={issueId} />
+            <TipTapEditor content={draft} onChange={writeDraft} placeholder="Add description..." minHeight="150px" issueId={issueId} />
           )}
           <div className="mt-2 flex gap-2">
             <button
               type="button"
-              onClick={() => { onSave(draft, mentionedUserIds); exitEdit() }}
+              onClick={() => {
+                onSave(draft, mentionedUserIds)
+                clearStoredDraft()
+                exitEdit()
+              }}
               className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
             >
               Save
             </button>
             <button
               type="button"
-              onClick={exitEdit}
+              onClick={() => {
+                clearStoredDraft()
+                exitEdit()
+              }}
               className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
