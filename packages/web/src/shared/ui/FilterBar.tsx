@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Search, ChevronDown, Users, Tag, Layers, Zap, X, CircleDot, Signal, Shapes, UserCircle, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { stringToHslColor } from '@/shared/lib/color'
@@ -608,32 +608,32 @@ export function SearchInput({
   onChange: (v: string) => void
 }) {
   const [local, setLocal] = useState(value)
+  // Stable ref so handleChange never captures a stale onChange closure.
+  const onChangeRef = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange })
 
-  // Sync local state when the parent resets the value externally (e.g. "Clear all filters")
-  useEffect(() => {
-    setLocal(value)
-  }, [value])
+  // Sync when the parent resets the value externally (e.g. "Clear all filters").
+  // Only updates local display — does NOT call onChange (parent already knows).
+  useEffect(() => { setLocal(value) }, [value])
 
-  const flush = useCallback((v: string) => onChange(v), [onChange])
-
-  useEffect(() => {
-    const timer = setTimeout(() => flush(local), 300)
-    return () => clearTimeout(timer)
-  }, [local, flush])
+  const handleChange = (v: string) => {
+    setLocal(v)
+    onChangeRef.current(v)
+  }
 
   return (
     <div className="relative flex-1 min-w-[200px]">
       <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
       <input
         value={local}
-        onChange={(e) => setLocal(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         placeholder="Search issues..."
         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-1.5 pl-9 pr-8 text-sm focus:border-primary-500 focus:outline-none"
       />
       {local && (
         <button
           type="button"
-          onClick={() => { setLocal(''); onChange('') }}
+          onClick={() => handleChange('')}
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           aria-label="Clear search"
         >

@@ -265,6 +265,11 @@ export default function AppLayout() {
                           <CommandItem
                             key={p.id}
                             value={`${p.key} ${p.name}`}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              navigate(`/projects/${p.key}/board`)
+                              setShowProjects(false)
+                            }}
                             onSelect={() => {
                               navigate(`/projects/${p.key}/board`)
                               setShowProjects(false)

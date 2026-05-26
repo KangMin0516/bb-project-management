@@ -18,6 +18,14 @@
 
 ## Timeline
 
+### 2026-05-26 — Fix: SearchInput double-debounce + project switcher cmdk race
+
+**Fixed.**
+1. **SearchInput double-debounce** — `SearchInput` (Board/Lists/Calendar/Timeline) previously added a 300 ms `setTimeout` around `onChange`, but `useFilterSearchParams.writeToUrl` already debounces the URL write for search. The redundant layer created a 300–600 ms window where `filters.search` (React state) was out of sync with the URL. During that window, any `mutateParams` update (e.g. toggling Group: Epic) triggered `useFilterSearchParams`'s URL-sync effect, which detected the divergence and reset `filters.search` to the URL value — clearing the user's in-progress search and causing the board to oscillate between states. The `onChange` inline-function reference also changed on every render, causing `flush` to be recreated and the debounce timer to reset on every render. Fix: removed the `setTimeout` entirely; `handleChange` calls `onChangeRef.current(v)` directly so `useFilterSearchParams` owns the sole debounce. A `useRef` keeps the `onChange` reference stable.
+2. **Project switcher cmdk pointer race** — cmdk v1 resolves `onSelect` against its internal "highlighted" item, not necessarily the element the pointer is over at click time. If the user moved the mouse quickly or the popover was still settling, the previously highlighted item (often the current project) fired instead of the intended one. Fix: added `onMouseDown` with `e.preventDefault()` to each project `CommandItem` so navigation fires at pointer-down, before cmdk's highlight state can diverge. `onSelect` is kept as a keyboard-Enter fallback.
+
+- Source: `packages/web/src/shared/ui/FilterBar.tsx` (`SearchInput` — remove debounce timer, use `onChangeRef` + direct call), `packages/web/src/widgets/AppLayout/AppLayout.tsx` (project `CommandItem` — add `onMouseDown` guard).
+
 ### 2026-05-26 — Description editor: video upload + image/video resize (PM-101)
 **Added.**
 1. **Video upload** — new Video toolbar button (film icon) opens a file picker (`video/*`). Drag-and-drop and paste of video files also work. Videos are uploaded via the existing `issueRepository.uploadFile` and embedded as `<video controls>` elements via a custom `VideoExtension` TipTap Node. A second hidden `<input type="file" accept="video/*">` handles the picker flow.
