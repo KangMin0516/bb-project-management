@@ -9,12 +9,29 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Mention from '@tiptap/extension-mention'
 import { common, createLowlight } from 'lowlight'
 import TipTapToolbar from './TipTapToolbar'
+import { VideoExtension } from './VideoExtension'
+import { MediaBubbleMenu } from './MediaBubbleMenu'
 
 import { useToastStore } from '@/shared/lib/toast'
 import { prepareForUpload } from '@/shared/lib/prepareUpload'
 import { getErrorMessage } from '@/shared/lib/error'
 import './editor.css'
 import { issueRepository } from '@/features/issue/repository'
+
+// Extend the base Image extension to support a width attribute for inline resize.
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el) => (el as HTMLElement).style.width || null,
+        renderHTML: (attrs) =>
+          attrs.width ? { style: `width: ${attrs.width}; max-width: 100%;` } : {},
+      },
+    }
+  },
+})
 
 const lowlight = createLowlight(common)
 
@@ -26,8 +43,6 @@ interface TipTapEditorProps {
   editable?: boolean
   minHeight?: string
   onSubmit?: () => void
-  /** Fires once the editor instance is ready. Use to drive imperative
-   *  insertions (e.g. mention picker replacing the partial @-token). */
   onReady?: (editor: Editor) => void
 }
 
@@ -115,6 +130,7 @@ export default function TipTapEditor({
   onReady,
 }: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialContent = useMemo(() => markdownToHtml(content), [])
 
@@ -133,11 +149,10 @@ export default function TipTapEditor({
       Placeholder.configure({
         placeholder: placeholderText,
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'rounded-md max-w-full',
-        },
+      ResizableImage.configure({
+        HTMLAttributes: { class: 'rounded-md' },
       }),
+      VideoExtension,
       Table.configure({
         resizable: true,
       }),
@@ -187,10 +202,14 @@ export default function TipTapEditor({
       handleDrop: (_view, event) => {
         const files = event.dataTransfer?.files
         if (files && files.length > 0) {
-          const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
-          if (imageFiles.length > 0) {
+          const mediaFiles = Array.from(files).filter(
+            (f) => f.type.startsWith('image/') || f.type.startsWith('video/'),
+          )
+          if (mediaFiles.length > 0) {
             event.preventDefault()
-            imageFiles.forEach((file) => handleImageUpload(file))
+            mediaFiles.forEach((file) =>
+              file.type.startsWith('video/') ? handleVideoUpload(file) : handleImageUpload(file),
+            )
             return true
           }
         }
@@ -199,10 +218,14 @@ export default function TipTapEditor({
       handlePaste: (_view, event) => {
         const files = event.clipboardData?.files
         if (files && files.length > 0) {
-          const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
-          if (imageFiles.length > 0) {
+          const mediaFiles = Array.from(files).filter(
+            (f) => f.type.startsWith('image/') || f.type.startsWith('video/'),
+          )
+          if (mediaFiles.length > 0) {
             event.preventDefault()
-            imageFiles.forEach((file) => handleImageUpload(file))
+            mediaFiles.forEach((file) =>
+              file.type.startsWith('video/') ? handleVideoUpload(file) : handleImageUpload(file),
+            )
             return true
           }
         }
@@ -253,25 +276,51 @@ export default function TipTapEditor({
     }
   }, [editor])
 
+  const handleVideoUpload = useCallback(async (file: File) => {
+    if (!editor) return
+    try {
+      const prepared = await prepareForUpload(file)
+      const result = await issueRepository.uploadFile(prepared)
+      if (result.url) {
+        editor.chain().focus().setVideo({ src: result.url }).run()
+      }
+    } catch (err) {
+      useToastStore.getState().addToast(getErrorMessage(err, 'Video upload failed'), 'error')
+    }
+  }, [editor])
+
   const handleImageButtonClick = useCallback(() => {
     fileInputRef.current?.click()
   }, [])
 
+  const handleVideoButtonClick = useCallback(() => {
+    videoInputRef.current?.click()
+  }, [])
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      handleImageUpload(file)
-    }
+    if (file) handleImageUpload(file)
     e.target.value = ''
   }, [handleImageUpload])
+
+  const handleVideoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleVideoUpload(file)
+    e.target.value = ''
+  }, [handleVideoUpload])
 
   if (!editor) return null
 
   return (
     <div className={`rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden ${className}`}>
       {editable && (
-        <TipTapToolbar editor={editor} onImageClick={handleImageButtonClick} />
+        <TipTapToolbar
+          editor={editor}
+          onImageClick={handleImageButtonClick}
+          onVideoClick={handleVideoButtonClick}
+        />
       )}
+      <MediaBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
       <input
         ref={fileInputRef}
@@ -279,6 +328,13 @@ export default function TipTapEditor({
         accept="image/*"
         className="hidden"
         onChange={handleFileSelect}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={handleVideoSelect}
       />
     </div>
   )

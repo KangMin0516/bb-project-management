@@ -18,6 +18,13 @@
 
 ## Timeline
 
+### 2026-05-26 — Description editor: video upload + image/video resize (PM-101)
+**Added.**
+1. **Video upload** — new Video toolbar button (film icon) opens a file picker (`video/*`). Drag-and-drop and paste of video files also work. Videos are uploaded via the existing `issueRepository.uploadFile` and embedded as `<video controls>` elements via a custom `VideoExtension` TipTap Node. A second hidden `<input type="file" accept="video/*">` handles the picker flow.
+2. **Inline resize** — clicking an embedded image or video reveals a `MediaBubbleMenu` with four preset width buttons (25 / 50 / 75 / 100%). The chosen width is stored as a `width` attribute on the node and serialised as an inline `style` so it persists across save/reload. The base `@tiptap/extension-image` is replaced with `ResizableImage` (same extension, extended with the `width` attribute).
+
+- Source: `packages/web/src/shared/ui/editor/VideoExtension.ts` (new), `packages/web/src/shared/ui/editor/MediaBubbleMenu.tsx` (new), `packages/web/src/shared/ui/editor/TipTapEditor.tsx` (ResizableImage, VideoExtension, video upload, drop/paste, MediaBubbleMenu), `packages/web/src/shared/ui/editor/TipTapToolbar.tsx` (Video button), `packages/web/src/shared/ui/editor/editor.css` (video styles), `packages/web/package.json` (add `@tiptap/core` direct dep).
+
 ### 2026-05-26 — SearchInput: debounce + clear button
 **Changed.** `SearchInput` (used on Board, Issues list, Calendar, Timeline) now debounces the `onChange` callback by 300 ms so keystroke-by-keystroke filtering no longer fires on every character. A clear (×) button appears when the input is non-empty, letting users reset search instantly without selecting-all and deleting. The parent-controlled `value` is still synced back into local state so external "Clear all filters" resets work correctly.
 

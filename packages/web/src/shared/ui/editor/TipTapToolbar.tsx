@@ -13,6 +13,7 @@ import {
   CodeSquare,
   Link,
   Image,
+  Video,
   Table,
   Undo,
   Redo,
@@ -21,6 +22,7 @@ import {
 interface TipTapToolbarProps {
   editor: Editor
   onImageClick?: () => void
+  onVideoClick?: () => void
 }
 
 interface ToolbarButton {
@@ -30,7 +32,7 @@ interface ToolbarButton {
   isActive?: () => boolean
 }
 
-export default function TipTapToolbar({ editor, onImageClick }: TipTapToolbarProps) {
+export default function TipTapToolbar({ editor, onImageClick, onVideoClick }: TipTapToolbarProps) {
   const groups: ToolbarButton[][] = [
     // Text formatting
     [
@@ -128,9 +130,19 @@ export default function TipTapToolbar({ editor, onImageClick }: TipTapToolbarPro
             onImageClick()
           } else {
             const url = window.prompt('Enter image URL')
-            if (url) {
-              editor.chain().focus().setImage({ src: url }).run()
-            }
+            if (url) editor.chain().focus().setImage({ src: url }).run()
+          }
+        },
+      },
+      {
+        icon: <Video className="h-3.5 w-3.5" />,
+        title: 'Video',
+        action: () => {
+          if (onVideoClick) {
+            onVideoClick()
+          } else {
+            const url = window.prompt('Enter video URL')
+            if (url) editor.chain().focus().setVideo({ src: url }).run()
           }
         },
       },
