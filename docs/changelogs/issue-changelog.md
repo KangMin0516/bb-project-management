@@ -22,6 +22,11 @@
 
 ## Timeline
 
+### 2026-05-27 — Board IssueCard: sub-task assignee picker (PM-100)
+**Changed.** Sub-task rows on a board card now open the same assignee Popover as the parent issue when their avatar is clicked — previously they were a static display (and the prior PM-100 entry deliberately left them non-interactive). `AssigneePopover` was generalised to accept a minimal `{ id, assigneeId?, assignee? }` shape instead of a full `Issue` (so it works for the `ChildIssue` type) and gained a `size` prop (`sm` for sub-tasks, `md` for the parent). Reassignment reuses the existing `onAssigneeChange` → `updateIssue.mutate({ issueId, data: { assigneeId } })` path, which already accepts any `issueId`; the backend `PATCH .../issues/:issueId` needed no change. Unassigned sub-tasks now show a `?` chip (click to assign) to match the parent card.
+
+- Source: `packages/web/src/features/issue/components/board/IssueCard.tsx` (generalise `AssigneePopover` props + `size`, derive `selectedId` from `assigneeId ?? assignee?.id`, replace static sub-task avatar `div` with `<AssigneePopover size="sm">`).
+
 ### 2026-05-26 — Attachment UX: auto-save from description editor + delete guard
 
 **Added / Changed.**

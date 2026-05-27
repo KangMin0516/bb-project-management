@@ -296,18 +296,12 @@ export default memo(function IssueCard({
                 className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_COLORS[child.status] || 'bg-gray-300')}
                 title={STATUS_LABELS[child.status] || child.status}
               />
-              {child.assignee && (
-                <div
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-[9px] font-medium text-primary-700 dark:text-primary-300 overflow-hidden"
-                  title={child.assignee.name}
-                >
-                  {child.assignee.avatar ? (
-                    <img src={child.assignee.avatar} alt={child.assignee.name} className="h-full w-full object-cover" />
-                  ) : (
-                    child.assignee.name.charAt(0).toUpperCase()
-                  )}
-                </div>
-              )}
+              <AssigneePopover
+                issue={child}
+                members={members}
+                onAssigneeChange={onAssigneeChange}
+                size="sm"
+              />
             </div>
           ))}
         </div>
@@ -320,13 +314,20 @@ function AssigneePopover({
   issue,
   members,
   onAssigneeChange,
+  size = 'md',
 }: {
-  issue: Issue
+  issue: {
+    id: string
+    assigneeId?: string | null
+    assignee?: { id?: string; name: string; avatar?: string | null } | null
+  }
   members?: Member[]
   onAssigneeChange?: (issueId: string, assigneeId: string | null) => void
+  size?: 'sm' | 'md'
 }) {
   const [open, setOpen] = useState(false)
   const canPick = !!(members && onAssigneeChange)
+  const selectedId = issue.assigneeId ?? issue.assignee?.id ?? null
 
   const trigger = (
     <div
@@ -336,7 +337,7 @@ function AssigneePopover({
       )}
       title={issue.assignee ? issue.assignee.name : 'Unassigned'}
     >
-      <UserAvatar user={issue.assignee ?? null} size="md" />
+      <UserAvatar user={issue.assignee ?? null} size={size} />
     </div>
   )
 
@@ -364,7 +365,7 @@ function AssigneePopover({
                 value="Unassigned"
                 onSelect={() => { onAssigneeChange(issue.id, null); setOpen(false) }}
               >
-                <Check className={cn('h-4 w-4 mr-1', !issue.assigneeId ? 'opacity-100' : 'opacity-0')} />
+                <Check className={cn('h-4 w-4 mr-1', !selectedId ? 'opacity-100' : 'opacity-0')} />
                 <UserAvatar user={null} size="xs" />
                 <span className="ml-1.5">Unassigned</span>
               </CommandItem>
@@ -374,7 +375,7 @@ function AssigneePopover({
                   value={m.name}
                   onSelect={() => { onAssigneeChange(issue.id, m.id); setOpen(false) }}
                 >
-                  <Check className={cn('h-4 w-4 mr-1', issue.assigneeId === m.id ? 'opacity-100' : 'opacity-0')} />
+                  <Check className={cn('h-4 w-4 mr-1', selectedId === m.id ? 'opacity-100' : 'opacity-0')} />
                   <UserAvatar user={m} size="xs" />
                   <span className="ml-1.5 truncate">{m.name}</span>
                 </CommandItem>
