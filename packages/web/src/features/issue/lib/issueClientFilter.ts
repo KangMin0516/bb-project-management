@@ -54,6 +54,15 @@ export function applyClientFilters(
     result = result.filter((i) => keep.has(i.id))
   }
 
+  if (filters.reviewers.size > 0) {
+    result = result.filter(
+      (issue) => !!issue.reviewerAssigneeId && filters.reviewers.has(issue.reviewerAssigneeId),
+    )
+  }
+  if (filters.creators.size > 0) {
+    result = result.filter((issue) => filters.creators.has(issue.creatorId))
+  }
+
   return result
 }
 

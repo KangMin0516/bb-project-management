@@ -133,15 +133,22 @@ export default function CalendarPage() {
     queryClient.invalidateQueries({ queryKey: ['issues', projectId, 'unscheduled'] })
   }, [queryClient, projectId])
 
-  const assignedMembers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; avatar: string | null }>()
-    for (const issue of allIssues) {
-      if (issue.assignee) map.set(issue.assignee.id, issue.assignee)
+  const { assignedMembers, reviewerMembers, creatorMembers } = useMemo(() => {
+    const aMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const rMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const cMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const seed = (issue: Issue) => {
+      if (issue.assignee) aMap.set(issue.assignee.id, issue.assignee)
+      if (issue.reviewerAssignee) rMap.set(issue.reviewerAssignee.id, issue.reviewerAssignee)
+      if (issue.creator) cMap.set(issue.creator.id, issue.creator)
     }
-    for (const issue of unscheduledItems) {
-      if (issue.assignee && !map.has(issue.assignee.id)) map.set(issue.assignee.id, issue.assignee)
+    for (const issue of allIssues) seed(issue)
+    for (const issue of unscheduledItems) seed(issue)
+    return {
+      assignedMembers: [...aMap.values()],
+      reviewerMembers: [...rMap.values()],
+      creatorMembers: [...cMap.values()],
     }
-    return [...map.values()]
   }, [allIssues, unscheduledItems])
 
   // PM-78: search-input operator parsing context. `assignee:me` etc.
@@ -190,6 +197,8 @@ export default function CalendarPage() {
         resetFilters={resetFilters}
         toggleAssignee={toggleAssignee}
         assignedMembers={assignedMembers}
+        reviewerMembers={reviewerMembers}
+        creatorMembers={creatorMembers}
         projectLabels={projectLabelsQuery.data ?? []}
         projectComponents={projectComponentsQuery.data ?? []}
         projectModules={projectModules}

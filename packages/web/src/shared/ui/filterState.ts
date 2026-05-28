@@ -25,6 +25,10 @@ export interface SortRule {
 
 export interface FilterState {
   assignees: Set<string>
+  /** Users picked in the Reviewer filter — matches `issue.reviewerAssigneeId`. */
+  reviewers: Set<string>
+  /** Users picked in the Creator filter — matches `issue.creatorId`. */
+  creators: Set<string>
   labels: Set<string>
   components: Set<string>
   epicId: string | null
@@ -46,6 +50,8 @@ export interface FilterState {
 
 export const INITIAL_FILTER: FilterState = {
   assignees: new Set(),
+  reviewers: new Set(),
+  creators: new Set(),
   labels: new Set(),
   components: new Set(),
   epicId: null,
@@ -62,6 +68,8 @@ export const INITIAL_FILTER: FilterState = {
 export function hasActiveFilters(f: FilterState): boolean {
   return (
     f.assignees.size > 0 ||
+    f.reviewers.size > 0 ||
+    f.creators.size > 0 ||
     f.labels.size > 0 ||
     f.components.size > 0 ||
     !!f.epicId ||

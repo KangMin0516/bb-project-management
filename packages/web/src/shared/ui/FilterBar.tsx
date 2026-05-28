@@ -225,12 +225,20 @@ interface FiltersPopoverProps {
   setType: (v: Set<string>) => void
   setSource: (v: Set<string>) => void
   toggleAssignee: (id: string) => void
+  toggleReviewer?: (id: string) => void
+  toggleCreator?: (id: string) => void
   toggleLabel: (id: string) => void
   toggleComponent: (id: string) => void
   setEpicId: (id: string | null) => void
   setModuleId?: (id: string | null) => void
   toggleEpicOwner?: (id: string) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
+  /** Users that appear as `reviewerAssignee` on the visible issues. When
+   *  omitted the section is hidden — pages that don't care (e.g. specs)
+   *  can simply not pass it. */
+  boardReviewers?: { id: string; name: string; avatar: string | null }[]
+  /** Users that appear as `creator` on the visible issues. */
+  boardCreators?: { id: string; name: string; avatar: string | null }[]
   boardLabels: { id: string; name: string; color: string }[]
   boardComponents: { id: string; name: string }[]
   boardEpics: { id: string; title: string }[]
@@ -249,12 +257,16 @@ export function FiltersPopover({
   setType,
   setSource,
   toggleAssignee,
+  toggleReviewer,
+  toggleCreator,
   toggleLabel,
   toggleComponent,
   setEpicId,
   setModuleId,
   toggleEpicOwner,
   assignedMembers,
+  boardReviewers,
+  boardCreators,
   boardLabels,
   boardComponents,
   boardEpics,
@@ -269,6 +281,8 @@ export function FiltersPopover({
     filters.type.size +
     filters.source.size +
     filters.assignees.size +
+    (filters.reviewers?.size ?? 0) +
+    (filters.creators?.size ?? 0) +
     filters.labels.size +
     filters.components.size +
     (filters.epicId ? 1 : 0) +
@@ -357,6 +371,36 @@ export function FiltersPopover({
                   key={m.id}
                   checked={filters.assignees.has(m.id)}
                   onChange={() => toggleAssignee(m.id)}
+                >
+                  <Avatar32 name={m.name} avatar={m.avatar} />
+                  <span className="truncate">{m.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardReviewers && boardReviewers.length > 0 && toggleReviewer && (
+            <FilterSection title="Reviewer">
+              {boardReviewers.map((m) => (
+                <CheckboxRow
+                  key={m.id}
+                  checked={filters.reviewers.has(m.id)}
+                  onChange={() => toggleReviewer(m.id)}
+                >
+                  <Avatar32 name={m.name} avatar={m.avatar} />
+                  <span className="truncate">{m.name}</span>
+                </CheckboxRow>
+              ))}
+            </FilterSection>
+          )}
+
+          {boardCreators && boardCreators.length > 0 && toggleCreator && (
+            <FilterSection title="Creator">
+              {boardCreators.map((m) => (
+                <CheckboxRow
+                  key={m.id}
+                  checked={filters.creators.has(m.id)}
+                  onChange={() => toggleCreator(m.id)}
                 >
                   <Avatar32 name={m.name} avatar={m.avatar} />
                   <span className="truncate">{m.name}</span>

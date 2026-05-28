@@ -28,6 +28,8 @@ export function useBoardDerivations(
     const childrenMap = new Map<string, ChildIssue[]>()
     const parentOnlyBoard: Record<string, Issue[]> = {}
     const assigneeMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const reviewerMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const creatorMap = new Map<string, { id: string; name: string; avatar: string | null }>()
     const labelMap = new Map<string, { id: string; name: string; color: string }>()
     const compMap = new Map<string, { id: string; name: string }>()
     const epics: Issue[] = []
@@ -40,6 +42,8 @@ export function useBoardDerivations(
         parentOnlyBoard: undefined as Record<string, Issue[]> | undefined,
         epicAncestorMap,
         assignedMembers: [] as { id: string; name: string; avatar: string | null }[],
+        boardReviewers: [] as { id: string; name: string; avatar: string | null }[],
+        boardCreators: [] as { id: string; name: string; avatar: string | null }[],
         boardLabels: [] as { id: string; name: string; color: string }[],
         boardComponents: [] as { id: string; name: string }[],
         boardEpics: epics,
@@ -52,7 +56,13 @@ export function useBoardDerivations(
       for (const issue of issues) {
         allIssuesById.set(issue.id, issue)
 
-        if (issue.type === 'SUB_TASK' && issue.parentId) {
+        // Populate childrenMap for every issue that has a parent, not
+        // just SUB_TASKs. Previously EPIC cards rendered "0/N" until the
+        // user expanded the chevron — childrenMap was empty for them
+        // because TASK/BUG (direct children of EPIC) were skipped, so
+        // `doneCount = displayList.filter(DONE).length` was always 0.
+        // DOMAIN parents are excluded — they don't render as kanban cards.
+        if (issue.parentId && issue.type !== 'DOMAIN') {
           const list = childrenMap.get(issue.parentId) ?? []
           list.push({
             id: issue.id,
@@ -65,6 +75,9 @@ export function useBoardDerivations(
               : null,
           })
           childrenMap.set(issue.parentId, list)
+        }
+
+        if (issue.type === 'SUB_TASK') {
           // When the toggle is on, the sub-task ALSO renders as a full
           // card. We add it to parents here so it lands in the same
           // status column as a peer of its grandparent's tasks.
@@ -78,6 +91,8 @@ export function useBoardDerivations(
         }
 
         if (issue.assignee) assigneeMap.set(issue.assignee.id, issue.assignee)
+        if (issue.reviewerAssignee) reviewerMap.set(issue.reviewerAssignee.id, issue.reviewerAssignee)
+        if (issue.creator) creatorMap.set(issue.creator.id, issue.creator)
         for (const il of issue.labels) labelMap.set(il.label.id, il.label)
         for (const ic of issue.components ?? []) compMap.set(ic.component.id, ic.component)
         if (issue.type === 'EPIC') epics.push(issue)
@@ -116,6 +131,8 @@ export function useBoardDerivations(
       parentOnlyBoard,
       epicAncestorMap,
       assignedMembers: [...assigneeMap.values()],
+      boardReviewers: [...reviewerMap.values()],
+      boardCreators: [...creatorMap.values()],
       boardLabels: [...labelMap.values()],
       boardComponents: [...compMap.values()],
       boardEpics: epics,

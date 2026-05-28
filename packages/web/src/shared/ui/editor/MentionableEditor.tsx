@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 import type { ProjectMember } from '@/features/project/api'
 import TipTapEditor from '@/shared/ui/editor/TipTapEditor'
@@ -44,11 +44,20 @@ export default function MentionableEditor({
   const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set())
   const editorRef = useRef<Editor | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const filteredMembers = members.filter((m) =>
     m.user.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
     m.user.email.toLowerCase().includes(mentionQuery.toLowerCase()),
   )
+
+  // Keep the highlighted row in view as the user arrows through a list
+  // longer than the popup. `block: 'nearest'` avoids jumpy scrolls when
+  // the row is already visible.
+  useEffect(() => {
+    if (!showMentions) return
+    itemRefs.current[mentionIndex]?.scrollIntoView({ block: 'nearest' })
+  }, [mentionIndex, showMentions])
 
   const handleChange = useCallback((value: string) => {
     onChange(value)
@@ -138,12 +147,13 @@ export default function MentionableEditor({
         issueId={issueId}
       />
       {showMentions && filteredMembers.length > 0 && (
-        <div className="absolute z-10 mt-1 w-72 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
-          {filteredMembers.slice(0, 5).map((m, i) => {
+        <div className="absolute z-10 mt-1 max-h-64 w-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg dark:shadow-gray-900/50">
+          {filteredMembers.map((m, i) => {
             const picked = mentionedUserIds.has(m.user.id)
             return (
               <button
                 key={m.user.id}
+                ref={(el) => { itemRefs.current[i] = el }}
                 type="button"
                 onClick={() => insertMention(m)}
                 className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${

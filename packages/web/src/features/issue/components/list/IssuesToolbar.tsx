@@ -44,8 +44,10 @@ export default function IssuesToolbar({
   viewOptions,
   rightActions,
 }: IssuesToolbarProps) {
-  const toggle = (key: 'assignees' | 'labels' | 'components', id: string) =>
-    setFilters({ [key]: toggleSet(filters[key], id) })
+  const toggle = (
+    key: 'assignees' | 'reviewers' | 'creators' | 'labels' | 'components',
+    id: string,
+  ) => setFilters({ [key]: toggleSet(filters[key], id) })
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -71,11 +73,15 @@ export default function IssuesToolbar({
         setType={(v) => setFilters({ type: v })}
         setSource={(v) => setFilters({ source: v })}
         toggleAssignee={(id) => toggle('assignees', id)}
+        toggleReviewer={(id) => toggle('reviewers', id)}
+        toggleCreator={(id) => toggle('creators', id)}
         toggleLabel={(id) => toggle('labels', id)}
         toggleComponent={(id) => toggle('components', id)}
         setEpicId={(id) => setFilters({ epicId: id })}
         setModuleId={(id) => setFilters({ domainId: id })}
         assignedMembers={members}
+        boardReviewers={members}
+        boardCreators={members}
         boardLabels={projectLabels}
         boardComponents={projectComponents}
         boardEpics={projectEpics}

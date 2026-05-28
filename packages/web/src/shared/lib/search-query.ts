@@ -13,6 +13,8 @@ export interface ParsedSearch {
   type: Set<string>
   source: Set<string>
   assignees: Set<string>
+  reviewers: Set<string>
+  creators: Set<string>
   labels: Set<string>
   /** Single-select; null = not set in query. */
   domainId: string | null
@@ -58,6 +60,8 @@ export function parseSearchQuery(
     type: new Set(),
     source: new Set(),
     assignees: new Set(),
+    reviewers: new Set(),
+    creators: new Set(),
     labels: new Set(),
     domainId: null,
     epicId: null,
@@ -146,6 +150,25 @@ function applyOperator(
       }
       return true
     }
+    case 'reviewer': {
+      if (value.toLowerCase() === 'me' && ctx.currentUserId) {
+        out.reviewers.add(ctx.currentUserId)
+      } else if (ctx.members) {
+        const member = findByName(ctx.members, value)
+        if (member) out.reviewers.add(member.id)
+      }
+      return true
+    }
+    case 'creator':
+    case 'author': {
+      if (value.toLowerCase() === 'me' && ctx.currentUserId) {
+        out.creators.add(ctx.currentUserId)
+      } else if (ctx.members) {
+        const member = findByName(ctx.members, value)
+        if (member) out.creators.add(member.id)
+      }
+      return true
+    }
     case 'label': {
       if (ctx.labels) {
         const label = findByName(ctx.labels, value)
@@ -221,6 +244,8 @@ export function applyParsedSearch(
     type: unionSets(base.type, parsed.type),
     source: unionSets(base.source, parsed.source),
     assignees: unionSets(base.assignees, parsed.assignees),
+    reviewers: unionSets(base.reviewers, parsed.reviewers),
+    creators: unionSets(base.creators, parsed.creators),
     labels: unionSets(base.labels, parsed.labels),
     domainId: parsed.domainId ?? base.domainId,
     epicId: parsed.epicId ?? base.epicId,

@@ -166,6 +166,8 @@ export default function BoardPage() {
     parentOnlyBoard,
     epicAncestorMap,
     assignedMembers,
+    boardReviewers,
+    boardCreators,
     boardLabels,
     boardComponents,
     boardEpics,
@@ -302,11 +304,15 @@ export default function BoardPage() {
           setFilters={setFilters}
           resetFilters={resetFilters}
           toggleAssignee={(id) => setFilters({ assignees: toggleSet(filters.assignees, id) })}
+          toggleReviewer={(id) => setFilters({ reviewers: toggleSet(filters.reviewers, id) })}
+          toggleCreator={(id) => setFilters({ creators: toggleSet(filters.creators, id) })}
           toggleLabel={(id) => setFilters({ labels: toggleSet(filters.labels, id) })}
           toggleComponent={(id) => setFilters({ components: toggleSet(filters.components, id) })}
           setEpicId={(id) => setFilters({ epicId: id })}
           toggleEpicOwner={(id) => setFilters({ epicOwners: toggleSet(filters.epicOwners, id) })}
           assignedMembers={assignedMembers}
+          boardReviewers={boardReviewers}
+          boardCreators={boardCreators}
           boardLabels={boardLabels}
           boardComponents={boardComponents}
           boardEpics={boardEpics}

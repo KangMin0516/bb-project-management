@@ -9,11 +9,15 @@ interface BoardToolbarProps {
   setFilters: (next: Partial<FilterState>) => void
   resetFilters: () => void
   toggleAssignee: (id: string) => void
+  toggleReviewer: (id: string) => void
+  toggleCreator: (id: string) => void
   toggleLabel: (id: string) => void
   toggleComponent: (id: string) => void
   setEpicId: (id: string | null) => void
   toggleEpicOwner: (id: string) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
+  boardReviewers: { id: string; name: string; avatar: string | null }[]
+  boardCreators: { id: string; name: string; avatar: string | null }[]
   boardLabels: { id: string; name: string; color: string }[]
   boardComponents: { id: string; name: string }[]
   boardEpics: Issue[]
@@ -37,11 +41,15 @@ export default function BoardToolbar({
   setFilters,
   resetFilters,
   toggleAssignee,
+  toggleReviewer,
+  toggleCreator,
   toggleLabel,
   toggleComponent,
   setEpicId,
   toggleEpicOwner,
   assignedMembers,
+  boardReviewers,
+  boardCreators,
   boardLabels,
   boardComponents,
   boardEpics,
@@ -67,12 +75,16 @@ export default function BoardToolbar({
         setType={(v) => setFilters({ type: v })}
         setSource={(v) => setFilters({ source: v })}
         toggleAssignee={toggleAssignee}
+        toggleReviewer={toggleReviewer}
+        toggleCreator={toggleCreator}
         toggleLabel={toggleLabel}
         toggleComponent={toggleComponent}
         setEpicId={setEpicId}
         setModuleId={(id) => setFilters({ domainId: id })}
         toggleEpicOwner={toggleEpicOwner}
         assignedMembers={assignedMembers}
+        boardReviewers={boardReviewers}
+        boardCreators={boardCreators}
         boardLabels={boardLabels}
         boardComponents={boardComponents}
         boardEpics={boardEpics}

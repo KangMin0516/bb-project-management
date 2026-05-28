@@ -1,14 +1,8 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
+import Combobox from '@/shared/ui/combobox'
 import UserAvatar from './UserAvatar'
 
 interface MemberOption {
-  user: { id: string; name: string; avatar?: string | null }
+  user: { id: string; name: string; email?: string; avatar?: string | null }
 }
 
 interface UserPickerProps {
@@ -19,50 +13,74 @@ interface UserPickerProps {
   emptyLabel?: string
 }
 
-/** Sentinel for the "no user" option — Radix Select rejects empty values. */
+/** Sentinel for the "no user" option — Combobox value cannot be empty. */
 const NO_USER = '__none__'
 
 /**
- * Dropdown for picking a user from a member list, with optional "no
- * selection" option as the first entry. Renders as a shadcn Select so
- * focus trap, keyboard nav, and theme tokens stay consistent with the
- * other pickers in the issue panel. `defaultOpen` mirrors the previous
- * always-visible-on-mount behaviour (parent puts UserPicker into edit
- * mode the moment the user clicks the field).
+ * Dropdown for picking a user from a member list. Backed by the shared
+ * `Combobox` (cmdk-powered) so callers get type-to-search, keyboard
+ * navigation, and an empty-state for free — previously this was a plain
+ * Radix Select which forced users to scroll a long list (PM-106).
+ *
+ * Opens immediately on mount because callers put the picker into edit
+ * mode in response to a click, so showing the popover deferred would
+ * feel like a stutter.
  */
 export default function UserPicker({ members, value, onChange, emptyLabel = 'Unassigned' }: UserPickerProps) {
-  const selected = members.find((m) => m.user.id === value)?.user
+  const options = [
+    {
+      value: NO_USER,
+      label: emptyLabel,
+      searchValue: emptyLabel,
+      render: (
+        <span className="flex items-center gap-2">
+          <UserAvatar user={null} />
+          <span>{emptyLabel}</span>
+        </span>
+      ),
+      triggerRender: (
+        <span className="flex items-center gap-2">
+          <UserAvatar user={null} />
+          <span className="truncate">{emptyLabel}</span>
+        </span>
+      ),
+    },
+    ...members.map((m) => ({
+      value: m.user.id,
+      label: m.user.name,
+      searchValue: m.user.email ? `${m.user.name} ${m.user.email}` : m.user.name,
+      render: (
+        <span className="flex items-center gap-2 min-w-0">
+          <UserAvatar user={m.user} />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{m.user.name}</span>
+            {m.user.email && (
+              <span className="truncate text-[11px] text-gray-500 dark:text-gray-400">
+                {m.user.email}
+              </span>
+            )}
+          </span>
+        </span>
+      ),
+      triggerRender: (
+        <span className="flex items-center gap-2 min-w-0">
+          <UserAvatar user={m.user} />
+          <span className="truncate">{m.user.name}</span>
+        </span>
+      ),
+    })),
+  ]
 
   return (
-    <Select
+    <Combobox
       defaultOpen
       value={value || NO_USER}
-      onValueChange={(v) => onChange(v === NO_USER ? '' : v)}
-    >
-      <SelectTrigger className="h-8 text-sm">
-        <SelectValue>
-          <span className="flex items-center gap-2">
-            <UserAvatar user={selected ?? null} />
-            <span className="truncate">{selected ? selected.name : emptyLabel}</span>
-          </span>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NO_USER}>
-          <span className="flex items-center gap-2">
-            <UserAvatar user={null} />
-            {emptyLabel}
-          </span>
-        </SelectItem>
-        {members.map((m) => (
-          <SelectItem key={m.user.id} value={m.user.id}>
-            <span className="flex items-center gap-2">
-              <UserAvatar user={m.user} />
-              {m.user.name}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      onChange={(v) => onChange(v === NO_USER ? '' : v)}
+      options={options}
+      placeholder={emptyLabel}
+      searchPlaceholder="Search member..."
+      emptyMessage="No matches"
+      className="h-8"
+    />
   )
 }

@@ -22,6 +22,8 @@ const SORT_FIELDS: readonly SortField[] = [
 export const PARAM = {
   // Shared filter fields (FilterState)
   assignees: 'assignees',
+  reviewers: 'reviewers',
+  creators: 'creators',
   labels: 'labels',
   components: 'components',
   epic: 'epic',
@@ -78,6 +80,8 @@ export function serializeFilter(
 ): URLSearchParams {
   const writers: Array<[string, string | null]> = [
     [PARAM.assignees, setToParam(state.assignees)],
+    [PARAM.reviewers, setToParam(state.reviewers)],
+    [PARAM.creators, setToParam(state.creators)],
     [PARAM.labels, setToParam(state.labels)],
     [PARAM.components, setToParam(state.components)],
     [PARAM.epic, state.epicId],
@@ -100,6 +104,8 @@ export function serializeFilter(
 export function deserializeFilter(params: URLSearchParams): FilterState {
   return {
     assignees: paramToSet(params.get(PARAM.assignees)),
+    reviewers: paramToSet(params.get(PARAM.reviewers)),
+    creators: paramToSet(params.get(PARAM.creators)),
     labels: paramToSet(params.get(PARAM.labels)),
     components: paramToSet(params.get(PARAM.components)),
     epicId: params.get(PARAM.epic),

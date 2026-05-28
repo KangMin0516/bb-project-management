@@ -155,12 +155,20 @@ export default function TimelinePage() {
     return [...fromDomains, ...orphans]
   }, [tocQuery.data])
 
-  const assignedMembers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; avatar: string | null }>()
+  const { assignedMembers, reviewerMembers, creatorMembers } = useMemo(() => {
+    const aMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const rMap = new Map<string, { id: string; name: string; avatar: string | null }>()
+    const cMap = new Map<string, { id: string; name: string; avatar: string | null }>()
     for (const issue of allIssues) {
-      if (issue.assignee) map.set(issue.assignee.id, issue.assignee)
+      if (issue.assignee) aMap.set(issue.assignee.id, issue.assignee)
+      if (issue.reviewerAssignee) rMap.set(issue.reviewerAssignee.id, issue.reviewerAssignee)
+      if (issue.creator) cMap.set(issue.creator.id, issue.creator)
     }
-    return [...map.values()]
+    return {
+      assignedMembers: [...aMap.values()],
+      reviewerMembers: [...rMap.values()],
+      creatorMembers: [...cMap.values()],
+    }
   }, [allIssues])
 
   // PM-78: search-input operator parsing context.
@@ -226,6 +234,8 @@ export default function TimelinePage() {
         groupBy={groupBy}
         setGroupBy={setGroupBy}
         assignedMembers={assignedMembers}
+        reviewerMembers={reviewerMembers}
+        creatorMembers={creatorMembers}
         projectLabels={projectLabelsQuery.data ?? []}
         projectComponents={projectComponentsQuery.data ?? []}
         projectModules={projectModules}

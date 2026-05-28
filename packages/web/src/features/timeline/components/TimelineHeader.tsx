@@ -18,6 +18,9 @@ interface TimelineHeaderProps {
   groupBy: GroupBy
   setGroupBy: (next: GroupBy) => void
   assignedMembers: { id: string; name: string; avatar: string | null }[]
+  /** Reviewer / creator member lists derived from the visible issues. */
+  reviewerMembers: { id: string; name: string; avatar: string | null }[]
+  creatorMembers: { id: string; name: string; avatar: string | null }[]
   projectLabels: { id: string; name: string; color: string }[]
   projectComponents: { id: string; name: string }[]
   projectModules: { id: string; title: string }[]
@@ -36,6 +39,8 @@ export default function TimelineHeader({
   groupBy,
   setGroupBy,
   assignedMembers,
+  reviewerMembers,
+  creatorMembers,
   projectLabels,
   projectComponents,
   projectModules,
@@ -59,11 +64,15 @@ export default function TimelineHeader({
           setType={(v) => setFilters({ type: v })}
           setSource={(v) => setFilters({ source: v })}
           toggleAssignee={toggleAssignee}
+          toggleReviewer={(id) => setFilters({ reviewers: toggleSet(filters.reviewers, id) })}
+          toggleCreator={(id) => setFilters({ creators: toggleSet(filters.creators, id) })}
           toggleLabel={(id) => setFilters({ labels: toggleSet(filters.labels, id) })}
           toggleComponent={(id) => setFilters({ components: toggleSet(filters.components, id) })}
           setEpicId={(id) => setFilters({ epicId: id })}
           setModuleId={(id) => setFilters({ domainId: id })}
           assignedMembers={assignedMembers}
+          boardReviewers={reviewerMembers}
+          boardCreators={creatorMembers}
           boardLabels={projectLabels}
           boardComponents={projectComponents}
           boardEpics={projectEpics}

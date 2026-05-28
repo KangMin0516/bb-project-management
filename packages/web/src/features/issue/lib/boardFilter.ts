@@ -3,6 +3,8 @@ import type { ChildIssue } from '@/features/issue/components/board/types'
 
 export interface BoardFilterState {
   assignees: Set<string>
+  reviewers: Set<string>
+  creators: Set<string>
   labels: Set<string>
   components: Set<string>
   epicId: string | null
@@ -29,7 +31,7 @@ interface FilterOptions {
 export function matchesFilters(issue: Issue, filters: BoardFilterState, options?: FilterOptions): boolean {
   if (options?.keepEpics && issue.type === 'EPIC') return true
 
-  const { assignees, labels, components, epicId, search, status, priority, type, source } = filters
+  const { assignees, reviewers, creators, labels, components, epicId, search, status, priority, type, source } = filters
   const searchLower = search.toLowerCase()
 
   let assigneeMatch = assignees.size === 0 || (!!issue.assigneeId && assignees.has(issue.assigneeId))
@@ -42,6 +44,8 @@ export function matchesFilters(issue: Issue, filters: BoardFilterState, options?
 
   return (
     assigneeMatch &&
+    (reviewers.size === 0 || (!!issue.reviewerAssigneeId && reviewers.has(issue.reviewerAssigneeId))) &&
+    (creators.size === 0 || creators.has(issue.creatorId)) &&
     (labels.size === 0 || issue.labels.some((il) => labels.has(il.label.id))) &&
     (components.size === 0 || issue.components?.some((ic) => components.has(ic.component.id))) &&
     (!epicId || issue.id === epicId || issue.parentId === epicId) &&

@@ -59,6 +59,8 @@ export function useFilteredIssues(
       if (effective.type.size > 0 && !effective.type.has(issue.type)) return false
       if (effective.source.size > 0 && !effective.source.has(issue.source)) return false
       if (effective.assignees.size > 0 && (!issue.assigneeId || !effective.assignees.has(issue.assigneeId))) return false
+      if (effective.reviewers.size > 0 && (!issue.reviewerAssigneeId || !effective.reviewers.has(issue.reviewerAssigneeId))) return false
+      if (effective.creators.size > 0 && !effective.creators.has(issue.creatorId)) return false
       if (effective.epicId && !isDescendantOf(issue, effective.epicId)) return false
       if (effective.domainId && !isDescendantOf(issue, effective.domainId)) return false
       if (effective.labels.size > 0 && !issue.labels.some((l) => effective.labels.has(l.label.id))) return false

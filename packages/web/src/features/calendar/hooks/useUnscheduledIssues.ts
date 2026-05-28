@@ -49,6 +49,8 @@ export function useUnscheduledIssues(projectId: string, filters: FilterState, _e
     const typeFilter = filters.type
     const sourceFilter = filters.source
     const assigneeFilter = filters.assignees
+    const reviewerFilter = filters.reviewers
+    const creatorFilter = filters.creators
     const searchLower = filters.search.toLowerCase()
 
     if (typeof window !== 'undefined' && import.meta.env.DEV) {
@@ -72,6 +74,12 @@ export function useUnscheduledIssues(projectId: string, filters: FilterState, _e
           ? !!i.assigneeId && assigneeFilter.has(i.assigneeId)
           : true,
       )
+      .filter((i) =>
+        reviewerFilter.size
+          ? !!i.reviewerAssigneeId && reviewerFilter.has(i.reviewerAssigneeId)
+          : true,
+      )
+      .filter((i) => (creatorFilter.size ? creatorFilter.has(i.creatorId) : true))
       .filter(
         (i) =>
           !searchLower ||
