@@ -103,8 +103,14 @@ export default memo(function IssueCard({
         assignee: c.assignee ? { id: c.assignee.id, name: c.assignee.name, avatar: c.assignee.avatar } : null,
       }))
     : childList
-  const hasChildren = totalCount > 0
-  const doneCount = displayList.filter((c) => c.status === 'DONE').length
+  const hasChildren = (issue.progress?.total ?? totalCount) > 0
+  // Prefer the BE-computed `progress` aggregate when present — it counts
+  // archived DONE children that the board response strips. Fall back to
+  // the displayList tally for older payloads.
+  const doneCount = issue.progress
+    ? issue.progress.done
+    : displayList.filter((c) => c.status === 'DONE').length
+  const progressTotal = issue.progress?.total ?? totalCount
 
   return (
     <div ref={cardRef} className={cn(issue.type === 'SUB_TASK' && 'ml-2')}>
@@ -158,16 +164,16 @@ export default memo(function IssueCard({
                   ? <ChevronDown className="h-3 w-3" />
                   : <ChevronRight className="h-3 w-3" />
                 }
-                {totalCount} sub-task{totalCount > 1 ? 's' : ''}
+                {progressTotal} sub-task{progressTotal > 1 ? 's' : ''}
               </button>
               <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                {doneCount}/{totalCount}
+                {doneCount}/{progressTotal}
               </span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
               <div
                 className="h-full rounded-full bg-green-400 transition-all"
-                style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }}
+                style={{ width: `${progressTotal > 0 ? (doneCount / progressTotal) * 100 : 0}%` }}
               />
             </div>
           </div>

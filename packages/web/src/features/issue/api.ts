@@ -33,6 +33,11 @@ export interface Issue {
   components: { component: { id: string; name: string } }[]
   parent: { id: string; number: number; title: string; type: string } | null
   _count: { children: number }
+  /** Aggregate done/total of DIRECT children, populated by the Board
+   *  endpoint. Counts archived children too, so progress strips on
+   *  collapsed cards stay accurate after the auto-archive scheduler
+   *  ages DONE rows out of the per-status payload. */
+  progress?: { total: number; done: number }
 }
 
 export type IssueLinkType = 'BLOCKS' | 'IS_BLOCKED_BY' | 'RELATES_TO' | 'DUPLICATES' | 'IS_DUPLICATED_BY'

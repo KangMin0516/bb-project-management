@@ -74,6 +74,46 @@ function parseSortParam(sort?: string): OrderByEntry[] | null {
   return out.length > 0 ? out : null;
 }
 
+/**
+ * Aggregate the count of direct children (total + DONE) per parent for a
+ * batch of board issues, ignoring `archivedAt`. Mutates every issue in
+ * `grouped` to attach `progress: { total, done }`. Single SQL groupBy —
+ * O(distinct parents) for the FE, vs N+1 fetches per expand.
+ */
+async function decorateWithChildProgress(
+  prisma: PrismaService,
+  grouped: Record<string, unknown[]>,
+): Promise<void> {
+  const visibleIds: string[] = [];
+  for (const list of Object.values(grouped)) {
+    for (const issue of list as Array<{ id: string }>) {
+      visibleIds.push(issue.id);
+    }
+  }
+  if (visibleIds.length === 0) return;
+
+  const counts = await prisma.issue.groupBy({
+    by: ['parentId', 'status'],
+    where: { parentId: { in: visibleIds } },
+    _count: { _all: true },
+  });
+
+  const progressByParent = new Map<string, { total: number; done: number }>();
+  for (const row of counts) {
+    if (!row.parentId) continue;
+    const entry = progressByParent.get(row.parentId) ?? { total: 0, done: 0 };
+    entry.total += row._count._all;
+    if (row.status === 'DONE') entry.done += row._count._all;
+    progressByParent.set(row.parentId, entry);
+  }
+
+  for (const list of Object.values(grouped)) {
+    for (const issue of list as Array<{ id: string; progress?: unknown }>) {
+      issue.progress = progressByParent.get(issue.id) ?? { total: 0, done: 0 };
+    }
+  }
+}
+
 @Injectable()
 export class IssueQueryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -165,6 +205,12 @@ export class IssueQueryService {
    * keep large completed/canceled columns from dominating the payload.
    * Archived SUB_TASKs are always included so parent cards render the
    * right child count.
+   *
+   * Each issue is decorated with `progress: { total, done }`, computed
+   * via a single groupBy that ignores `archivedAt`. This is the only
+   * way Board cards can show a truthful "M/N done" progress strip —
+   * children that have been auto-archived (DONE > 3 days) are stripped
+   * from the per-status payload but still belong to the parent's total.
    */
   async findByStatus(
     projectId: string,
@@ -202,6 +248,7 @@ export class IssueQueryService {
       }),
     );
 
+    await decorateWithChildProgress(this.prisma, grouped);
     return grouped;
   }
 

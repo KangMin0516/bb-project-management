@@ -22,6 +22,12 @@
 
 ## Timeline
 
+### 2026-05-28 — Board progress: BE-aggregated child counts cover archived DONE rows (PM-107 follow-up)
+
+**Fixed.** First-pass fix to PM-107 (FE-only — populate `childrenMap` for every parent) left a residual case visible on real data: `ArchiveScheduler` auto-archives DONE/CANCELED rows after 3 days, and the board endpoint strips `archivedAt IS NOT NULL` issues from the response, so an EPIC whose children all aged into the archive showed `0/N` with my earlier fix even though `_count.children` said `N`. Replaced the "count what we see" approach with a BE-side aggregate: `IssueQueryService.findByStatus` now runs a single `groupBy({ by: ['parentId', 'status'], where: { parentId: { in: visibleIds } } })` (no `archivedAt` filter) and decorates every issue with `progress: { total, done }`. `IssueCard` prefers `issue.progress` when present and falls back to the local tally only for older payloads.
+
+- Source: `packages/api/src/issue/application/issue-query.service.ts` (new module-scope `decorateWithChildProgress` helper + call from `findByStatus`), `packages/web/src/features/issue/api.ts` (`Issue.progress?: { total, done }`), `packages/web/src/features/issue/components/board/IssueCard.tsx` (use `issue.progress` for `doneCount`, `progressTotal`, `hasChildren`, and the progress strip render).
+
 ### 2026-05-28 — IssueMetadata assignee/reviewer pickers: searchable Command popover (PM-106)
 
 **Fixed.** The Assignee / Reviewer dropdowns inside `IssueDetailPanel` rendered a plain Radix `Select` list — on projects with 20+ members the user had to scroll a long list and could not search. Rewrote `UserPicker` to wrap the existing `Combobox` (cmdk-backed) so type-to-search, keyboard navigation, and "no matches" empty state come for free. Trigger renders the picked user's avatar + name; rows show avatar + name + email (email feeds `searchValue` so typing a domain like `@burningb` filters the list). Behaviour matches the board card's `AssigneePopover` pattern (`packages/web/src/features/issue/components/board/IssueCard.tsx`).
