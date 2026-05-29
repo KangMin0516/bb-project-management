@@ -60,6 +60,13 @@ export class ExternalCreateIssueDto {
   @IsUUID()
   assigneeId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Reviewer user UUID. Use list_members to resolve a name → ID.',
+  })
+  @IsOptional()
+  @IsUUID()
+  reviewerAssigneeId?: string;
+
   @ApiPropertyOptional({ description: 'Parent issue ID' })
   @IsOptional()
   @IsUUID()

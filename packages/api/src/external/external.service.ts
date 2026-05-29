@@ -124,6 +124,36 @@ export class ExternalService {
     return project.id;
   }
 
+  /**
+   * Resolve a person-filter value used by list/search params
+   * (`assignee`, `reviewer`, `creator`) into a `User.id` (or `null` for
+   * the unassigned case). Accepts "me" (the caller), an email, a raw
+   * UUID, or "none"/"unassigned".
+   */
+  private async resolveUserFilter(
+    value: string,
+    callerUserId?: string,
+  ): Promise<string | null> {
+    if (value === 'me') {
+      if (!callerUserId) {
+        throw new BadRequestException(
+          '"me" filter requires an authenticated caller',
+        );
+      }
+      return callerUserId;
+    }
+    if (value === 'none' || value === 'unassigned') return null;
+    if (value.includes('@')) {
+      const user = await this.prisma.user.findUnique({
+        where: { email: value },
+        select: { id: true },
+      });
+      if (!user) throw new BadRequestException(`User "${value}" not found`);
+      return user.id;
+    }
+    return value;
+  }
+
   async createIssue(
     dto: ExternalCreateIssueDto,
     creatorId: string,
@@ -219,6 +249,7 @@ export class ExternalService {
       priority: merged.priority as IssuePriority | undefined,
       type: issueType,
       assigneeId: (merged.assigneeId as string | undefined) ?? undefined,
+      reviewerAssigneeId: dto.reviewerAssigneeId ?? undefined,
       parentId: merged.parentId as string | undefined,
       startDate: merged.startDate as string | undefined,
       dueDate: merged.dueDate as string | undefined,
@@ -445,6 +476,7 @@ export class ExternalService {
         status: dto.status,
         priority: dto.priority,
         assigneeId,
+        reviewerAssigneeId: dto.reviewerAssigneeId,
         parentId,
         startDate: dto.startDate,
         dueDate: dto.dueDate,
@@ -461,6 +493,7 @@ export class ExternalService {
       },
       include: {
         assignee: { select: { id: true, email: true, name: true } },
+        reviewerAssignee: { select: { id: true, email: true, name: true } },
         creator: { select: { id: true, email: true, name: true } },
         labels: { include: { label: true } },
         children: {
@@ -801,6 +834,8 @@ export class ExternalService {
       page?: number;
       limit?: number;
       assignee?: string;
+      reviewer?: string;
+      creator?: string;
       priority?: string;
       type?: string;
       text?: string;
@@ -821,6 +856,8 @@ export class ExternalService {
       priority?: IssuePriority;
       type?: IssueType;
       assigneeId?: string | null;
+      reviewerAssigneeId?: string | null;
+      creatorId?: string | null;
       title?: { contains: string; mode: 'insensitive' };
       updatedAt?: { gte: Date };
       dueDate?: { gte: Date; lte: Date } | { lt: Date };
@@ -838,32 +875,25 @@ export class ExternalService {
       where.title = { contains: params.text, mode: 'insensitive' };
     }
 
-    // assignee=me → resolve from caller; assignee=email → lookup; else UUID
+    // assignee / reviewer / creator — each accepts "me", an email, a
+    // raw UUID, or "none"/"unassigned".
     if (params.assignee) {
-      if (params.assignee === 'me') {
-        if (!callerUserId) {
-          throw new BadRequestException(
-            'assignee=me requires an authenticated caller',
-          );
-        }
-        where.assigneeId = callerUserId;
-      } else if (params.assignee.includes('@')) {
-        const user = await this.prisma.user.findUnique({
-          where: { email: params.assignee },
-          select: { id: true },
-        });
-        if (!user) {
-          throw new BadRequestException(`User "${params.assignee}" not found`);
-        }
-        where.assigneeId = user.id;
-      } else if (
-        params.assignee === 'none' ||
-        params.assignee === 'unassigned'
-      ) {
-        where.assigneeId = null;
-      } else {
-        where.assigneeId = params.assignee;
-      }
+      where.assigneeId = await this.resolveUserFilter(
+        params.assignee,
+        callerUserId,
+      );
+    }
+    if (params.reviewer) {
+      where.reviewerAssigneeId = await this.resolveUserFilter(
+        params.reviewer,
+        callerUserId,
+      );
+    }
+    if (params.creator) {
+      where.creatorId = await this.resolveUserFilter(
+        params.creator,
+        callerUserId,
+      );
     }
 
     const updatedSince = this.parseRelativePast(params.updatedSince);
@@ -892,6 +922,7 @@ export class ExternalService {
     const wantLabels = requested.has('labels');
     const wantDates = requested.has('dates');
     const wantCreator = requested.has('creator');
+    const wantReviewer = requested.has('reviewer');
     const wantParent = requested.has('parent');
     const wantEmail = requested.has('email');
 
@@ -916,6 +947,7 @@ export class ExternalService {
         focusDate: true,
       }),
       ...(wantCreator && { creator: { select: userSelect } }),
+      ...(wantReviewer && { reviewerAssignee: { select: userSelect } }),
       ...(wantParent && {
         parentId: true,
         parent: { select: { id: true, number: true, title: true, type: true } },
@@ -1571,6 +1603,8 @@ export class ExternalService {
       type?: string;
       includeDescription?: boolean;
       limit?: number;
+      reviewer?: string;
+      creator?: string;
     },
   ) {
     if (!params.q || params.q.trim().length < 2) {
@@ -1608,6 +1642,9 @@ export class ExternalService {
       projectId: { in: string[] };
       archivedAt: null;
       type?: IssueType;
+      assigneeId?: string | null;
+      reviewerAssigneeId?: string | null;
+      creatorId?: string | null;
       OR?: Array<{
         title?: { contains: string; mode: 'insensitive' };
         description?: { contains: string; mode: 'insensitive' };
@@ -1618,6 +1655,15 @@ export class ExternalService {
       archivedAt: null,
     };
     if (params.type) where.type = params.type.toUpperCase() as IssueType;
+    if (params.reviewer) {
+      where.reviewerAssigneeId = await this.resolveUserFilter(
+        params.reviewer,
+        userId,
+      );
+    }
+    if (params.creator) {
+      where.creatorId = await this.resolveUserFilter(params.creator, userId);
+    }
 
     if (params.includeDescription) {
       where.OR = [

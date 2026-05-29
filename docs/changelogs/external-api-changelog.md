@@ -13,10 +13,11 @@
 All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: bbpm_<56 hex>`.
 
 ### Issues
-- `POST /api/external/issues` — body `{projectKey, title, description?, status?, priority?, type?, assigneeEmail?, parentId?, startDate?, dueDate?, labels?: string[]}`. Resolves `assigneeEmail` → `User.id`; resolves `labels` (array of names) → `Label.id[]` scoped to the project.
-- `PATCH /api/external/issues/:projectKey/:issueNumber` — partial update; `assigneeEmail: null | ''` clears.
-- `GET /api/external/issues/:projectKey/:issueNumber` — single issue with assignee, creator, labels, children.
-- `GET /api/external/issues/:projectKey?status=&page=&limit=` — paginated list (max 100/page).
+- `POST /api/external/issues` — body `{projectKey, title, description?, status?, priority?, type?, assigneeEmail?, assigneeId?, reviewerAssigneeId?, parentId?, startDate?, dueDate?, labels?: string[]}`. Resolves `assigneeEmail` → `User.id`; resolves `labels` (array of names) → `Label.id[]` scoped to the project.
+- `PATCH /api/external/issues/:projectKey/:issueNumber` — partial update; `assigneeEmail: null | ''` clears; `reviewerAssigneeId: null` clears the reviewer.
+- `GET /api/external/issues/:projectKey/:issueNumber` — single issue with assignee, reviewer, creator, labels, children.
+- `GET /api/external/issues/:projectKey?status=&page=&limit=&assignee=&reviewer=&creator=` — paginated list (max 100/page). `assignee`/`reviewer`/`creator` each accept `me` / email / UUID (assignee & reviewer also `none`/`unassigned`). `fields=reviewer` opts the reviewer object into the row projection.
+- `GET /api/external/search?q=&reviewer=&creator=` — cross-project search now also filters by `reviewer` / `creator` (same value forms).
 
 ### Project digest (read-only, agent-friendly aggregator)
 - `GET /api/external/projects/:projectKey/digest?days=7` — rolling-window summary: counts by status/type/priority, archived count, per-assignee workload, overdue list, upcoming-due list, recently-created (last `days`), recently-completed (last `days`), recent activity. Capped at 100 activities, 50 entries per list. `days` clamped to `[1, 90]`.
@@ -34,6 +35,16 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 - `DELETE /api/external/issues/:projectKey/:issueNumber/spec-links/:linkId`
 
 ## Timeline
+
+### 2026-05-29 — Reviewer write + reviewer/creator filters (PM-109)
+**Added.** Brought the external surface up to parity with the web `reviewer`/`creator` filter feature (PM-105–108) so MCP/agent callers can both *set* a reviewer and *filter* by reviewer/creator server-side — previously reviewer support lived only in the internal use cases and the web client.
+- Create/update DTOs gained `reviewerAssigneeId` (UUID; `null` clears on update). `CreateIssueUseCase`/`UpdateIssueUseCase` already accepted the field, so `ExternalService.createIssue`/`updateIssue` just forward it. Because the global pipe runs `forbidNonWhitelisted`, the prior absence meant MCP's already-shipped `reviewerAssigneeId` param was rejected with `400 property reviewerAssigneeId should not exist` — this fixes that.
+- `listIssues` accepts `reviewer` and `creator` query params; `searchIssues` accepts the same two. A new `ExternalService.resolveUserFilter()` helper resolves `me` / email / UUID / `none` and is now shared by the `assignee` path too (dedupes the old inline logic). Filters compile to Prisma `where.reviewerAssigneeId` / `where.creatorId` so summary mode and pagination stay correct.
+- `getIssue` now includes `reviewerAssignee`; `listIssues` exposes a `fields=reviewer` projection opt-in.
+- DTOs: `packages/api/src/external/dto/external-create-issue.dto.ts`, `external-update-issue.dto.ts`.
+- Controller: `packages/api/src/external/external.controller.ts` (`listIssues`, `searchIssues`).
+- Service: `packages/api/src/external/external.service.ts` (`resolveUserFilter`, `createIssue`, `updateIssue`, `getIssue`, `listIssues`, `searchIssues`).
+- MCP follow-up shipped in `bbpm-internal-mcp` v0.10.0 (separate repo) — see [`mcp-changelog.md`](./mcp-changelog.md).
 
 ### 2026-05-24 — SpecItem ↔ Issue link mirror (PM-82)
 **Added.** External API surfaces the new SpecItem-to-Issue link CRUD so MCP agents can wire freshly-created issues to a spec's individual checkbox-line requirements (not just the spec as a whole). Two new routes:

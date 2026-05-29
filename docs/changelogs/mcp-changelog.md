@@ -86,6 +86,14 @@ the rest of `/api/external/*`.
 
 ## Timeline
 
+### 2026-05-29 — Reviewer write + reviewer/creator filters (`bbpm-internal-mcp` v0.10.0, PM-109)
+**Added.** Agents can now set a reviewer and filter by reviewer/creator — closing the gap with the web `reviewer`/`creator` filter feature (PM-105–108), which was frontend-only and had no API/MCP path.
+- `create_issue` gained `reviewerAssigneeId`. `update_issue` already advertised `reviewerAssigneeId` since v0.8, but every call was rejected `400 property reviewerAssigneeId should not exist` because the external DTO whitelisted it out — the BE half (see [`external-api-changelog.md`](./external-api-changelog.md#2026-05-29--reviewer-write--reviewercreator-filters-pm-109)) makes it work for the first time.
+- `list_issues` gained `reviewer` and `creator` filters (each accepts `me` / email / UUID; assignee & reviewer also `none`) and a `fields: ["reviewer"]` projection. `search_issues` gained the same `reviewer` / `creator` filters.
+- `get_issue` now returns the reviewer object inline.
+- All filtering is server-side (Prisma `where`), so summary mode and pagination stay accurate.
+- MCP repo (separate): `src/tools/create-issue.ts`, `update-issue.ts`, `list-issues.ts`, `search-issues.ts`, `get-issue.ts`, `src/client/bbpm-client.ts`; version `0.9.0 → 0.10.0`.
+
 ### 2026-05-21 — `DOMAIN` enum + two new agent tools (PR1: BE only; MCP server schema follow-up)
 **Changed.** Backend support for two new MCP tools landed on the API + external surface:
 - `get_project_table_of_content(projectKey)` → wraps `GET /api/external/projects/:projectKey/table-of-content`. Returns the project's `Domain → Epic` outline so agents can answer "what modules / scope does this project have" without paging hundreds of issues.

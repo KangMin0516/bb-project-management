@@ -79,6 +79,8 @@ export class ExternalController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('assignee') assignee?: string,
+    @Query('reviewer') reviewer?: string,
+    @Query('creator') creator?: string,
     @Query('priority') priority?: string,
     @Query('type') type?: string,
     @Query('text') text?: string,
@@ -101,6 +103,8 @@ export class ExternalController {
         page: page ? parseInt(page, 10) || 1 : 1,
         limit: limit ? parseInt(limit, 10) || 20 : 20,
         assignee,
+        reviewer,
+        creator,
         priority,
         type,
         text,
@@ -356,6 +360,8 @@ export class ExternalController {
     @Query('type') type?: string,
     @Query('includeDescription') includeDescription?: string,
     @Query('limit') limit?: string,
+    @Query('reviewer') reviewer?: string,
+    @Query('creator') creator?: string,
   ) {
     return this.externalService.searchIssues(user.sub, {
       q,
@@ -364,6 +370,8 @@ export class ExternalController {
       includeDescription:
         includeDescription === 'true' || includeDescription === '1',
       limit: limit ? parseInt(limit, 10) || undefined : undefined,
+      reviewer,
+      creator,
     });
   }
 

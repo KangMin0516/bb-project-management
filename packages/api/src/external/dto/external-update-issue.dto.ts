@@ -48,6 +48,14 @@ export class ExternalUpdateIssueDto {
   @IsUUID()
   assigneeId?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Reviewer user UUID (null to clear).',
+  })
+  @IsOptional()
+  @ValidateIf((o) => o.reviewerAssigneeId !== null)
+  @IsUUID()
+  reviewerAssigneeId?: string | null;
+
   @ApiPropertyOptional({ description: 'Parent issue ID (null to clear)' })
   @IsOptional()
   @ValidateIf((o) => o.parentId !== null)
