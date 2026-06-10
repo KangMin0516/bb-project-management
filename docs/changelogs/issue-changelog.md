@@ -22,6 +22,17 @@
 
 ## Timeline
 
+### 2026-06-10 — Fix issue search & linking: number/key lookup, sub-tasks, clickable linked chips (PM-110)
+
+**Fixed.** Four related search/linking defects on the Board and issue detail, all rooted in two search paths that only matched title/number on a truncated client-side list.
+1. **Backend number/key search** — `IssueQueryService.findAll` only matched `title`/`description` via `contains`, so a query like `1065` or `PITB-1065` never matched an issue by its number. Added a `^(?:[A-Za-z]{2,8}-)?(\d{1,9})$` parse that ORs `{ number }` into the `where` (strips the project-key prefix). Since `findAll` doesn't filter `parentId`, sub-tasks now resolve too.
+2. **Link Issue picker returned nothing** — `LinkIssueModal` fetched only the first 200 issues (`findInProjectRaw(projectId, { limit: '200' })`) and filtered in memory; on large projects (PITB numbers >1000) the target was never in that window, so every query showed "No matching issues". Switched to debounced server-side search (`findInProject({ search, limit: 25 })`) which leans on fix #1 for number/key/sub-task matching.
+3. **Board full-key search** — `matchesFilters` compared only `issue.title` and `String(issue.number)`; `PITB-1065` matched nothing. Threaded `projectKey` into `FilterOptions` and made the predicate strip the key prefix before the number test and also match the composed `KEY-number` string.
+4. **Board sub-task search** — sub-tasks are excluded from `parentOnlyBoard`, so `1067` (a sub-task) was unfindable. `BoardPage` now passes `includeSubtasks: showSubtasks || searchActive` so any free-text search surfaces matching sub-tasks as cards (board payload already carries them; capped at `ISSUE_MAX_PER_COLUMN = 200`/column).
+5. **Linked-issue chips not clickable** — `LinkedIssueRow` rendered a plain `<div>`; wrapped the key+title in a `<button>` that navigates to `/projects/${projectKey}/board?open=${issueId}` (the same `?open=` deep-link CommandPalette uses), matching the working `SpecLinkRow` pattern.
+
+- Source: `packages/api/src/issue/application/issue-query.service.ts` (number/key parse + `{ number }` in search OR), `packages/web/src/features/issue/components/links/LinkIssueModal.tsx` (debounced server-side search via `useDebouncedValue` + `findInProject`), `packages/web/src/features/issue/components/links/LinkedIssueRow.tsx` (clickable chip → `?open=` deep-link), `packages/web/src/features/issue/lib/boardFilter.ts` (`projectKey` in `FilterOptions`, key-aware `searchMatch`), `packages/web/src/pages/BoardPage.tsx` (hoist `projectKey`, `searchActive` → `includeSubtasks`, pass `projectKey` to `filterBoard`).
+
 ### 2026-05-28 — Board progress: BE-aggregated child counts cover archived DONE rows (PM-107 follow-up)
 
 **Fixed.** First-pass fix to PM-107 (FE-only — populate `childrenMap` for every parent) left a residual case visible on real data: `ArchiveScheduler` auto-archives DONE/CANCELED rows after 3 days, and the board endpoint strips `archivedAt IS NOT NULL` issues from the response, so an EPIC whose children all aged into the archive showed `0/N` with my earlier fix even though `_count.children` said `N`. Replaced the "count what we see" approach with a BE-side aggregate: `IssueQueryService.findByStatus` now runs a single `groupBy({ by: ['parentId', 'status'], where: { parentId: { in: visibleIds } } })` (no `archivedAt` filter) and decorates every issue with `progress: { total, done }`. `IssueCard` prefers `issue.progress` when present and falls back to the local tally only for older payloads.
