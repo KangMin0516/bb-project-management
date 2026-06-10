@@ -36,6 +36,10 @@ All routes are `@Public()` + `@UseGuards(ApiKeyGuard)` and require `X-API-Key: b
 
 ## Timeline
 
+### 2026-06-10 — `/external/search` matches issue number / key, not just text (PM-110)
+**Fixed.** `ExternalService.searchIssues` only ran `contains` on `title` (or `title`+`description` with `includeDescription`), so an agent searching `1065` or `PITB-1065` got text matches, never the issue with that number. Mirrors the internal `IssueQueryService.findAll` fix: parse `q` against `^(?:[A-Za-z]{2,8}-)?(\d{1,9})$` and OR `{ number }` into the `where`. The query is now always built as an `OR` array (title + optional description + optional number) instead of the prior `OR`-vs-bare-`title` branch. The 2-char minimum still applies, so single-digit numbers aren't searchable by this path.
+- Service: `packages/api/src/external/external.service.ts` (`searchIssues` — `numberMatch` parse, unified `where.OR`, `number?: number` added to the OR shape type).
+
 ### 2026-05-29 — Reviewer write + reviewer/creator filters (PM-109)
 **Added.** Brought the external surface up to parity with the web `reviewer`/`creator` filter feature (PM-105–108) so MCP/agent callers can both *set* a reviewer and *filter* by reviewer/creator server-side — previously reviewer support lived only in the internal use cases and the web client.
 - Create/update DTOs gained `reviewerAssigneeId` (UUID; `null` clears on update). `CreateIssueUseCase`/`UpdateIssueUseCase` already accepted the field, so `ExternalService.createIssue`/`updateIssue` just forward it. Because the global pipe runs `forbidNonWhitelisted`, the prior absence meant MCP's already-shipped `reviewerAssigneeId` param was rejected with `400 property reviewerAssigneeId should not exist` — this fixes that.

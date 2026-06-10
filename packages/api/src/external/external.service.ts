@@ -1648,8 +1648,8 @@ export class ExternalService {
       OR?: Array<{
         title?: { contains: string; mode: 'insensitive' };
         description?: { contains: string; mode: 'insensitive' };
+        number?: number;
       }>;
-      title?: { contains: string; mode: 'insensitive' };
     } = {
       projectId: { in: scopedProjectIds },
       archivedAt: null,
@@ -1665,14 +1665,19 @@ export class ExternalService {
       where.creatorId = await this.resolveUserFilter(params.creator, userId);
     }
 
-    if (params.includeDescription) {
-      where.OR = [
-        { title: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
-      ];
-    } else {
-      where.title = { contains: q, mode: 'insensitive' };
-    }
+    // PM-110: match the issue number directly too — bare ("1065") or
+    // key-prefixed ("PITB-1065") — so agents can resolve an issue by its
+    // key, not just by title/description text.
+    const numberMatch = q.match(/^(?:[A-Za-z]{2,8}-)?(\d{1,9})$/);
+    const searchNumber = numberMatch ? Number(numberMatch[1]) : null;
+
+    where.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      ...(params.includeDescription
+        ? [{ description: { contains: q, mode: 'insensitive' as const } }]
+        : []),
+      ...(searchNumber !== null ? [{ number: searchNumber }] : []),
+    ];
 
     const issues = await this.prisma.issue.findMany({
       where,
