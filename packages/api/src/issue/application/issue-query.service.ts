@@ -155,6 +155,13 @@ export class IssueQueryService {
       return undefined;
     })();
 
+    // PM-110: let `search` match the issue number directly — bare ("1065")
+    // or prefixed with the project key ("PITB-1065") — not just title/desc.
+    // The board search and the Link-Issue picker both funnel through here,
+    // so this is the single place that makes number/key lookup work.
+    const numberMatch = search?.trim().match(/^(?:[A-Za-z]{2,8}-)?(\d{1,9})$/);
+    const searchNumber = numberMatch ? Number(numberMatch[1]) : null;
+
     const where = {
       projectId,
       ...(!includeArchived && { archivedAt: null }),
@@ -168,6 +175,7 @@ export class IssueQueryService {
         OR: [
           { title: { contains: search, mode: 'insensitive' as const } },
           { description: { contains: search, mode: 'insensitive' as const } },
+          ...(searchNumber !== null ? [{ number: searchNumber }] : []),
         ],
       }),
     };

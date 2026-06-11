@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import { type Issue, type IssueLinkType } from '@/features/issue/api'
 import { STATUS_COLORS } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
+import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 import PriorityBadge from '@/features/issue/components/badges/PriorityBadge'
 import { LINK_TYPES, getLinkTypeLabel } from '@/features/issue/lib/linkType'
 import { useIssueLinkMutations } from '@/features/issue/hooks/useIssueLinkMutations'
@@ -27,24 +28,22 @@ interface LinkIssueModalProps {
 export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssueModalProps) {
   const [linkType, setLinkType] = useState<IssueLinkType>('RELATES_TO')
   const [searchQuery, setSearchQuery] = useState('')
+  // PM-110: search the whole project server-side (matches title / number /
+  // KEY-number) instead of fetching the first 200 issues and filtering in
+  // memory — on large projects the target issue was never in that window.
+  const debouncedQuery = useDebouncedValue(searchQuery.trim(), 250)
 
-  const { data: issuesData } = useQuery({
-    queryKey: ['issues', projectId, { limit: '200' }],
-    queryFn: () => issueRepository.findInProjectRaw(projectId, { limit: '200' }),
+  const { data: issuesData, isFetching } = useQuery({
+    queryKey: ['issues', projectId, 'link-picker', debouncedQuery],
+    queryFn: () => issueRepository.findInProject(projectId, { search: debouncedQuery, limit: 25 }),
   })
 
   const { create } = useIssueLinkMutations(projectId, issueId, onClose)
 
-  const items = issuesData?.items
-  const filteredIssues = useMemo(() => {
-    if (!items) return []
-    const q = searchQuery.toLowerCase()
-    return items.filter((issue: Issue) => {
-      if (issue.id === issueId) return false
-      if (!searchQuery) return true
-      return issue.title.toLowerCase().includes(q) || String(issue.number).includes(q)
-    })
-  }, [items, searchQuery, issueId])
+  const filteredIssues = useMemo(
+    () => (issuesData?.items ?? []).filter((issue: Issue) => issue.id !== issueId),
+    [issuesData, issueId],
+  )
 
   return (
     <ModalShell title="Link Issue" onClose={onClose}>
@@ -87,7 +86,7 @@ export default function LinkIssueModal({ projectId, issueId, onClose }: LinkIssu
           ))
         ) : (
           <div className="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-            {searchQuery ? 'No matching issues' : 'No issues available'}
+            {isFetching ? 'Searching…' : debouncedQuery ? 'No matching issues' : 'No issues available'}
           </div>
         )}
       </div>

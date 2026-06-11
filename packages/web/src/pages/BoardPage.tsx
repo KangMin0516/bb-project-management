@@ -135,6 +135,12 @@ export default function BoardPage() {
 
   const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
+  const projectKey = project?.key ?? ''
+
+  // PM-110: a free-text search must be able to find sub-tasks too. Sub-tasks
+  // are excluded from `parentOnlyBoard` by default, so surface them as cards
+  // (same mechanism as the Sub-tasks toggle) whenever the user is searching.
+  const searchActive = filters.search.trim().length > 0
 
   // Module list for the Domain filter chip. Cheap query — the TOC
   // endpoint is small (only DOMAIN + EPIC rows).
@@ -172,7 +178,7 @@ export default function BoardPage() {
     boardComponents,
     boardEpics,
     flatBoardIssues,
-  } = useBoardDerivations(viewBoard, { includeSubtasks: showSubtasks })
+  } = useBoardDerivations(viewBoard, { includeSubtasks: showSubtasks || searchActive })
 
   const expandAllSwimlanes = useCallback(() => setCollapsedEpics(new Set()), [])
   const collapseAllSwimlanes = useCallback(() => {
@@ -220,8 +226,8 @@ export default function BoardPage() {
   const hasFilters = hasActiveFilters(effective)
 
   const filteredBoard = useMemo(
-    () => (hasFilters ? filterBoard(parentOnlyBoard, effective, { childrenMap }) : parentOnlyBoard),
-    [parentOnlyBoard, hasFilters, effective, childrenMap],
+    () => (hasFilters ? filterBoard(parentOnlyBoard, effective, { childrenMap, projectKey }) : parentOnlyBoard),
+    [parentOnlyBoard, hasFilters, effective, childrenMap, projectKey],
   )
 
   // Use parentOnlyBoard (sub-tasks excluded) so they stop double-rendering
@@ -230,8 +236,8 @@ export default function BoardPage() {
   const filteredBoardForSwimlane = useMemo(() => {
     if (!groupByEpic) return null
     if (!hasFilters) return parentOnlyBoard
-    return filterBoard(parentOnlyBoard, effective, { keepEpics: true, childrenMap })
-  }, [groupByEpic, parentOnlyBoard, hasFilters, effective, childrenMap])
+    return filterBoard(parentOnlyBoard, effective, { keepEpics: true, childrenMap, projectKey })
+  }, [groupByEpic, parentOnlyBoard, hasFilters, effective, childrenMap, projectKey])
 
   const handleDragEnd = (result: DropResult) => {
     // While a server sort is active the cards aren't in manual order,
@@ -280,7 +286,6 @@ export default function BoardPage() {
 
   if (!projectId) return null
 
-  const projectKey = project?.key ?? ''
   const taskish = flatBoardIssues.filter((i) => i.type !== 'EPIC' && i.type !== 'DOMAIN')
 
   return (
