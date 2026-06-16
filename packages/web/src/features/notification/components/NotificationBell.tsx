@@ -66,7 +66,13 @@ export default function NotificationBell() {
       markReadMutation.mutate(notification.id)
     }
     if (notification.projectId && notification.issueId) {
-      navigate(`/projects/${notification.projectId}/lists`, { state: { selectedIssueId: notification.issueId } })
+      // Comment/mention notifications point at the discussion, so deep-link
+      // straight to the Activity tab where the full thread + input live.
+      const selectedTab =
+        notification.type === 'COMMENTED' || notification.type === 'MENTIONED' ? 'activity' : 'details'
+      navigate(`/projects/${notification.projectId}/lists`, {
+        state: { selectedIssueId: notification.issueId, selectedTab },
+      })
     } else if (notification.projectId) {
       navigate(`/projects/${notification.projectId}/board`)
     }

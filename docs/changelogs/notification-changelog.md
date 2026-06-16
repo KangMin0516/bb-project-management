@@ -17,6 +17,15 @@
 
 ## Timeline
 
+### 2026-06-16 — Comment notifications open the right ticket on the Activity tab
+**Fixed.** Clicking an in-app notification only opened the issue when it happened to be in the currently-loaded Lists query (after default filters, `showArchived=false`, and pagination), so `COMMENTED` / `MENTIONED` notifications for older or archived tickets silently did nothing. The handler also always landed on the Details tab, never the comment thread the notification was about.
+
+`NotificationBell` now carries `selectedTab` in the navigation state — `'activity'` for `COMMENTED` / `MENTIONED`, else `'details'`. `IssuesPage` no longer requires the target to be in `list.items`: when it isn't, it fetches the issue by id (`issueRepository.findOne`, reusing the `['issue', …]` cache the detail panel reads, so no duplicate request) and opens it regardless of filters / archive / page. `IssueDetailPanel` gained an `initialTab` prop so it can mount straight on Activity; manual opens (row click, keyboard, sub-task nav, `?open=`) reset to Details.
+
+The same blind spot affected the `?open=<id>` deep-link used by Slack DM "View in BB-PM" buttons (which target `/board?open=…`) — an archived / DONE issue that had aged out of the board payload showed an "Issue not found on this page" toast instead of opening. `useOpenIssueFromUrl` now takes a `projectId` and applies the identical fetch-by-id fallback, so both the Board and Lists `?open=` paths open the issue regardless of the current page's filters.
+
+- Source: `packages/web/src/features/notification/components/NotificationBell.tsx`, `packages/web/src/pages/IssuesPage.tsx`, `packages/web/src/pages/BoardPage.tsx`, `packages/web/src/features/issue/components/IssueDetailPanel.tsx`, `packages/web/src/features/issue/hooks/useOpenIssueFromUrl.ts`.
+
 ### 2026-05-22 — Deadline alerts: hourly cron creates in-app notifications for at-risk issues (PM-79, Phase 1)
 **Added.** New `DeadlineScheduler` (`packages/api/src/issue/deadline.scheduler.ts`) runs every hour. For each non-terminal (`status NOT IN (DONE, CANCELED)`), non-archived issue with `dueDate <= now + 24h`, it creates a `DEADLINE_WARNING` notification (or `DEADLINE_OVERDUE` if `dueDate < now`) addressed to the assignee — or falls back to the creator if the issue is unassigned.
 
