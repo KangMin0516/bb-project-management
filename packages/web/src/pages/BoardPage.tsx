@@ -200,7 +200,7 @@ export default function BoardPage() {
 
   // ?open= deep-link: opens the detail panel when the issue is on the board.
   const allBoardIssues = useMemo(() => (board ? Object.values(board).flat() : undefined), [board])
-  useOpenIssueFromUrl(allBoardIssues, setSelectedIssue, { showNotFound: true })
+  useOpenIssueFromUrl(allBoardIssues, setSelectedIssue, { showNotFound: true, projectId })
 
   const { focusedIssueId } = useBoardKeyboardNav({
     flatBoardIssues,

@@ -1,4 +1,4 @@
-import { useState, useDeferredValue, useEffect, useMemo } from 'react'
+import { useState, useDeferredValue, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, List, GitBranch } from 'lucide-react'
@@ -20,6 +20,7 @@ import IssuesToolbar from '@/features/issue/components/list/IssuesToolbar'
 import IssueTreeView from '@/features/issue/components/IssueTreeView'
 import CreateIssueModal from '@/features/issue/components/CreateIssueModal'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
+import type { IssueDetailTab } from '@/features/issue/components/detail/IssueDetailTabs'
 import BulkActionBar from '@/features/issue/components/BulkActionBar'
 import type { ViewOption } from '@/shared/ui/ViewToggle'
 import type { Issue } from '@/features/issue/api'
@@ -55,6 +56,18 @@ export default function IssuesPage() {
   const url = useIssueListUrlState()
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  // Tab the detail panel opens on — set by notification hand-off, reset on
+  // any manual open.
+  const [initialTab, setInitialTab] = useState<IssueDetailTab | undefined>(undefined)
+  // Issue id requested via notification/search hand-off but not yet resolved
+  // to a panel — it may be archived / filtered out / on another page.
+  const [pendingOpenId, setPendingOpenId] = useState<string | null>(null)
+
+  // Manual opens (row click, keyboard, sub-task nav) always land on details.
+  const openIssue = useCallback((issue: Issue) => {
+    setInitialTab(undefined)
+    setSelectedIssue(issue)
+  }, [])
 
   const listParams = useMemo(
     () => buildListParams({
@@ -118,24 +131,50 @@ export default function IssuesPage() {
 
   const selection = useIssueListSelection({
     items: displayItems,
-    onOpen: setSelectedIssue,
+    onOpen: openIssue,
     isDetailOpen: !!selectedIssue,
   })
 
-  // Open from <Link state={{selectedIssueId}}> hand-off (search / notifications).
+  // Open from <Link state> hand-off (search / notifications). Capture the
+  // target id + tab here; resolution happens below so an issue that isn't in
+  // the current (filtered / archived / paginated) list still opens.
   useEffect(() => {
-    if (!list?.items) return
-    const state = location.state as { selectedIssueId?: string } | null
-    if (state?.selectedIssueId) {
-      const issue = list.items.find((i) => i.id === state.selectedIssueId)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (issue) setSelectedIssue(issue)
-      window.history.replaceState({}, '')
-    }
-  }, [location.state, list?.items])
+    const state = location.state as { selectedIssueId?: string; selectedTab?: IssueDetailTab } | null
+    if (!state?.selectedIssueId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPendingOpenId(state.selectedIssueId)
+    setInitialTab(state.selectedTab)
+    window.history.replaceState({}, '')
+  }, [location.state])
 
-  // Open from ?open= deep-link.
-  useOpenIssueFromUrl(list?.items, setSelectedIssue)
+  // Fetch the hand-off target by id when it's absent from the loaded list
+  // (e.g. a comment notification for an archived / DONE ticket). Shares the
+  // ['issue', ...] cache key the detail panel reads, so it's deduped.
+  const inLoadedList = !!pendingOpenId && !!list?.items?.some((i) => i.id === pendingOpenId)
+  const { data: fetchedOpenIssue } = useQuery({
+    queryKey: ['issue', projectId, pendingOpenId],
+    queryFn: () => issueRepository.findOne(projectId!, pendingOpenId!),
+    enabled: !!projectId && !!pendingOpenId && !inLoadedList,
+  })
+
+  // Resolve a pending open: prefer the already-loaded row, else the fetch.
+  // Keeps initialTab intact (so comment notifications land on Activity).
+  useEffect(() => {
+    if (!pendingOpenId) return
+    const fromList = list?.items?.find((i) => i.id === pendingOpenId)
+    if (fromList) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedIssue(fromList)
+      setPendingOpenId(null)
+    } else if (fetchedOpenIssue && fetchedOpenIssue.id === pendingOpenId) {
+      setSelectedIssue(fetchedOpenIssue)
+      setPendingOpenId(null)
+    }
+  }, [pendingOpenId, list?.items, fetchedOpenIssue])
+
+  // Open from ?open= deep-link. projectId enables the fetch-by-id fallback
+  // so a link to an archived / filtered-out issue still opens.
+  useOpenIssueFromUrl(list?.items, openIssue, { projectId })
 
   if (!projectId) return null
 
@@ -195,7 +234,7 @@ export default function IssuesPage() {
           <IssueTreeView
             issues={displayItems}
             projectKey={projectKey}
-            onIssueClick={setSelectedIssue}
+            onIssueClick={openIssue}
             onEpicChange={(issueId, parentId) => epicChange.mutate({ issueId, parentId })}
           />
         ) : (
@@ -210,7 +249,7 @@ export default function IssuesPage() {
             onToggleSort={url.toggleSort}
             onToggleSelectAll={selection.toggleAll}
             onToggleSelect={selection.toggleOne}
-            onOpen={setSelectedIssue}
+            onOpen={openIssue}
             onDelete={(id) => remove.mutate(id)}
           />
         )}
@@ -230,8 +269,9 @@ export default function IssuesPage() {
           projectKey={projectKey}
           issue={selectedIssue}
           context="issues"
+          initialTab={initialTab}
           onClose={() => setSelectedIssue(null)}
-          onNavigate={setSelectedIssue}
+          onNavigate={openIssue}
         />
       )}
     </div>

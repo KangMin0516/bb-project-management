@@ -29,6 +29,9 @@ interface IssueDetailPanelProps {
   projectKey: string
   issue: Issue
   context?: ShareContext
+  /** Tab to show on open — defaults to 'details'. Notification deep-links
+   *  pass 'activity' so a comment notification lands on the thread. */
+  initialTab?: IssueDetailTab
   onClose: () => void
   onNavigate: (issue: Issue) => void
 }
@@ -41,9 +44,9 @@ interface IssueDetailPanelProps {
 /** Must match the Sheet exit-animation duration (sheetVariants → duration-300). */
 const SHEET_EXIT_MS = 300
 
-export default function IssueDetailPanel({ projectId, projectKey, issue, context, onClose, onNavigate }: IssueDetailPanelProps) {
+export default function IssueDetailPanel({ projectId, projectKey, issue, context, initialTab, onClose, onNavigate }: IssueDetailPanelProps) {
   const [expanded, setExpanded] = useState(() => localStorage.getItem('issue-panel-expanded') === 'true')
-  const [activeTab, setActiveTab] = useState<IssueDetailTab>('details')
+  const [activeTab, setActiveTab] = useState<IssueDetailTab>(initialTab ?? 'details')
   const [descriptionEditing, setDescriptionEditing] = useState(false)
 
   const panelRef = useRef<HTMLDivElement>(null)
@@ -52,6 +55,14 @@ export default function IssueDetailPanel({ projectId, projectKey, issue, context
   // If the parent swaps in a different issue while we're mid-close, snap
   // back to open instead of waiting for the pending unmount.
   useEffect(() => { reopen() }, [issue.id, reopen])
+
+  // Honour a deep-linked tab when the panel is reused for a new issue (e.g.
+  // clicking a comment notification while the panel is already open). Mount
+  // alone is covered by the useState initialiser above.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (initialTab) setActiveTab(initialTab)
+  }, [issue.id, initialTab])
 
   const { detail, members, projectLabels, projectComponents, epics, modules } = useIssueDetailData(
     projectId,
