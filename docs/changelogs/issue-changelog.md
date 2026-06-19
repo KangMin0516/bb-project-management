@@ -22,6 +22,12 @@
 
 ## Timeline
 
+### 2026-06-19 — Board search now matches description, aligning it with Lists (PM-110 follow-up)
+
+**Fixed.** Searching the same term on Lists vs Board returned different results: Lists found more issues than Board. Root cause was two divergent search engines — Lists sends `?search=` to the backend (`IssueQueryService.findAll`), which ORs `title` + `description` + number/key; Board filters client-side via `matchesFilters`, which only checked `title` + number/key and ignored `description`. So an issue matching purely on its body (e.g. `Bring` hitting PITB-991/1016/114 via description, with no "Bring" in the title) showed on Lists but vanished on Board. Added a `description` substring test to `matchesFilters` so both paths cover the same fields. No backend change needed — the board payload already carries `description` (`ISSUE_INCLUDE` uses `include`, not `select`).
+
+- Source: `packages/web/src/features/issue/lib/boardFilter.ts` (`searchMatch` now also tests `issue.description`).
+
 ### 2026-06-10 — Fix issue search & linking: number/key lookup, sub-tasks, clickable linked chips (PM-110)
 
 **Fixed.** Four related search/linking defects on the Board and issue detail, all rooted in two search paths that only matched title/number on a truncated client-side list.
