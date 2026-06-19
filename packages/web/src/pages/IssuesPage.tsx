@@ -86,7 +86,13 @@ export default function IssuesPage() {
   )
 
   const { project, members, projectLabels, projectComponents, list, isLoading, epicChange, remove } =
-    useIssueListData({ projectId: projectId ?? '', listParams })
+    useIssueListData({
+      projectId: projectId ?? '',
+      listParams,
+      // The grouped tree needs the whole hierarchy — page through all
+      // results so deeper statuses aren't dropped at the 200-row cap.
+      fetchAll: url.viewMode === 'grouped',
+    })
 
   // TOC drives the Module + Epic sections of the FiltersPopover. The query
   // is already cached by other pages (BoardPage / TableOfContentPage), so

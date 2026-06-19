@@ -22,6 +22,12 @@
 
 ## Timeline
 
+### 2026-06-19 — Lists grouped/tree view pages through all issues instead of truncating at 200
+
+**Fixed.** The "Lists" (grouped tree) view appeared to show only BACKLOG/TODO issues on large projects. Root cause was silent truncation: the grouped view fetches one page with `limit=200` and, unlike the flat "List" view, sends no `sortBy`, so the server falls back to its default `orderBy: [{ status: 'asc' }, { order: 'asc' }]`. With the `IssueStatus` enum ordering BACKLOG→TODO first, a project with >200 issues had its entire 200-row budget consumed by the lowest statuses, dropping IN_PROGRESS/REVIEW/DONE from the payload entirely (same data-loss class the Calendar view documents on its `dueDateFrom` param). The server caps `limit` at `@Max(200)`, so raising the page size wasn't an option. Instead the grouped view now pages through every result (`issueApi.listAll` fetches page 1, then pages 2..N in parallel, deduped by id) so the hierarchy is always complete. The flat "List" view is unchanged — it keeps the single capped page plus its own sort. The footer "N issues" count is now accurate for grouped too.
+
+- Source: `packages/web/src/features/issue/api.ts` (`issueApi.listAll` paging helper), `packages/web/src/features/issue/repository.ts` (`findAllInProjectRaw`), `packages/web/src/features/issue/hooks/useIssueListData.ts` (`fetchAll` option, query-key bit), `packages/web/src/pages/IssuesPage.tsx` (pass `fetchAll: url.viewMode === 'grouped'`).
+
 ### 2026-06-19 — Board search now matches description, aligning it with Lists (PM-110 follow-up)
 
 **Fixed.** Searching the same term on Lists vs Board returned different results: Lists found more issues than Board. Root cause was two divergent search engines — Lists sends `?search=` to the backend (`IssueQueryService.findAll`), which ORs `title` + `description` + number/key; Board filters client-side via `matchesFilters`, which only checked `title` + number/key and ignored `description`. So an issue matching purely on its body (e.g. `Bring` hitting PITB-991/1016/114 via description, with no "Bring" in the title) showed on Lists but vanished on Board. Added a `description` substring test to `matchesFilters` so both paths cover the same fields. No backend change needed — the board payload already carries `description` (`ISSUE_INCLUDE` uses `include`, not `select`).

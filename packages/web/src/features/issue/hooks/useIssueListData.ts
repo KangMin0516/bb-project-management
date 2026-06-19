@@ -9,6 +9,11 @@ interface UseIssueListDataOptions {
   projectId: string
   /** Query params already serialised by the page (limit, status, sort, etc.). */
   listParams: Record<string, string>
+  /**
+   * Page through every result instead of just the first capped page. The
+   * grouped tree view sets this so the hierarchy isn't truncated at 200.
+   */
+  fetchAll?: boolean
 }
 
 /**
@@ -17,7 +22,7 @@ interface UseIssueListDataOptions {
  * issue list, and the two mutations the page can fire (epic-change +
  * delete). All cache invalidations route through one helper.
  */
-export function useIssueListData({ projectId, listParams }: UseIssueListDataOptions) {
+export function useIssueListData({ projectId, listParams, fetchAll = false }: UseIssueListDataOptions) {
   const queryClient = useQueryClient()
   const enabled = !!projectId
 
@@ -27,8 +32,11 @@ export function useIssueListData({ projectId, listParams }: UseIssueListDataOpti
   const components = useQuery({ queryKey: ['components', projectId], queryFn: () => componentApi.list(projectId), enabled })
 
   const list = useQuery({
-    queryKey: ['issues', projectId, listParams],
-    queryFn: () => issueRepository.findInProjectRaw(projectId, listParams),
+    queryKey: ['issues', projectId, listParams, fetchAll],
+    queryFn: () =>
+      fetchAll
+        ? issueRepository.findAllInProjectRaw(projectId, listParams)
+        : issueRepository.findInProjectRaw(projectId, listParams),
     enabled,
   })
 

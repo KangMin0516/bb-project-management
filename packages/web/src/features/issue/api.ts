@@ -194,6 +194,25 @@ export interface TableOfContent {
 export const issueApi = {
   list: (projectId: string, params?: Record<string, string>) =>
     api.get<{ data: PaginatedIssues }>(`/projects/${projectId}/issues`, { params }).then((r) => r.data.data),
+  /**
+   * Pages through the entire result set. The grouped/tree view needs the
+   * whole hierarchy — a single capped page (server `@Max(200)`) silently
+   * drops the deeper statuses, so a >200-issue project would show only
+   * BACKLOG/TODO. Pages 2..N fetch in parallel and dedupe by id in case
+   * rows shift between requests.
+   */
+  listAll: async (projectId: string, params?: Record<string, string>): Promise<PaginatedIssues> => {
+    const first = await issueApi.list(projectId, { ...params, page: '1' })
+    if (first.totalPages <= 1) return first
+    const rest = await Promise.all(
+      Array.from({ length: first.totalPages - 1 }, (_, i) =>
+        issueApi.list(projectId, { ...params, page: String(i + 2) }),
+      ),
+    )
+    const byId = new Map<string, Issue>()
+    for (const issue of [first, ...rest].flatMap((p) => p.items)) byId.set(issue.id, issue)
+    return { ...first, items: [...byId.values()], page: 1 }
+  },
   board: (projectId: string, params?: { includeArchived?: boolean; sort?: string }) =>
     api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`, { params }).then((r) => r.data.data),
   dependencies: (projectId: string) =>

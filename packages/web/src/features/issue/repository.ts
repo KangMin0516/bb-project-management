@@ -57,6 +57,12 @@ export const issueRepository = {
    */
   findInProjectRaw: issueApi.list,
 
+  /**
+   * Like findInProjectRaw but pages through every result. Used by the
+   * grouped tree view so the hierarchy isn't truncated at the 200-row cap.
+   */
+  findAllInProjectRaw: issueApi.listAll,
+
   /** EPIC-type issues only — used by the parent picker in IssueDetailPanel. */
   findEpicsInProject(projectId: string): Promise<Issue[]> {
     return issueApi.list(projectId, { type: 'EPIC', limit: String(EPIC_PAGE_SIZE) }).then((r) => r.items)
