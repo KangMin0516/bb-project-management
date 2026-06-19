@@ -42,6 +42,9 @@ export function matchesFilters(issue: Issue, filters: BoardFilterState, options?
   const searchMatch =
     !searchLower ||
     issue.title.toLowerCase().includes(searchLower) ||
+    // PM-110: match description too, so the board search lines up with the
+    // server-side Lists search (title + description + number/key).
+    (issue.description?.toLowerCase().includes(searchLower) ?? false) ||
     String(issue.number).includes(numberPart) ||
     (!!keyPrefix && `${keyPrefix}${issue.number}`.includes(searchLower))
 
