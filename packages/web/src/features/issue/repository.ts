@@ -70,10 +70,14 @@ export const issueRepository = {
 
   /** Full board layout (status → issues). `sort` is the comma-separated
    *  `field:dir` form the FE filter-codec produces. */
-  findBoardLayout(projectId: string, options: { includeArchived?: boolean; sort?: string } = {}) {
-    const params: { includeArchived?: boolean; sort?: string } = {}
+  findBoardLayout(
+    projectId: string,
+    options: { includeArchived?: boolean; sort?: string; search?: string } = {},
+  ) {
+    const params: { includeArchived?: boolean; sort?: string; search?: string } = {}
     if (options.includeArchived) params.includeArchived = true
     if (options.sort) params.sort = options.sort
+    if (options.search) params.search = options.search
     return issueApi.board(projectId, Object.keys(params).length ? params : undefined)
   },
 
