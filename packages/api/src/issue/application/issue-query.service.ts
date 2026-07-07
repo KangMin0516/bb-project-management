@@ -209,8 +209,11 @@ export class IssueQueryService {
   }
 
   /**
-   * Board view — issues grouped by status with a per-column limit to
-   * keep large completed/canceled columns from dominating the payload.
+   * Board view — issues grouped by status. Only the terminal columns
+   * (DONE/CANCELED) are capped, since those are the ones that
+   * accumulate an ever-growing completed backlog; active-workflow
+   * columns (TODO, REVIEW_QA, ...) must return every issue or newer
+   * cards silently fall off the board once a column passes the cap.
    * Archived SUB_TASKs are always included so parent cards render the
    * right child count.
    *
@@ -224,6 +227,7 @@ export class IssueQueryService {
     projectId: string,
     includeArchived = false,
     sort?: string,
+    search?: string,
   ) {
     const statuses: IssueStatus[] = [
       'BACKLOG',
@@ -234,9 +238,26 @@ export class IssueQueryService {
       'DONE',
       'CANCELED',
     ];
+    const cappedStatuses: IssueStatus[] = ['DONE', 'CANCELED'];
     const grouped: Record<string, unknown[]> = {};
     // User-supplied sort wins; default to manual `order` (drag-drop).
     const orderBy = parseSortParam(sort) ?? [{ order: 'asc' as const }];
+
+    // A search term must be able to surface matches that live beyond the
+    // per-column cap — same match rule as `findAll` — so it's applied in
+    // the WHERE clause, and the cap is skipped while a search is active
+    // since the filtered result set is already small.
+    const numberMatch = search?.trim().match(/^(?:[A-Za-z]{2,8}-)?(\d{1,9})$/);
+    const searchNumber = numberMatch ? Number(numberMatch[1]) : null;
+    const searchFilter = search
+      ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' as const } },
+            { description: { contains: search, mode: 'insensitive' as const } },
+            ...(searchNumber !== null ? [{ number: searchNumber }] : []),
+          ],
+        }
+      : undefined;
 
     await Promise.all(
       statuses.map(async (status) => {
@@ -244,13 +265,18 @@ export class IssueQueryService {
           where: {
             projectId,
             status,
-            ...(!includeArchived && {
-              OR: [{ archivedAt: null }, { type: IssueType.SUB_TASK }],
-            }),
+            AND: [
+              ...(!includeArchived
+                ? [{ OR: [{ archivedAt: null }, { type: IssueType.SUB_TASK }] }]
+                : []),
+              ...(searchFilter ? [searchFilter] : []),
+            ],
           },
           include: ISSUE_INCLUDE,
           orderBy,
-          take: ISSUE_MAX_PER_COLUMN,
+          ...(!searchFilter && cappedStatuses.includes(status)
+            ? { take: ISSUE_MAX_PER_COLUMN }
+            : {}),
         });
         if (issues.length > 0) grouped[status] = issues;
       }),

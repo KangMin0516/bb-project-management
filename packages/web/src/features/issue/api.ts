@@ -213,7 +213,7 @@ export const issueApi = {
     for (const issue of [first, ...rest].flatMap((p) => p.items)) byId.set(issue.id, issue)
     return { ...first, items: [...byId.values()], page: 1 }
   },
-  board: (projectId: string, params?: { includeArchived?: boolean; sort?: string }) =>
+  board: (projectId: string, params?: { includeArchived?: boolean; sort?: string; search?: string }) =>
     api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`, { params }).then((r) => r.data.data),
   dependencies: (projectId: string) =>
     api.get<{ data: DependencyLink[] }>(`/projects/${projectId}/issues/dependencies`).then((r) => r.data.data),

@@ -19,13 +19,15 @@ export type ViewMode = (typeof VIEW_MODES)[number]
 export function useIssueListUrlState() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Read the first entry of the multi-field sort stack.
+  // Read the first entry of the multi-field sort stack. No `sort` param
+  // in the URL means a fresh page load — default to newest-created-first
+  // rather than leaving the list unsorted.
   const sortRaw = searchParams.get(PARAM.sort)
   const firstSort = sortRaw?.split(',')[0]?.split(':') as [string, string | undefined] | undefined
   const sortBy: SortField | '' =
     firstSort && (SORT_FIELDS as readonly string[]).includes(firstSort[0])
       ? (firstSort[0] as SortField)
-      : ''
+      : 'createdAt'
   const sortOrder: SortOrder = firstSort?.[1] === 'asc' ? 'asc' : 'desc'
   const viewMode = getEnum(searchParams, PARAM.view, VIEW_MODES, 'list')
   const showArchived = getBool(searchParams, PARAM.archived, false)

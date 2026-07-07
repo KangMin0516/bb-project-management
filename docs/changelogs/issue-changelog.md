@@ -11,7 +11,7 @@
 ## Surface
 
 - `GET|POST /api/projects/:projectId/issues` — list (paginated) / create
-- `GET /api/projects/:projectId/issues/board` — kanban grouped by status, capped per column
+- `GET /api/projects/:projectId/issues/board` — kanban grouped by status; DONE/CANCELED capped per column, active statuses uncapped; `?search=` bypasses the cap entirely
 - `GET|PATCH|DELETE /api/projects/:projectId/issues/:issueId`
 - `PATCH /api/projects/:projectId/issues/:issueId/reorder` — drag-drop on board, body `{status, order}`
 - `PATCH|POST /api/projects/:projectId/issues/bulk` / `bulk-delete`
@@ -21,6 +21,18 @@
 - **Scheduler**: `0 0 3 * * *` (daily 03:00) — `ArchiveScheduler.archiveOldIssues`
 
 ## Timeline
+
+### 2026-07-07 — Board per-column cap silently hid issues in active-workflow statuses, and search couldn't reach past it either
+
+**Fixed.** A newly created TASK (PITB-1817) didn't appear on the Board at all, with or without a search query, even though Lists found it instantly. Root cause: `IssueQueryService.findByStatus` applied `take: ISSUE_MAX_PER_COLUMN` (200) to *every* status column, ordered by manual drag `order`, even though the method's own doc comment says the cap exists "to keep large completed/canceled columns from dominating the payload." On this project TODO already had 208 issues and REVIEW_QA had 637 — any column past 200 was silently truncating from the *high-order* end, i.e. exactly the newest cards, since `order asc` puts freshly-created issues (highest order value) last. The cap now only applies to `DONE`/`CANCELED`; active-workflow columns (BACKLOG, TODO, IN_PROGRESS, REVIEW_QA, RECHECK) always return every row. Separately, `findByStatus` gained the same `search` OR-filter (title/description/number) `findAll` already had, applied in the WHERE clause and skipping the cap entirely while a term is active — needed because even a capped DONE/CANCELED column must still let a search reach a match buried past row 200. `BoardPage` now threads the parsed search residual (post operator-stripping, same value `filterBoard` already uses client-side) down to `useBoardData`/`findBoardLayout`/`issueApi.board` as a `search` param.
+
+- Source: `packages/api/src/issue/application/issue-query.service.ts` (`findByStatus`: `cappedStatuses` restricted to DONE/CANCELED, `search`/`searchFilter` param, `AND`-composed `where` to avoid clobbering the archived-OR clause), `packages/api/src/issue/issue.controller.ts` (`board` accepts `?search=`), `packages/web/src/features/issue/api.ts` + `repository.ts` (`findBoardLayout` forwards `search`), `packages/web/src/features/issue/hooks/useBoardData.ts` (`search` param + query key), `packages/web/src/pages/BoardPage.tsx` (`searchParam` computed via `parseSearchQuery` ahead of `useBoardData`), `packages/api/src/issue/application/issue-query.service.spec.ts` (new — cap/search coverage).
+
+### 2026-07-07 — Lists "List" view defaults to newest-created-first instead of no sort
+
+**Changed.** With no `?sort=` in the URL, `useIssueListUrlState` returned `sortBy: ''`, so `buildListParams` sent no sort param and the backend fell back to `[{status: 'asc'}, {order: 'asc'}]` (workflow order) — the flat List view opened unsorted-looking every time, and the user had to manually click "Created" each visit to see newest issues first. Default `sortBy` is now `'createdAt'` (sortOrder already defaulted to `'desc'`), so `buildListParams`'s existing `viewMode === 'list' && sortBy` branch sends `sortBy=createdAt&sortOrder=desc` automatically. The grouped "Lists" tree view is untouched — that branch is gated to `viewMode === 'list'` already.
+
+- Source: `packages/web/src/features/issue/hooks/useIssueListUrlState.ts` (`sortBy` fallback `'' → 'createdAt'`).
 
 ### 2026-06-19 — Lists grouped/tree view pages through all issues instead of truncating at 200
 

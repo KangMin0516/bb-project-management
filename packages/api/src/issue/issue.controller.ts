@@ -101,8 +101,9 @@ export class IssueController {
     @Param('projectId') projectId: string,
     @Query('includeArchived') includeArchived?: string,
     @Query('sort') sort?: string,
+    @Query('search') search?: string,
   ) {
-    return this.query.findByStatus(projectId, includeArchived === 'true', sort);
+    return this.query.findByStatus(projectId, includeArchived === 'true', sort, search);
   }
 
   @Get('table-of-content')

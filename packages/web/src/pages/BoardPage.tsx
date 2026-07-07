@@ -133,7 +133,14 @@ export default function BoardPage() {
   )
   const sortActive = filters.sortStack.length > 0
 
-  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam)
+  // Residual text is stable regardless of operator resolution (member/label
+  // lookups only affect chip values, never which tokens count as text), so
+  // it can be computed ahead of `useBoardData` and sent server-side — the
+  // per-column cap would otherwise hide matches that live deep in a large
+  // DONE/CANCELED column.
+  const searchParam = useMemo(() => parseSearchQuery(filters.search).text || undefined, [filters.search])
+
+  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam, searchParam)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
   const projectKey = project?.key ?? ''
 
