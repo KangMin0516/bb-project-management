@@ -40,6 +40,9 @@ export class ReorderIssueUseCase {
   ) {}
 
   async execute(cmd: ReorderIssueCommand): Promise<unknown> {
+    const targetOrder = Number.isFinite(cmd.targetOrder)
+      ? Math.max(0, Math.round(cmd.targetOrder))
+      : 0;
     const existing = await this.repo.findForUpdate(cmd.issueId);
     if (!existing || existing.projectId !== cmd.projectId) {
       throw new NotFoundException('Issue not found');
@@ -75,7 +78,7 @@ export class ReorderIssueUseCase {
       projectId: cmd.projectId,
       issueId: cmd.issueId,
       targetStatus: cmd.targetStatus,
-      targetOrder: cmd.targetOrder,
+      targetOrder,
       resetArchive,
       recheckUpdate,
       activities,
