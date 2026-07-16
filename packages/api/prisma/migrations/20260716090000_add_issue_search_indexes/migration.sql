@@ -14,6 +14,10 @@ CREATE INDEX IF NOT EXISTS "issues_project_assignee_status_order_idx"
 ON "issues"("project_id", "assignee_id", "status", "order")
 WHERE "assignee_id" IS NOT NULL;
 
+CREATE INDEX IF NOT EXISTS "issues_project_assignee_parent_idx"
+ON "issues"("project_id", "assignee_id", "parent_id")
+WHERE "assignee_id" IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS "issues_project_reviewer_status_order_idx"
 ON "issues"("project_id", "reviewer_assignee_id", "status", "order")
 WHERE "reviewer_assignee_id" IS NOT NULL;
