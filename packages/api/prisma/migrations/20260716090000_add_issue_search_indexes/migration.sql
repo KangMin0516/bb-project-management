@@ -10,6 +10,28 @@ ON "issues" USING GIN ("description" gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS "issues_project_archived_status_order_idx"
 ON "issues"("project_id", "archived_at", "status", "order");
 
+CREATE INDEX IF NOT EXISTS "issues_project_assignee_status_order_idx"
+ON "issues"("project_id", "assignee_id", "status", "order")
+WHERE "assignee_id" IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS "issues_project_reviewer_status_order_idx"
+ON "issues"("project_id", "reviewer_assignee_id", "status", "order")
+WHERE "reviewer_assignee_id" IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS "issues_project_creator_status_order_idx"
+ON "issues"("project_id", "creator_id", "status", "order")
+WHERE "creator_id" IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS "issues_project_parent_status_order_idx"
+ON "issues"("project_id", "parent_id", "status", "order")
+WHERE "parent_id" IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS "issue_labels_label_id_issue_id_idx"
+ON "issue_labels"("label_id", "issue_id");
+
+CREATE INDEX IF NOT EXISTS "issue_components_component_id_issue_id_idx"
+ON "issue_components"("component_id", "issue_id");
+
 CREATE INDEX IF NOT EXISTS "activities_issue_created_at_idx"
 ON "activities"("issue_id", "created_at" DESC);
 

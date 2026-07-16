@@ -28,8 +28,11 @@
 
 **Added + Schema.** Follow-up production `EXPLAIN ANALYZE` found activity dashboard/report-style queries still around ~200ms: recent project activity scanned all `activities`, and "completed today" probed `activities_issue_id_idx` once per issue. Added `activities(created_at DESC, issue_id)`, `activities(user_id, created_at DESC)`, and a partial status-completion index on `(created_at DESC, issue_id, user_id) WHERE field='status' AND new_value='DONE'`.
 
+**Added + Schema.** Board server-side filters are backed by new composite/reverse lookup indexes: project-scoped assignee/reviewer/creator/parent status-order indexes plus `issue_labels(label_id, issue_id)` and `issue_components(component_id, issue_id)`. These match the filter params the board now forwards instead of relying on client-only filtering.
+
 - Source: `packages/web/src/pages/BoardPage.tsx` now debounces the server-side `?search=` value passed to `useBoardData`, preventing one board request per keystroke while preserving immediate local input/filter state.
 - Source: `packages/api/src/issue/application/issue-query.service.ts` now uses a board-specific `select` payload and omits heavy `description` bodies unless a server-side board search is active. Non-search board rows still return `description: null` to preserve the frontend issue shape without sending long Markdown/HTML bodies for every card.
+- Source: `packages/web/src/pages/BoardPage.tsx`, `packages/web/src/features/issue/hooks/useBoardData.ts`, `packages/web/src/features/issue/repository.ts`, `packages/web/src/features/issue/api.ts`, `packages/api/src/issue/issue.controller.ts`, and `packages/api/src/issue/application/issue-query.service.ts` now forward board facet filters (`assigneeIds`, `reviewerIds`, `creatorIds`, `labelIds`, `componentIds`, `epicId`, status/priority/type/source sets) to the backend. Filtered boards no longer fetch every card and then discard most of them client-side.
 - Migration: `20260716090000_add_issue_search_indexes`.
 - Source: `packages/api/prisma/migrations/20260716090000_add_issue_search_indexes/migration.sql`.
 

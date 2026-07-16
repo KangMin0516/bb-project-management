@@ -17,6 +17,7 @@ import { BulkSetParentUseCase } from './application/bulk-set-parent.use-case.js'
 import { BulkUpdateIssueUseCase } from './application/bulk-update-issue.use-case.js';
 import { CreateIssueUseCase } from './application/create-issue.use-case.js';
 import { IssueQueryService } from './application/issue-query.service.js';
+import type { BoardQueryFilters } from './application/issue-query.service.js';
 import { RemoveIssueUseCase } from './application/remove-issue.use-case.js';
 import { ReorderIssueUseCase } from './application/reorder-issue.use-case.js';
 import { UpdateIssueUseCase } from './application/update-issue.use-case.js';
@@ -102,8 +103,9 @@ export class IssueController {
     @Query('includeArchived') includeArchived?: string,
     @Query('sort') sort?: string,
     @Query('search') search?: string,
+    @Query() boardFilters?: BoardQueryFilters,
   ) {
-    return this.query.findByStatus(projectId, includeArchived === 'true', sort, search);
+    return this.query.findByStatus(projectId, includeArchived === 'true', sort, search, boardFilters);
   }
 
   @Get('table-of-content')

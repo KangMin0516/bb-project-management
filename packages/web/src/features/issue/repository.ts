@@ -1,4 +1,4 @@
-import { issueApi, uploadApi, type Attachment, type Issue, type PaginatedIssues } from '@/features/issue/api'
+import { issueApi, uploadApi, type Attachment, type BoardQueryParams, type Issue, type PaginatedIssues } from '@/features/issue/api'
 
 /**
  * Repository layer for Issue. Wraps the raw HTTP client with typed,
@@ -72,12 +72,12 @@ export const issueRepository = {
    *  `field:dir` form the FE filter-codec produces. */
   findBoardLayout(
     projectId: string,
-    options: { includeArchived?: boolean; sort?: string; search?: string } = {},
+    options: BoardQueryParams = {},
   ) {
-    const params: { includeArchived?: boolean; sort?: string; search?: string } = {}
-    if (options.includeArchived) params.includeArchived = true
-    if (options.sort) params.sort = options.sort
-    if (options.search) params.search = options.search
+    const params: BoardQueryParams = {}
+    for (const [key, value] of Object.entries(options) as Array<[keyof BoardQueryParams, BoardQueryParams[keyof BoardQueryParams]]>) {
+      if (value) params[key] = value as never
+    }
     return issueApi.board(projectId, Object.keys(params).length ? params : undefined)
   },
 

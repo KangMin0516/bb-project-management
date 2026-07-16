@@ -27,8 +27,12 @@ import SwimlaneBoardView from '@/features/issue/components/board/SwimlaneBoardVi
 import BoardToolbar from '@/features/issue/components/board/BoardToolbar'
 import CreateIssueModal from '@/features/issue/components/CreateIssueModal'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
-import type { Issue } from '@/features/issue/api'
+import type { BoardQueryParams, Issue } from '@/features/issue/api'
 import type { ChildIssue } from '@/features/issue/components/board/types'
+
+function setToCsv(values: Set<string>): string | undefined {
+  return values.size ? [...values].join(',') : undefined
+}
 
 /**
  * Composition root for the project Kanban board. All derivations, queries,
@@ -142,8 +146,37 @@ export default function BoardPage() {
   // per-column cap would otherwise hide matches that live deep in a large
   // DONE/CANCELED column.
   const searchParam = useMemo(() => parseSearchQuery(debouncedSearch).text || undefined, [debouncedSearch])
+  const boardQueryParams = useMemo<BoardQueryParams>(() => ({
+    includeArchived: showArchived || undefined,
+    sort: sortParam,
+    search: searchParam,
+    assigneeIds: setToCsv(filters.assignees),
+    reviewerIds: setToCsv(filters.reviewers),
+    creatorIds: setToCsv(filters.creators),
+    labelIds: setToCsv(filters.labels),
+    componentIds: setToCsv(filters.components),
+    epicId: filters.epicId ?? undefined,
+    statuses: setToCsv(filters.status),
+    priorities: setToCsv(filters.priority),
+    types: setToCsv(filters.type),
+    sources: setToCsv(filters.source),
+  }), [
+    filters.assignees,
+    filters.components,
+    filters.creators,
+    filters.epicId,
+    filters.labels,
+    filters.priority,
+    filters.reviewers,
+    filters.source,
+    filters.status,
+    filters.type,
+    searchParam,
+    showArchived,
+    sortParam,
+  ])
 
-  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam, searchParam)
+  const { project, board, isLoading } = useBoardData(projectId ?? '', boardQueryParams)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
   const projectKey = project?.key ?? ''
 
