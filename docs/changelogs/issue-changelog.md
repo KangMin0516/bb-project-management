@@ -22,6 +22,17 @@
 
 ## Timeline
 
+### 2026-07-16 — Add issue search/detail indexes for large project performance
+
+**Added + Schema.** Production issue search showed `ILIKE '%term%'` filters scanning active project rows before sorting board/list results (`PITB` had ~1k active rows and ~3k total issues). Added `pg_trgm` plus GIN trigram indexes on `issues.title` and `issues.description` so backend board/list search can use index-assisted substring matching. Added a composite `(project_id, archived_at, status, "order")` index for the common active board/list ordering path. Issue detail feed lookups also gained `(issue_id, created_at DESC)` indexes on `activities`, `comments`, and `attachments` for the existing newest-first detail panel queries.
+
+**Added + Schema.** Follow-up production `EXPLAIN ANALYZE` found activity dashboard/report-style queries still around ~200ms: recent project activity scanned all `activities`, and "completed today" probed `activities_issue_id_idx` once per issue. Added `activities(created_at DESC, issue_id)`, `activities(user_id, created_at DESC)`, and a partial status-completion index on `(created_at DESC, issue_id, user_id) WHERE field='status' AND new_value='DONE'`.
+
+- Source: `packages/web/src/pages/BoardPage.tsx` now debounces the server-side `?search=` value passed to `useBoardData`, preventing one board request per keystroke while preserving immediate local input/filter state.
+- Source: `packages/api/src/issue/application/issue-query.service.ts` now uses a board-specific `select` payload and omits heavy `description` bodies unless a server-side board search is active. Non-search board rows still return `description: null` to preserve the frontend issue shape without sending long Markdown/HTML bodies for every card.
+- Migration: `20260716090000_add_issue_search_indexes`.
+- Source: `packages/api/prisma/migrations/20260716090000_add_issue_search_indexes/migration.sql`.
+
 ### 2026-07-07 — Board per-column cap silently hid issues in active-workflow statuses, and search couldn't reach past it either
 
 **Fixed.** A newly created TASK (PITB-1817) didn't appear on the Board at all, with or without a search query, even though Lists found it instantly. Root cause: `IssueQueryService.findByStatus` applied `take: ISSUE_MAX_PER_COLUMN` (200) to *every* status column, ordered by manual drag `order`, even though the method's own doc comment says the cap exists "to keep large completed/canceled columns from dominating the payload." On this project TODO already had 208 issues and REVIEW_QA had 637 — any column past 200 was silently truncating from the *high-order* end, i.e. exactly the newest cards, since `order asc` puts freshly-created issues (highest order value) last. The cap now only applies to `DONE`/`CANCELED`; active-workflow columns (BACKLOG, TODO, IN_PROGRESS, REVIEW_QA, RECHECK) always return every row. Separately, `findByStatus` gained the same `search` OR-filter (title/description/number) `findAll` already had, applied in the WHERE clause and skipping the cap entirely while a term is active — needed because even a capped DONE/CANCELED column must still let a search reach a match buried past row 200. `BoardPage` now threads the parsed search residual (post operator-stripping, same value `filterBoard` already uses client-side) down to `useBoardData`/`findBoardLayout`/`issueApi.board` as a `search` param.

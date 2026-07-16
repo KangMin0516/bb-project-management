@@ -27,6 +27,39 @@ export const ISSUE_INCLUDE = {
   _count: { select: { children: true } },
 } as const;
 
+function buildBoardSelect(includeDescription: boolean) {
+  return {
+    id: true,
+    number: true,
+    title: true,
+    description: includeDescription,
+    status: true,
+    priority: true,
+    type: true,
+    order: true,
+    startDate: true,
+    dueDate: true,
+    focusDate: true,
+    isRecheck: true,
+    archivedAt: true,
+    createdAt: true,
+    updatedAt: true,
+    source: true,
+    projectId: true,
+    assigneeId: true,
+    reviewerAssigneeId: true,
+    creatorId: true,
+    parentId: true,
+    assignee: { select: USER_SELECT },
+    reviewerAssignee: { select: USER_SELECT },
+    creator: { select: USER_SELECT },
+    labels: { select: { label: true } },
+    components: { select: { component: true } },
+    parent: { select: { id: true, number: true, title: true, type: true } },
+    _count: { select: { children: true } },
+  } as const;
+}
+
 /**
  * Fields the FE can sort by. Mirrors `SORT_FIELDS` in the web layer.
  * Enums (priority, status) rely on Postgres enum declaration order in
@@ -258,6 +291,7 @@ export class IssueQueryService {
           ],
         }
       : undefined;
+    const boardSelect = buildBoardSelect(Boolean(searchFilter));
 
     await Promise.all(
       statuses.map(async (status) => {
@@ -272,13 +306,17 @@ export class IssueQueryService {
               ...(searchFilter ? [searchFilter] : []),
             ],
           },
-          include: ISSUE_INCLUDE,
+          select: boardSelect,
           orderBy,
           ...(!searchFilter && cappedStatuses.includes(status)
             ? { take: ISSUE_MAX_PER_COLUMN }
             : {}),
         });
-        if (issues.length > 0) grouped[status] = issues;
+        if (issues.length > 0) {
+          grouped[status] = searchFilter
+            ? issues
+            : issues.map((issue) => ({ ...issue, description: null }));
+        }
       }),
     );
 
