@@ -167,6 +167,22 @@ export interface DependencyLink {
   targetIssue: LinkedIssueInfo
 }
 
+export interface BoardQueryParams {
+  includeArchived?: boolean
+  sort?: string
+  search?: string
+  assigneeIds?: string
+  reviewerIds?: string
+  creatorIds?: string
+  labelIds?: string
+  componentIds?: string
+  epicId?: string
+  statuses?: string
+  priorities?: string
+  types?: string
+  sources?: string
+}
+
 /**
  * Shape returned by `GET /projects/:projectId/issues/table-of-content`.
  * `orphanEpics` is the bucket for Epics that haven't been assigned a
@@ -213,7 +229,7 @@ export const issueApi = {
     for (const issue of [first, ...rest].flatMap((p) => p.items)) byId.set(issue.id, issue)
     return { ...first, items: [...byId.values()], page: 1 }
   },
-  board: (projectId: string, params?: { includeArchived?: boolean; sort?: string; search?: string }) =>
+  board: (projectId: string, params?: BoardQueryParams) =>
     api.get<{ data: Record<string, Issue[]> }>(`/projects/${projectId}/issues/board`, { params }).then((r) => r.data.data),
   dependencies: (projectId: string) =>
     api.get<{ data: DependencyLink[] }>(`/projects/${projectId}/issues/dependencies`).then((r) => r.data.data),

@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ISSUE_MAX_PER_COLUMN, USER_SELECT } from '../../common/constants.js';
 import {
+  IssuePriority,
   IssueType,
   type IssueStatus,
 } from '../../../generated/prisma/enums.js';
 import type { QueryIssueDto } from '../dto/query-issue.dto.js';
+import type { SourceLiteral } from '../../common/source.js';
 
 /**
  * Read-side counterpart to the Issue use cases (CQRS-lite per
@@ -26,6 +28,39 @@ export const ISSUE_INCLUDE = {
   parent: { select: { id: true, number: true, title: true, type: true } },
   _count: { select: { children: true } },
 } as const;
+
+function buildBoardSelect(includeDescription: boolean) {
+  return {
+    id: true,
+    number: true,
+    title: true,
+    description: includeDescription,
+    status: true,
+    priority: true,
+    type: true,
+    order: true,
+    startDate: true,
+    dueDate: true,
+    focusDate: true,
+    isRecheck: true,
+    archivedAt: true,
+    createdAt: true,
+    updatedAt: true,
+    source: true,
+    projectId: true,
+    assigneeId: true,
+    reviewerAssigneeId: true,
+    creatorId: true,
+    parentId: true,
+    assignee: { select: USER_SELECT },
+    reviewerAssignee: { select: USER_SELECT },
+    creator: { select: USER_SELECT },
+    labels: { select: { label: true } },
+    components: { select: { component: true } },
+    parent: { select: { id: true, number: true, title: true, type: true } },
+    _count: { select: { children: true } },
+  } as const;
+}
 
 /**
  * Fields the FE can sort by. Mirrors `SORT_FIELDS` in the web layer.
@@ -51,6 +86,31 @@ type OrderByEntry = Record<
   string,
   'asc' | 'desc' | { sort: 'asc' | 'desc'; nulls: 'last' | 'first' }
 >;
+
+export interface BoardQueryFilters {
+  assigneeIds?: string;
+  reviewerIds?: string;
+  creatorIds?: string;
+  labelIds?: string;
+  componentIds?: string;
+  epicId?: string;
+  statuses?: string;
+  priorities?: string;
+  types?: string;
+  sources?: string;
+}
+
+function csvSet(value?: string): string[] {
+  return value?.split(',').map((v) => v.trim()).filter(Boolean) ?? [];
+}
+
+function enumCsvSet<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+): T[] {
+  const allowedSet = new Set<string>(allowed);
+  return csvSet(value).filter((v): v is T => allowedSet.has(v));
+}
 
 /**
  * Parse `?sort=priority:desc,dueDate:asc` into a Prisma orderBy array.
@@ -228,6 +288,7 @@ export class IssueQueryService {
     includeArchived = false,
     sort?: string,
     search?: string,
+    filters: BoardQueryFilters = {},
   ) {
     const statuses: IssueStatus[] = [
       'BACKLOG',
@@ -258,9 +319,27 @@ export class IssueQueryService {
           ],
         }
       : undefined;
+    const boardSelect = buildBoardSelect(Boolean(searchFilter));
+    const assigneeIds = csvSet(filters.assigneeIds);
+    const reviewerIds = csvSet(filters.reviewerIds);
+    const creatorIds = csvSet(filters.creatorIds);
+    const labelIds = csvSet(filters.labelIds);
+    const componentIds = csvSet(filters.componentIds);
+    const priorities = enumCsvSet(filters.priorities, Object.values(IssuePriority));
+    const types = enumCsvSet(filters.types, Object.values(IssueType));
+    const sources = enumCsvSet<SourceLiteral>(filters.sources, [
+      'WEB',
+      'MCP',
+      'SLACK',
+      'WEBHOOK',
+      'API',
+      'SYSTEM',
+    ]);
+    const requestedStatuses = enumCsvSet(filters.statuses, statuses);
+    const statusesToQuery = requestedStatuses.length ? requestedStatuses : statuses;
 
     await Promise.all(
-      statuses.map(async (status) => {
+      statusesToQuery.map(async (status) => {
         const issues = await this.prisma.issue.findMany({
           where: {
             projectId,
@@ -270,15 +349,35 @@ export class IssueQueryService {
                 ? [{ OR: [{ archivedAt: null }, { type: IssueType.SUB_TASK }] }]
                 : []),
               ...(searchFilter ? [searchFilter] : []),
+              ...(assigneeIds.length
+                ? [{
+                    OR: [
+                      { assigneeId: { in: assigneeIds } },
+                      { children: { some: { assigneeId: { in: assigneeIds } } } },
+                    ],
+                  }]
+                : []),
+              ...(reviewerIds.length ? [{ reviewerAssigneeId: { in: reviewerIds } }] : []),
+              ...(creatorIds.length ? [{ creatorId: { in: creatorIds } }] : []),
+              ...(labelIds.length ? [{ labels: { some: { labelId: { in: labelIds } } } }] : []),
+              ...(componentIds.length ? [{ components: { some: { componentId: { in: componentIds } } } }] : []),
+              ...(filters.epicId ? [{ OR: [{ id: filters.epicId }, { parentId: filters.epicId }] }] : []),
+              ...(priorities.length ? [{ priority: { in: priorities } }] : []),
+              ...(types.length ? [{ type: { in: types } }] : []),
+              ...(sources.length ? [{ source: { in: sources } }] : []),
             ],
           },
-          include: ISSUE_INCLUDE,
+          select: boardSelect,
           orderBy,
           ...(!searchFilter && cappedStatuses.includes(status)
             ? { take: ISSUE_MAX_PER_COLUMN }
             : {}),
         });
-        if (issues.length > 0) grouped[status] = issues;
+        if (issues.length > 0) {
+          grouped[status] = searchFilter
+            ? issues
+            : issues.map((issue) => ({ ...issue, description: null }));
+        }
       }),
     );
 

@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { useFilterSearchParams } from '@/shared/lib/useFilterSearchParams'
+import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 import { useDragScroll } from '@/shared/lib/useDragScroll'
 import { getBool, setBool, PARAM } from '@/shared/lib/filter-codec'
 import { issueRepository } from '@/features/issue/repository'
@@ -26,8 +27,12 @@ import SwimlaneBoardView from '@/features/issue/components/board/SwimlaneBoardVi
 import BoardToolbar from '@/features/issue/components/board/BoardToolbar'
 import CreateIssueModal from '@/features/issue/components/CreateIssueModal'
 import IssueDetailPanel from '@/features/issue/components/IssueDetailPanel'
-import type { Issue } from '@/features/issue/api'
+import type { BoardQueryParams, Issue } from '@/features/issue/api'
 import type { ChildIssue } from '@/features/issue/components/board/types'
+
+function setToCsv(values: Set<string>): string | undefined {
+  return values.size ? [...values].join(',') : undefined
+}
 
 /**
  * Composition root for the project Kanban board. All derivations, queries,
@@ -133,14 +138,45 @@ export default function BoardPage() {
   )
   const sortActive = filters.sortStack.length > 0
 
+  const debouncedSearch = useDebouncedValue(filters.search, 300)
+
   // Residual text is stable regardless of operator resolution (member/label
   // lookups only affect chip values, never which tokens count as text), so
   // it can be computed ahead of `useBoardData` and sent server-side — the
   // per-column cap would otherwise hide matches that live deep in a large
   // DONE/CANCELED column.
-  const searchParam = useMemo(() => parseSearchQuery(filters.search).text || undefined, [filters.search])
+  const searchParam = useMemo(() => parseSearchQuery(debouncedSearch).text || undefined, [debouncedSearch])
+  const boardQueryParams = useMemo<BoardQueryParams>(() => ({
+    includeArchived: showArchived || undefined,
+    sort: sortParam,
+    search: searchParam,
+    assigneeIds: setToCsv(filters.assignees),
+    reviewerIds: setToCsv(filters.reviewers),
+    creatorIds: setToCsv(filters.creators),
+    labelIds: setToCsv(filters.labels),
+    componentIds: setToCsv(filters.components),
+    epicId: filters.epicId ?? undefined,
+    statuses: setToCsv(filters.status),
+    priorities: setToCsv(filters.priority),
+    types: setToCsv(filters.type),
+    sources: setToCsv(filters.source),
+  }), [
+    filters.assignees,
+    filters.components,
+    filters.creators,
+    filters.epicId,
+    filters.labels,
+    filters.priority,
+    filters.reviewers,
+    filters.source,
+    filters.status,
+    filters.type,
+    searchParam,
+    showArchived,
+    sortParam,
+  ])
 
-  const { project, board, isLoading } = useBoardData(projectId ?? '', showArchived, sortParam, searchParam)
+  const { project, board, isLoading } = useBoardData(projectId ?? '', boardQueryParams)
   const { reorder, updateIssue } = useBoardMutations(projectId ?? '')
   const projectKey = project?.key ?? ''
 
