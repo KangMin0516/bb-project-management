@@ -178,6 +178,26 @@ async function decorateWithChildProgress(
 export class IssueQueryService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async findAssigneeBoardIssueIds(
+    projectId: string,
+    assigneeIds: string[],
+  ): Promise<string[]> {
+    const rows = await this.prisma.issue.findMany({
+      where: {
+        projectId,
+        assigneeId: { in: assigneeIds },
+      },
+      select: { id: true, parentId: true },
+    });
+
+    const issueIds = new Set<string>();
+    for (const row of rows) {
+      issueIds.add(row.id);
+      if (row.parentId) issueIds.add(row.parentId);
+    }
+    return [...issueIds];
+  }
+
   async findAll(projectId: string, query: QueryIssueDto) {
     const {
       status,
@@ -337,6 +357,13 @@ export class IssueQueryService {
     ]);
     const requestedStatuses = enumCsvSet(filters.statuses, statuses);
     const statusesToQuery = requestedStatuses.length ? requestedStatuses : statuses;
+    const assigneeMatchedIssueIds = assigneeIds.length
+      ? await this.findAssigneeBoardIssueIds(projectId, assigneeIds)
+      : null;
+
+    if (assigneeMatchedIssueIds && assigneeMatchedIssueIds.length === 0) {
+      return grouped;
+    }
 
     await Promise.all(
       statusesToQuery.map(async (status) => {
@@ -349,13 +376,8 @@ export class IssueQueryService {
                 ? [{ OR: [{ archivedAt: null }, { type: IssueType.SUB_TASK }] }]
                 : []),
               ...(searchFilter ? [searchFilter] : []),
-              ...(assigneeIds.length
-                ? [{
-                    OR: [
-                      { assigneeId: { in: assigneeIds } },
-                      { children: { some: { assigneeId: { in: assigneeIds } } } },
-                    ],
-                  }]
+              ...(assigneeMatchedIssueIds
+                ? [{ id: { in: assigneeMatchedIssueIds } }]
                 : []),
               ...(reviewerIds.length ? [{ reviewerAssigneeId: { in: reviewerIds } }] : []),
               ...(creatorIds.length ? [{ creatorId: { in: creatorIds } }] : []),
