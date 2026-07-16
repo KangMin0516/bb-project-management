@@ -29,6 +29,12 @@ export const ISSUE_INCLUDE = {
   _count: { select: { children: true } },
 } as const;
 
+const BOARD_USER_SELECT = {
+  id: true,
+  name: true,
+  avatar: true,
+} as const;
+
 function buildBoardSelect(includeDescription: boolean) {
   return {
     id: true,
@@ -52,11 +58,17 @@ function buildBoardSelect(includeDescription: boolean) {
     reviewerAssigneeId: true,
     creatorId: true,
     parentId: true,
-    assignee: { select: USER_SELECT },
-    reviewerAssignee: { select: USER_SELECT },
-    creator: { select: USER_SELECT },
-    labels: { select: { label: true } },
-    components: { select: { component: true } },
+    assignee: { select: BOARD_USER_SELECT },
+    labels: {
+      select: {
+        label: { select: { id: true, name: true, color: true } },
+      },
+    },
+    components: {
+      select: {
+        component: { select: { id: true, name: true } },
+      },
+    },
     parent: { select: { id: true, number: true, title: true, type: true } },
     _count: { select: { children: true } },
   } as const;

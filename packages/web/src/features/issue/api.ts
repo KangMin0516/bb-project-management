@@ -26,9 +26,9 @@ export interface Issue {
   reviewerAssigneeId: string | null
   creatorId: string
   parentId: string | null
-  assignee: { id: string; email: string; name: string; avatar: string | null } | null
-  reviewerAssignee: { id: string; email: string; name: string; avatar: string | null } | null
-  creator: { id: string; email: string; name: string; avatar: string | null } | null
+  assignee: { id: string; email?: string; name: string; avatar: string | null } | null
+  reviewerAssignee?: { id: string; email?: string; name: string; avatar: string | null } | null
+  creator?: { id: string; email?: string; name: string; avatar: string | null } | null
   labels: { label: { id: string; name: string; color: string } }[]
   components: { component: { id: string; name: string } }[]
   parent: { id: string; number: number; title: string; type: string } | null
