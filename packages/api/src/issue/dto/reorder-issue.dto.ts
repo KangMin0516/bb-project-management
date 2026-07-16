@@ -1,4 +1,4 @@
-import { IsNumber, Min, IsIn } from 'class-validator';
+import { IsInt, Min, IsIn } from 'class-validator';
 
 const ISSUE_STATUSES = [
   'BACKLOG',
@@ -14,7 +14,7 @@ export class ReorderIssueDto {
   @IsIn(ISSUE_STATUSES)
   status!: string;
 
-  @IsNumber()
+  @IsInt()
   @Min(0)
   order!: number;
 }

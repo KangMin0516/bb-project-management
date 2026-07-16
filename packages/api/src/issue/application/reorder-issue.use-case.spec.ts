@@ -84,6 +84,22 @@ describe('ReorderIssueUseCase', () => {
     expect(payload.activities).toEqual([]);
   });
 
+  it('rounds non-integer orders before writing to the Int column', async () => {
+    const spy = jest.fn(async () => ({ id: 'i-1' }));
+    const uc = new ReorderIssueUseCase(makeRepo(EXISTING, spy));
+
+    await uc.execute({
+      projectId: 'p-1',
+      issueId: 'i-1',
+      targetStatus: 'TODO',
+      targetOrder: 1000.5,
+      actorId: 'u',
+    });
+
+    const payload = (spy as jest.Mock).mock.calls[0][0] as ReorderIssuePayload;
+    expect(payload.targetOrder).toBe(1001);
+  });
+
   it('resets archive when dragging out of DONE/CANCELED to active column', async () => {
     const spy = jest.fn(async () => ({ id: 'i-1' }));
     const uc = new ReorderIssueUseCase(

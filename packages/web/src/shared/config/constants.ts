@@ -145,11 +145,11 @@ export function calculateDropOrder(
   destIndex: number,
 ): number {
   if (destIssues.length === 0) return ORDER_GAP
-  if (destIndex === 0) return (destIssues[0]?.order ?? ORDER_GAP) / 2
+  if (destIndex === 0) return Math.max(0, Math.round((destIssues[0]?.order ?? ORDER_GAP) / 2))
   if (destIndex >= destIssues.length) {
     return (destIssues[destIssues.length - 1]?.order ?? 0) + ORDER_GAP
   }
   const before = destIssues[destIndex - 1]?.order ?? 0
   const after = destIssues[destIndex]?.order ?? before + ORDER_GAP * 2
-  return (before + after) / 2
+  return Math.max(0, Math.round((before + after) / 2))
 }

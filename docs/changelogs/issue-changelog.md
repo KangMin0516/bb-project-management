@@ -22,6 +22,12 @@
 
 ## Timeline
 
+### 2026-07-16 — Reorder validates integer order values before Prisma writes
+
+**Fixed.** Board drag-drop reorder could intermittently return HTTP 500 when the sparse-order calculation produced a fractional midpoint (for example after repeatedly inserting between close neighbors). The database column is `issues.order Int`, but the API DTO accepted any number and passed it through to Prisma, so bad order values surfaced as server errors instead of being handled at the boundary. The web order calculator now rounds midpoint orders to integers, the reorder DTO requires `@IsInt()`, and the use case defensively rounds/clamps the value before repository writes so older clients cannot crash the endpoint.
+
+- Source: `packages/web/src/shared/config/constants.ts` (`calculateDropOrder` integer midpoint), `packages/api/src/issue/dto/reorder-issue.dto.ts` (`@IsInt`), `packages/api/src/issue/application/reorder-issue.use-case.ts` (defensive normalize), `packages/api/src/issue/application/reorder-issue.use-case.spec.ts` (coverage).
+
 ### 2026-07-16 — Add issue search/detail indexes for large project performance
 
 **Added + Schema.** Production issue search showed `ILIKE '%term%'` filters scanning active project rows before sorting board/list results (`PITB` had ~1k active rows and ~3k total issues). Added `pg_trgm` plus GIN trigram indexes on `issues.title` and `issues.description` so backend board/list search can use index-assisted substring matching. Added a composite `(project_id, archived_at, status, "order")` index for the common active board/list ordering path. Issue detail feed lookups also gained `(issue_id, created_at DESC)` indexes on `activities`, `comments`, and `attachments` for the existing newest-first detail panel queries.
