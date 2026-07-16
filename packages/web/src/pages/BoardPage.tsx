@@ -221,7 +221,10 @@ export default function BoardPage() {
     boardComponents,
     boardEpics,
     flatBoardIssues,
-  } = useBoardDerivations(viewBoard, { includeSubtasks: showSubtasks || searchActive })
+  } = useBoardDerivations(viewBoard, {
+    includeSubtasks: showSubtasks || searchActive,
+    members: project?.members,
+  })
 
   const expandAllSwimlanes = useCallback(() => setCollapsedEpics(new Set()), [])
   const collapseAllSwimlanes = useCallback(() => {

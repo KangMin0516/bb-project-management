@@ -9,6 +9,7 @@ interface UseBoardDerivationsOptions {
    * Wired to the `Sub-tasks` toolbar toggle (PM-70).
    */
   includeSubtasks?: boolean
+  members?: { user: { id: string; name: string; avatar: string | null } }[]
 }
 
 /**
@@ -23,6 +24,7 @@ export function useBoardDerivations(
   options: UseBoardDerivationsOptions = {},
 ) {
   const includeSubtasks = options.includeSubtasks ?? false
+  const members = options.members ?? []
   return useMemo(() => {
     const allIssuesById = new Map<string, Issue>()
     const childrenMap = new Map<string, ChildIssue[]>()
@@ -34,6 +36,9 @@ export function useBoardDerivations(
     const compMap = new Map<string, { id: string; name: string }>()
     const epics: Issue[] = []
     const epicAncestorMap = new Map<string, string | null>()
+    const memberById = new Map(
+      members.map((m) => [m.user.id, { id: m.user.id, name: m.user.name, avatar: m.user.avatar }]),
+    )
 
     if (!board) {
       return {
@@ -91,8 +96,14 @@ export function useBoardDerivations(
         }
 
         if (issue.assignee) assigneeMap.set(issue.assignee.id, issue.assignee)
-        if (issue.reviewerAssignee) reviewerMap.set(issue.reviewerAssignee.id, issue.reviewerAssignee)
-        if (issue.creator) creatorMap.set(issue.creator.id, issue.creator)
+        if (issue.reviewerAssigneeId) {
+          const reviewer = issue.reviewerAssignee ?? memberById.get(issue.reviewerAssigneeId)
+          if (reviewer) reviewerMap.set(issue.reviewerAssigneeId, reviewer)
+        }
+        if (issue.creatorId) {
+          const creator = issue.creator ?? memberById.get(issue.creatorId)
+          if (creator) creatorMap.set(issue.creatorId, creator)
+        }
         for (const il of issue.labels) labelMap.set(il.label.id, il.label)
         for (const ic of issue.components ?? []) compMap.set(ic.component.id, ic.component)
         if (issue.type === 'EPIC') epics.push(issue)
@@ -138,5 +149,5 @@ export function useBoardDerivations(
       boardEpics: epics,
       flatBoardIssues,
     }
-  }, [board, includeSubtasks])
+  }, [board, includeSubtasks, members])
 }
