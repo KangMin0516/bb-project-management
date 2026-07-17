@@ -241,11 +241,12 @@ function ModuleNode({
 
   return (
     <div className="mb-1">
-      <div className="group flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+      <div className="flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
         {dragHandleProps && (
           <span
             {...dragHandleProps}
-            className="shrink-0 cursor-grab text-gray-300 opacity-0 group-hover:opacity-100 active:cursor-grabbing dark:text-gray-600"
+            aria-label="Drag to reorder"
+            className="shrink-0 cursor-grab rounded p-0.5 text-gray-300 hover:bg-gray-200 hover:text-gray-500 active:cursor-grabbing dark:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-300"
           >
             <GripVertical className="h-3 w-3" />
           </span>
@@ -403,11 +404,12 @@ function EpicNode({
 
   return (
     <li className="my-0.5">
-      <div className="group flex items-center gap-1 rounded px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+      <div className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">
         {dragHandleProps && (
           <span
             {...dragHandleProps}
-            className="shrink-0 cursor-grab text-gray-300 opacity-0 group-hover:opacity-100 active:cursor-grabbing dark:text-gray-600"
+            aria-label="Drag to reorder"
+            className="shrink-0 cursor-grab rounded p-0.5 text-gray-300 hover:bg-gray-200 hover:text-gray-500 active:cursor-grabbing dark:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-300"
           >
             <GripVertical className="h-3 w-3" />
           </span>
