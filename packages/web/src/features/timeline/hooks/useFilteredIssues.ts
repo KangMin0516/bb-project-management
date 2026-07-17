@@ -18,6 +18,11 @@ import {
  * adding `DOMAIN` to the `type` filter (e.g. to see Modules on a
  * timeline lane), in which case we honour the explicit choice.
  *
+ * `SUB_TASK` is hidden by default too — the timeline is meant to chart
+ * Epic/Task-level work, and sub-tasks add row noise without adding
+ * planning value at this zoom level. Same opt-in mechanism: add
+ * `SUB_TASK` to the `type` filter to see them.
+ *
  * `epicId` / `domainId` walk the parent chain via `parentId` so the
  * filter keeps the matched ancestor itself + every descendant (Epic →
  * Tasks → SubTasks, or Module → Epics → Tasks → SubTasks). Without the
@@ -53,6 +58,7 @@ export function useFilteredIssues(
 
     return allIssues.filter((issue) => {
       if (issue.type === 'DOMAIN' && !effective.type.has('DOMAIN')) return false
+      if (issue.type === 'SUB_TASK' && !effective.type.has('SUB_TASK')) return false
       if (issue.status === 'CANCELED' && !effective.status.has('CANCELED')) return false
       if (effective.status.size > 0 && !effective.status.has(issue.status)) return false
       if (effective.priority.size > 0 && !effective.priority.has(issue.priority)) return false
