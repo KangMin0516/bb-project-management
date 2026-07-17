@@ -15,6 +15,10 @@
 
 ## Timeline
 
+### 2026-07-17 — Title inside bars + hide SUB_TASK by default
+**Changed.** Bars/dots were unlabelled color blocks — identifying an issue required cross-referencing the left Issues column, and no-date issues rendered as a tiny, easy-to-miss dot (especially `BACKLOG`'s muted gray on the dark theme, which looked like nothing was there at all). Each bar now renders its issue title inside itself (`overflow-hidden` + `truncate`, so it degrades to an ellipsis on narrow bars/dots instead of overflowing). Separately, `useFilteredIssues` (shared by Calendar and Timeline) now hides `SUB_TASK` rows by default, same opt-in mechanism as the existing `DOMAIN` exclusion — the timeline charts Epic/Task-level work, and sub-tasks were adding row noise without planning value at this zoom level.
+- Source: `packages/web/src/features/timeline/components/TimelineChart.tsx`, `packages/web/src/features/timeline/hooks/useFilteredIssues.ts`.
+
 ### 2026-05-25 — Resizable left "Issues" column
 **Added.** Previously the Issues column toggled between 280 px (expanded) and 48 px (collapsed) and had no in-between. PMs on wider screens wanted more room for long issue titles; on smaller monitors they wanted to claw back chart real estate without fully collapsing. Now the right edge of the expanded column is a drag handle (4 px hit area, primary-coloured on hover). Drag horizontally to set the width between 160–640 px; the choice persists to `localStorage['timeline-labels-width']` and survives page reloads. The collapse toggle still snaps to 48 px → restoring shows the last-dragged width. `SharedTimelinePage` does not receive the resize callback so the public read-only view keeps fixed widths (no UX surprise for guests).
 

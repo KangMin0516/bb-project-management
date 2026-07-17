@@ -214,10 +214,11 @@ function ChartRow({
         <div className="absolute top-0 h-full w-px bg-red-400 z-[1]" style={{ left: `${todayOffset}%` }} />
       )}
 
-      {/* Real bar — dims during drag of this row */}
+      {/* Real bar — dims during drag of this row. Title renders inside,
+          truncating to an ellipsis when the bar is too narrow to fit it. */}
       <div
         className={cn(
-          'absolute top-1/2 -translate-y-1/2 transition-all z-[2]',
+          'absolute top-1/2 -translate-y-1/2 transition-all z-[2] flex items-center overflow-hidden',
           isEpic && 'ring-1 ring-primary-300 dark:ring-primary-600',
           isDot ? (isEpic ? 'rounded-full h-3.5' : 'rounded-full h-3') : 'rounded-md h-5',
           STATUS_BAR_COLORS[issue.status] || 'bg-gray-400/80',
@@ -234,7 +235,11 @@ function ChartRow({
         onMouseEnter={(e) => onHover(issue.id, e)}
         onMouseMove={(e) => onHover(issue.id, e)}
         onMouseLeave={() => onHover(null)}
-      />
+      >
+        <span className="truncate px-1.5 text-xs font-medium leading-none text-white">
+          {issue.title}
+        </span>
+      </div>
 
       {/* Edge handles on visible bars — only for issues with at least one date.
           Empty issues drag from the row itself (handleRowMouseDown). */}
@@ -260,6 +265,7 @@ function ChartRow({
           rangeEnd={endDate}
         />
       )}
+
     </div>
   )
 }
