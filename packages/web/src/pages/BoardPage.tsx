@@ -395,6 +395,7 @@ export default function BoardPage() {
           childrenMap={childrenMap}
           allIssuesById={allIssuesById}
           onIssueClick={handleTocClick}
+          onReorder={(issueId, status, order) => reorder.mutate({ issueId, status, order })}
           collapsed={!tocOpen}
           onToggleCollapse={toggleTocOpen}
         />

@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react'
-import { ChevronRight, FolderOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+  type DraggableProvidedDragHandleProps,
+} from '@hello-pangea/dnd'
+import { ChevronRight, FolderOpen, GripVertical, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import UserAvatar from '@/entities/user/UserAvatar'
-import { STATUS_BAR_COLORS, TYPE_ICONS } from '@/shared/config/constants'
+import { STATUS_BAR_COLORS, TYPE_ICONS, calculateDropOrder } from '@/shared/config/constants'
 import { cn } from '@/shared/lib/utils'
 import type { Issue, TableOfContent } from '@/features/issue/api'
 import type { ChildIssue } from '@/features/issue/components/board/types'
@@ -19,6 +26,13 @@ interface BoardTocSidebarProps {
   allIssuesById: Map<string, Issue>
   /** Open the IssueDetailPanel for any clicked TOC row (Module / Epic / Task / Sub-task). */
   onIssueClick: (issue: Issue) => void
+  /**
+   * Drag-reorder a Module or an Epic. Same generic `/reorder` endpoint the
+   * board's kanban and swimlane drags already use (status is passed through
+   * unchanged — only `order` moves), so the board and this sidebar always
+   * agree on ordering without any extra sync step.
+   */
+  onReorder: (issueId: string, status: string, order: number) => void
   /** Persisted collapse state — toggled via the header chevron. */
   collapsed: boolean
   onToggleCollapse: () => void
@@ -46,6 +60,7 @@ export default function BoardTocSidebar({
   childrenMap,
   allIssuesById,
   onIssueClick,
+  onReorder,
   collapsed,
   onToggleCollapse,
 }: BoardTocSidebarProps) {
@@ -67,9 +82,49 @@ export default function BoardTocSidebar({
     return map
   }, [taskish])
 
-  const modules = toc?.domains ?? []
-  const orphans = toc?.orphanEpics ?? []
+  const modules = useMemo(() => toc?.domains ?? [], [toc])
+  const orphans = useMemo(() => toc?.orphanEpics ?? [], [toc])
   const hasContent = modules.length > 0 || orphans.length > 0
+
+  // Modules reorder among themselves; Epics reorder within their own
+  // Module (or the Unassigned bucket) — dragging one to a *different*
+  // bucket would silently reparent it, which is a bigger, separate action
+  // (see bulk-set-parent) so cross-bucket drops are rejected, not applied.
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      const { destination, source, draggableId, type } = result
+      if (!destination) return
+      if (destination.droppableId === source.droppableId && destination.index === source.index) return
+
+      if (type === 'toc-module') {
+        const domainId = draggableId.replace(/^toc-module-/, '')
+        const domainIssue = allIssuesById.get(domainId)
+        if (!domainIssue) return
+        const siblings = modules
+          .map((m) => allIssuesById.get(m.id))
+          .filter((i): i is Issue => !!i && i.id !== domainId)
+        const newOrder = calculateDropOrder(siblings, destination.index)
+        onReorder(domainId, domainIssue.status, newOrder)
+        return
+      }
+
+      if (type === 'toc-epic') {
+        if (destination.droppableId !== source.droppableId) return
+        const epicId = draggableId.replace(/^toc-epic-/, '')
+        const epicIssue = epicById.get(epicId)
+        if (!epicIssue) return
+        const bucketId = source.droppableId.replace(/^toc-epics-/, '')
+        const bucketEpics =
+          bucketId === 'unassigned' ? orphans : (modules.find((m) => m.id === bucketId)?.epics ?? [])
+        const siblings = bucketEpics
+          .map((e) => epicById.get(e.id))
+          .filter((i): i is Issue => !!i && i.id !== epicId)
+        const newOrder = calculateDropOrder(siblings, destination.index)
+        onReorder(epicId, epicIssue.status, newOrder)
+      }
+    },
+    [modules, orphans, allIssuesById, epicById, onReorder],
+  )
 
   return (
     <aside
@@ -113,18 +168,35 @@ export default function BoardTocSidebar({
             No modules or epics yet.
           </p>
         ) : (
-          <>
-            {modules.map((m) => (
-              <ModuleNode
-                key={m.id}
-                module={m}
-                epicById={epicById}
-                tasksByEpicId={tasksByEpicId}
-                childrenMap={childrenMap}
-                allIssuesById={allIssuesById}
-                onIssueClick={onIssueClick}
-              />
-            ))}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="toc-modules" type="toc-module">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {modules.map((m, idx) => (
+                    <Draggable key={m.id} draggableId={`toc-module-${m.id}`} index={idx}>
+                      {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={snapshot.isDragging ? 'opacity-90' : undefined}
+                        >
+                          <ModuleNode
+                            module={m}
+                            epicById={epicById}
+                            tasksByEpicId={tasksByEpicId}
+                            childrenMap={childrenMap}
+                            allIssuesById={allIssuesById}
+                            onIssueClick={onIssueClick}
+                            dragHandleProps={dragProvided.dragHandleProps ?? undefined}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
             {orphans.length > 0 && (
               <UnassignedNode
                 epics={orphans}
@@ -135,7 +207,7 @@ export default function BoardTocSidebar({
                 onIssueClick={onIssueClick}
               />
             )}
-          </>
+          </DragDropContext>
         )}
       </div>
     </aside>
@@ -149,9 +221,18 @@ interface ModuleNodeProps {
   childrenMap: Map<string, ChildIssue[]>
   allIssuesById: Map<string, Issue>
   onIssueClick: (issue: Issue) => void
+  dragHandleProps?: DraggableProvidedDragHandleProps
 }
 
-function ModuleNode({ module: mod, epicById, tasksByEpicId, childrenMap, allIssuesById, onIssueClick }: ModuleNodeProps) {
+function ModuleNode({
+  module: mod,
+  epicById,
+  tasksByEpicId,
+  childrenMap,
+  allIssuesById,
+  onIssueClick,
+  dragHandleProps,
+}: ModuleNodeProps) {
   const [open, setOpen] = useState(true)
   // DOMAINs are still Issue rows — `allIssuesById` picks them up from
   // the board response (they have a default BACKLOG status). Click the
@@ -160,7 +241,15 @@ function ModuleNode({ module: mod, epicById, tasksByEpicId, childrenMap, allIssu
 
   return (
     <div className="mb-1">
-      <div className="flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+      <div className="group flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+        {dragHandleProps && (
+          <span
+            {...dragHandleProps}
+            className="shrink-0 cursor-grab text-gray-300 opacity-0 group-hover:opacity-100 active:cursor-grabbing dark:text-gray-600"
+          >
+            <GripVertical className="h-3 w-3" />
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -190,19 +279,34 @@ function ModuleNode({ module: mod, epicById, tasksByEpicId, childrenMap, allIssu
         )}
       >
         <li className="overflow-hidden">
-          <ul>
-            {mod.epics.map((e) => (
-              <EpicNode
-                key={e.id}
-                epicSummary={e}
-                epicIssue={epicById.get(e.id)}
-                tasks={tasksByEpicId.get(e.id) ?? []}
-                childrenMap={childrenMap}
-                allIssuesById={allIssuesById}
-                onIssueClick={onIssueClick}
-              />
-            ))}
-          </ul>
+          <Droppable droppableId={`toc-epics-${mod.id}`} type="toc-epic">
+            {(provided) => (
+              <ul ref={provided.innerRef} {...provided.droppableProps}>
+                {mod.epics.map((e, idx) => (
+                  <Draggable key={e.id} draggableId={`toc-epic-${e.id}`} index={idx}>
+                    {(dragProvided, snapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        className={snapshot.isDragging ? 'opacity-90' : undefined}
+                      >
+                        <EpicNode
+                          epicSummary={e}
+                          epicIssue={epicById.get(e.id)}
+                          tasks={tasksByEpicId.get(e.id) ?? []}
+                          childrenMap={childrenMap}
+                          allIssuesById={allIssuesById}
+                          onIssueClick={onIssueClick}
+                          dragHandleProps={dragProvided.dragHandleProps ?? undefined}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </ul>
+            )}
+          </Droppable>
         </li>
       </ul>
     </div>
@@ -240,19 +344,34 @@ function UnassignedNode({ epics, epicById, tasksByEpicId, childrenMap, allIssues
         )}
       >
         <li className="overflow-hidden">
-          <ul>
-            {epics.map((e) => (
-              <EpicNode
-                key={e.id}
-                epicSummary={e}
-                epicIssue={epicById.get(e.id)}
-                tasks={tasksByEpicId.get(e.id) ?? []}
-                childrenMap={childrenMap}
-                allIssuesById={allIssuesById}
-                onIssueClick={onIssueClick}
-              />
-            ))}
-          </ul>
+          <Droppable droppableId="toc-epics-unassigned" type="toc-epic">
+            {(provided) => (
+              <ul ref={provided.innerRef} {...provided.droppableProps}>
+                {epics.map((e, idx) => (
+                  <Draggable key={e.id} draggableId={`toc-epic-${e.id}`} index={idx}>
+                    {(dragProvided, snapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        className={snapshot.isDragging ? 'opacity-90' : undefined}
+                      >
+                        <EpicNode
+                          epicSummary={e}
+                          epicIssue={epicById.get(e.id)}
+                          tasks={tasksByEpicId.get(e.id) ?? []}
+                          childrenMap={childrenMap}
+                          allIssuesById={allIssuesById}
+                          onIssueClick={onIssueClick}
+                          dragHandleProps={dragProvided.dragHandleProps ?? undefined}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </ul>
+            )}
+          </Droppable>
         </li>
       </ul>
     </div>
@@ -267,15 +386,32 @@ interface EpicNodeProps {
   childrenMap: Map<string, ChildIssue[]>
   allIssuesById: Map<string, Issue>
   onIssueClick: (issue: Issue) => void
+  dragHandleProps?: DraggableProvidedDragHandleProps
 }
 
-function EpicNode({ epicSummary, epicIssue, tasks, childrenMap, allIssuesById, onIssueClick }: EpicNodeProps) {
+function EpicNode({
+  epicSummary,
+  epicIssue,
+  tasks,
+  childrenMap,
+  allIssuesById,
+  onIssueClick,
+  dragHandleProps,
+}: EpicNodeProps) {
   const [open, setOpen] = useState(false)
   const hasTasks = tasks.length > 0
 
   return (
     <li className="my-0.5">
-      <div className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+      <div className="group flex items-center gap-1 rounded px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+        {dragHandleProps && (
+          <span
+            {...dragHandleProps}
+            className="shrink-0 cursor-grab text-gray-300 opacity-0 group-hover:opacity-100 active:cursor-grabbing dark:text-gray-600"
+          >
+            <GripVertical className="h-3 w-3" />
+          </span>
+        )}
         {hasTasks ? (
           <button
             type="button"
