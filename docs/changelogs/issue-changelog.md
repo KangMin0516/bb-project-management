@@ -22,6 +22,13 @@
 
 ## Timeline
 
+### 2026-07-17 — Drag-to-reorder Modules and Epics in the Board's CONTENTS rail
+
+**Added.** `BoardTocSidebar` (the "CONTENTS" outline on the Board page) was read-only — no way to reorder Modules or the Epics inside them except by dragging on the right-side swimlane view. Wired `@hello-pangea/dnd` (already used by the swimlane board, no new dependency) into the sidebar: Modules reorder among themselves via a `toc-modules` Droppable, and each Module's Epics reorder within their own bucket via a per-Module `toc-epics-<id>` Droppable (the Unassigned bucket gets its own `toc-epics-unassigned` one). Both write through the same generic `PATCH /issues/:id/reorder` mutation the swimlane drag/arrows already use — Module and Epic ordering share the plain `Issue.order` column, so the sidebar and the right-side board are always reading the same value and the existing `['toc', projectId]` query invalidation on that mutation keeps both sides in sync with no new backend work. Dragging an Epic into a *different* Module's list is rejected (silent no-op) rather than reparenting it — that's a bigger, separate action already covered by `bulk-set-parent`, not something a reorder drag should do implicitly.
+
+- Verified via live drag simulation against the PITB project: reordering an Epic within a Module and reordering two Modules both updated the CONTENTS rail and the swimlane board immediately, and survived a full page reload.
+- Source: `packages/web/src/features/issue/components/board/BoardTocSidebar.tsx`, `packages/web/src/pages/BoardPage.tsx`.
+
 ### 2026-07-16 — Reorder validates integer order values before Prisma writes
 
 **Fixed.** Board drag-drop reorder could intermittently return HTTP 500 when the sparse-order calculation produced a fractional midpoint (for example after repeatedly inserting between close neighbors). The database column is `issues.order Int`, but the API DTO accepted any number and passed it through to Prisma, so bad order values surfaced as server errors instead of being handled at the boundary. The web order calculator now rounds midpoint orders to integers, the reorder DTO requires `@IsInt()`, and the use case defensively rounds/clamps the value before repository writes so older clients cannot crash the endpoint.
