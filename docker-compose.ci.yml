@@ -1,0 +1,42 @@
+# =============================================================================
+# BB Project Management - CI Build Compose
+# =============================================================================
+# Build (and push) the production images to GHCR (GitHub Container Registry).
+# This file only builds/tags images — it does not run them, and it does not
+# touch `db` (postgres:16-alpine is pulled straight from Docker Hub on the
+# server, never rebuilt or pushed).
+#
+# Usage (from CI, after `docker login ghcr.io` — see deploy.yml):
+#   export IMAGE_TAG=$(git rev-parse --short HEAD)
+#   docker compose -f docker-compose.ci.yml build
+#   docker compose -f docker-compose.ci.yml push
+#
+# No registry secrets to configure: GHCR auth uses the workflow's own
+# `secrets.GITHUB_TOKEN` (auto-issued per run, scoped via `permissions:` in
+# deploy.yml) — nothing to create or rotate by hand.
+#
+# Optional environment variables:
+#   - IMAGE_TAG       Defaults to `latest`. Use the commit sha in CI so each
+#                      build is addressable and rollback is a tag change,
+#                      not a rebuild.
+#   - VITE_API_URL    Build-time API base URL baked into the web bundle.
+#                      Defaults to `/api` (same-origin, nginx-proxied) —
+#                      matches production today.
+# =============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+      target: production
+    image: ghcr.io/seo-burning/bbpm-api:${IMAGE_TAG:-latest}
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: ghcr.io/seo-burning/bbpm-web:${IMAGE_TAG:-latest}
