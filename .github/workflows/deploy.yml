@@ -230,8 +230,12 @@ jobs:
               sleep 5
             done
 
-            # Cleanup
-            docker image prune -f
+            # Cleanup — `-a` also removes the previous deploy's now-unused
+            # tagged image (not just dangling layers), since every deploy
+            # pulls a fresh commit-sha tag that never gets reused. The
+            # `until=24h` filter keeps anything from the last 24h untouched,
+            # so a mid-flight image from this exact deploy is never at risk.
+            docker image prune -af --filter "until=24h"
             docker logout ghcr.io
 
             # Configure host nginx for domain (if DOMAIN is set)
