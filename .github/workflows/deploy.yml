@@ -38,6 +38,28 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: docker compose -f docker-compose.ci.yml push
 
+      # Every merge pushes a new commit-sha-tagged image and nothing ever
+      # deleted an old one — GHCR storage grew by one image pair per merge,
+      # forever. Runs right here (not a separate scheduled workflow) so
+      # cleanup happens every deploy instead of waiting up to a week.
+      # `min-versions-to-keep` always includes the tag just pushed above, so
+      # this can never delete the version this same run is about to deploy.
+      - name: Delete old bbpm-api versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: bbpm-api
+          package-type: container
+          min-versions-to-keep: 10
+          ignore-versions: '^latest$'
+
+      - name: Delete old bbpm-web versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: bbpm-web
+          package-type: container
+          min-versions-to-keep: 10
+          ignore-versions: '^latest$'
+
   deploy:
     name: Deploy to Production
     needs: build-and-push
