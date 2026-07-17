@@ -162,22 +162,24 @@ jobs:
             ENVEOF
             sed -i 's/^            //' .env
 
-            # Stop existing containers (preserve volumes/data)
-            echo "Stopping existing containers..."
-            $COMPOSE down --remove-orphans || true
-            docker stop bbpm-db bbpm-app bbpm-web 2>/dev/null || true
-            docker rm bbpm-db bbpm-app bbpm-web 2>/dev/null || true
-
-            # Pull pre-built images (built + pushed by the build-and-push job).
-            # Login uses the workflow's own ephemeral GITHUB_TOKEN, streamed in
-            # over SSH — never stored on the server (logged out below).
+            # Pull pre-built images (built + pushed by the build-and-push job)
+            # WHILE the currently-running containers keep serving traffic —
+            # no downtime for this step. Login uses the workflow's own
+            # ephemeral GITHUB_TOKEN, streamed in over SSH — never stored on
+            # the server (logged out below).
             echo "Logging in to GHCR..."
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
             echo "Pulling images..."
             $COMPOSE pull app web
 
-            # Start database first
-            echo "Starting database..."
+            # `db`'s image/config never changes between deploys, so this is a
+            # no-op when it's already running healthy — it only actually
+            # starts anything on a first-time deploy. Previously the whole
+            # stack (db included) was force-stopped before this point, which
+            # meant every deploy took the site down for the entire
+            # pull+migrate window (~minutes) instead of just the final
+            # container swap (~seconds, below).
+            echo "Ensuring database is up..."
             $COMPOSE up -d db
 
             # Wait for database to be healthy
@@ -207,9 +209,11 @@ jobs:
             # Clean up leftover containers from `compose run`
             docker rm -f $(docker ps -aq --filter "name=bbpm-app" --filter "status=exited") 2>/dev/null || true
 
-            # Start all services
-            echo "Starting all services..."
-            if ! $COMPOSE up -d; then
+            # Roll out the new images. This is the only moment of
+            # user-visible downtime — compose recreates just `app`/`web`
+            # (their image tag changed), `db` is left untouched throughout.
+            echo "Rolling out new app/web containers..."
+            if ! $COMPOSE up -d --no-deps app web; then
               echo "=== compose up failed; app logs ==="
               $COMPOSE logs app --tail=150 --no-log-prefix || true
               echo "=== db logs ==="
