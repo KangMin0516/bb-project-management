@@ -1,0 +1,41 @@
+# =============================================================================
+# BB Project Management - CI Build Compose
+# =============================================================================
+# Build (and optionally push) the production images to Google Container
+# Registry. This file only builds images — it does not run them, and it does
+# not touch `db` (postgres:16-alpine is pulled straight from Docker Hub on
+# the server, never rebuilt or pushed).
+#
+# Usage (from CI):
+#   export GCR_PROJECT_ID=<gcp-project-id>
+#   export IMAGE_TAG=$(git rev-parse --short HEAD)
+#   docker compose -f docker-compose.ci.yml build
+#   docker compose -f docker-compose.ci.yml push
+#
+# Required environment variables:
+#   - GCR_PROJECT_ID  GCP project id the images are pushed under.
+# Optional:
+#   - IMAGE_TAG       Defaults to `latest`. Use the commit sha in CI so each
+#                      build is addressable and rollback is a tag change,
+#                      not a rebuild.
+#   - VITE_API_URL    Build-time API base URL baked into the web bundle.
+#                      Defaults to `/api` (same-origin, nginx-proxied) —
+#                      matches production today.
+# =============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+      target: production
+    image: gcr.io/${GCR_PROJECT_ID:?GCR_PROJECT_ID must be set}/bbpm-api:${IMAGE_TAG:-latest}
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: gcr.io/${GCR_PROJECT_ID:?GCR_PROJECT_ID must be set}/bbpm-web:${IMAGE_TAG:-latest}

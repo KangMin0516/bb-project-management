@@ -4,11 +4,17 @@
 # Usage:
 #   docker compose -f docker-compose.prod.yml up -d
 #
+# `app` and `web` reference pre-built images pulled from GCR (built +
+# pushed by the `build-and-push` CI job via docker-compose.ci.yml) instead
+# of building on the server — see docker-compose.ci.yml for the build side.
+#
 # Required environment variables in .env:
 #   - JWT_SECRET
 #   - JWT_SHARE_SECRET
 #   - ADMIN_PASSWORD
 #   - POSTGRES_PASSWORD
+#   - GCR_PROJECT_ID
+#   - IMAGE_TAG
 # =============================================================================
 
 services:
@@ -44,10 +50,7 @@ services:
         max-file: "3"
 
   app:
-    build:
-      context: .
-      dockerfile: packages/api/Dockerfile
-      target: production
+    image: gcr.io/${GCR_PROJECT_ID:?GCR_PROJECT_ID must be set}/bbpm-api:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: bbpm-app
     environment:
       - NODE_ENV=production
@@ -99,10 +102,7 @@ services:
         max-file: "3"
 
   web:
-    build:
-      context: .
-      dockerfile: packages/web/Dockerfile
-      target: production
+    image: gcr.io/${GCR_PROJECT_ID:?GCR_PROJECT_ID must be set}/bbpm-web:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: bbpm-web
     ports:
       - "${APP_PORT:-3000}:3000"

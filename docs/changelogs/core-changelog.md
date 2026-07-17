@@ -8,7 +8,7 @@
 - **Common utilities**: `packages/api/src/common/` — guards (`JwtAuthGuard`, `ProjectMemberGuard`, `RolesGuard`, `SuperuserGuard`), decorators (`@Public`, `@Roles`, `@CurrentUser`), filters (`GlobalExceptionFilter`), interceptors (`TransformInterceptor`), `EncryptionService`, `constants.ts`
 - **Persistence**: `packages/api/src/prisma/prisma.service.ts` (PrismaClient + `@prisma/adapter-pg`)
 - **Schema**: `packages/api/prisma/schema.prisma`, all migrations under `packages/api/prisma/migrations/`
-- **Workspace + Docker**: `pnpm-workspace.yaml`, `Makefile`, `docker-compose.yml`, `docker-compose.prod.yml`, `packages/api/Dockerfile`, `packages/web/Dockerfile`, `packages/web/nginx.conf`
+- **Workspace + Docker**: `pnpm-workspace.yaml`, `Makefile`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.ci.yml`, `packages/api/Dockerfile`, `packages/web/Dockerfile`, `packages/web/nginx.conf`
 
 ## Surface
 
@@ -21,6 +21,10 @@
 - **Schedulers root**: `ScheduleModule.forRoot()` — individual crons live in feature modules (see `issue/archive.scheduler.ts`, `standup/standup.scheduler.ts`, `report/report.scheduler.ts`)
 
 ## Timeline
+
+### 2026-07-17 — Build + push images to GCR in CI; server pulls instead of building
+**Changed.** `deploy.yml` ran a single SSH job that did `git pull` + `docker compose build` on the production server itself — every deploy spent server CPU rebuilding both images with no addressable artifact to roll back to. Split into two jobs: `build-and-push` (GitHub-hosted runner, builds via the new `docker-compose.ci.yml`, tags `IMAGE_TAG=${{ github.sha }}`, pushes to `gcr.io`) and `deploy` (`needs: build-and-push`, SSH job, now pulls the tagged images with a read-only credential instead of building). `docker-compose.prod.yml`'s `app`/`web` services now reference `image: gcr.io/.../bbpm-{api,web}:${IMAGE_TAG}` instead of `build:`. Requires new GitHub secrets `GCR_PROJECT_ID`, `GCR_SA_KEY` (write, used by `build-and-push`) and `GCR_SA_KEY_READONLY` (read-only, used by `deploy`) — not yet configured, so the pipeline will fail closed until they're added rather than silently falling back to the old build-on-server path.
+- Source: `.github/workflows/deploy.yml`, `docker-compose.prod.yml`, `docker-compose.ci.yml`.
 
 ### 2026-04-23 — Migration idempotency hardening (09f8c4f)
 **Fixed.** A failed prod deploy was traced to a non-idempotent migration. Re-ran the migration step on existing rows with safe `IF NOT EXISTS` / re-checked guards.
