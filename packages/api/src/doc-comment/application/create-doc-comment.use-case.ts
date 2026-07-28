@@ -27,6 +27,8 @@ export interface CreateDocCommentCommand {
   anchor: Partial<DocCommentAnchor> | null;
   /** Set to reply to an existing thread head. */
   parentId: string | null;
+  /** Member session: the comment is signed with this BB PM account. */
+  userId: string | null;
   guestName: string | null;
   authorKey: string | null;
 }
@@ -77,11 +79,18 @@ export class CreateDocCommentUseCase {
       textOffset: anchor.textOffset,
       body: body.value,
       parentId,
-      guestName: normalizeDisplayName(cmd.guestName),
+      userId: cmd.userId,
+      // A member's name comes off their user row, so a `guestName` sent
+      // alongside a member session is dropped rather than stored — it
+      // would be a second, editable name for the same author.
+      guestName: cmd.userId ? null : normalizeDisplayName(cmd.guestName),
       authorKey: cmd.authorKey,
       shareLinkId: cmd.shareLinkId,
     });
 
-    return toCommentView(row, cmd.authorKey);
+    return toCommentView(row, {
+      authorKey: cmd.authorKey,
+      userId: cmd.userId,
+    });
   }
 }

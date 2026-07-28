@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ApiKeyModule } from '../api-key/api-key.module.js';
 import { IssueModule } from '../issue/issue.module.js';
 import { CreateShareLinkUseCase } from './application/create-share-link.use-case.js';
 import { GetPublicTimelineUseCase } from './application/get-public-timeline.use-case.js';
 import { RevokeShareLinkUseCase } from './application/revoke-share-link.use-case.js';
 import { RotatePasscodeUseCase } from './application/rotate-passcode.use-case.js';
 import { UnlockShareLinkUseCase } from './application/unlock-share-link.use-case.js';
+import { UnlockShareLinkAsMemberUseCase } from './application/unlock-share-link-as-member.use-case.js';
 import { VerifyShareAccessUseCase } from './application/verify-share-access.use-case.js';
 import { SHARE_LINK_REPOSITORY } from './application/ports/share-link.repository.js';
 import { ShareLinkPrismaRepository } from './infrastructure/share-link.prisma.repository.js';
@@ -29,7 +31,10 @@ import { ShareJwtStrategy } from './strategies/share-jwt.strategy.js';
   // share tokens are signed with JWT_SHARE_SECRET, not JWT_SECRET.
   // Verification goes through ShareJwtStrategy which builds its own
   // passport-jwt instance with the right secret.
-  imports: [PassportModule, JwtModule.register({}), IssueModule],
+  // ApiKeyModule supplies `ApiKeyGuard`, which is how the member unlock
+  // route accepts an OAuth access token or a personal API key without
+  // pulling the whole user-JWT session into this public surface.
+  imports: [PassportModule, JwtModule.register({}), IssueModule, ApiKeyModule],
   controllers: [ShareLinkController, ShareLinkPublicController],
   providers: [
     ShareLinkPrismaRepository,
@@ -38,6 +43,7 @@ import { ShareJwtStrategy } from './strategies/share-jwt.strategy.js';
     RevokeShareLinkUseCase,
     RotatePasscodeUseCase,
     UnlockShareLinkUseCase,
+    UnlockShareLinkAsMemberUseCase,
     GetPublicTimelineUseCase,
     VerifyShareAccessUseCase,
     ShareJwtStrategy,

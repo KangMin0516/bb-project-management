@@ -15,7 +15,9 @@
  * - **Resolve is a property of the head.** Replies are not individually
  *   resolvable — the thread is the unit of "dealt with".
  * - **A guest's `authorKey` is their only credential.** It authorises
- *   exactly one row and is never echoed back to any client.
+ *   exactly one row and is never echoed back to any client. A member who
+ *   unlocked with a BB PM credential is identified by `userId` instead,
+ *   which survives clearing the browser's storage.
  */
 
 export const MAX_BODY_LENGTH = 4000;
@@ -38,8 +40,19 @@ export interface DocCommentRow {
   id: string;
   parentId: string | null;
   authorKey: string | null;
+  userId: string | null;
   resolvedAt: Date | null;
   resolvedBy: string | null;
+}
+
+/**
+ * Who is asking. A passcode guest has only `authorKey`, the opaque id
+ * their browser minted. A member unlocked with a BB PM credential and
+ * carries `userId` in their share JWT as well.
+ */
+export interface DocCommentCaller {
+  authorKey: string | null;
+  userId: string | null;
 }
 
 export type ValidationFailure = { field: string; message: string };
@@ -171,17 +184,25 @@ export function checkReplyTarget(
 }
 
 /**
- * Only the row's own author may delete it. `authorKey` is the guest's
- * bearer capability for that one row; a comment with no key on file
- * (posted by an authenticated user, or predating this field) cannot be
- * deleted through the public surface at all.
+ * Only the row's own author may delete it.
+ *
+ * Two kinds of ownership, checked in that order:
+ *
+ * 1. **Account.** When both the row and the caller carry a `userId`, that
+ *    is the answer — a member who signed in on a second machine still
+ *    owns their comment, and a *different* member sharing the same
+ *    browser (so, the same `authorKey`) does not.
+ * 2. **Browser key.** Otherwise fall back to the guest's per-browser
+ *    capability. A row with neither key on file cannot be deleted
+ *    through the public surface at all.
  */
 export function canDelete(
   row: DocCommentRow,
-  authorKey: string | null,
+  caller: DocCommentCaller,
 ): boolean {
-  if (!row.authorKey || !authorKey) return false;
-  return row.authorKey === authorKey;
+  if (caller.userId && row.userId) return row.userId === caller.userId;
+  if (!row.authorKey || !caller.authorKey) return false;
+  return row.authorKey === caller.authorKey;
 }
 
 /**
@@ -192,9 +213,9 @@ export function canDelete(
  */
 export function canDeleteHeadWithReplies(
   replies: DocCommentRow[],
-  authorKey: string | null,
+  caller: DocCommentCaller,
 ): boolean {
-  return replies.every((r) => r.authorKey && r.authorKey === authorKey);
+  return replies.every((r) => canDelete(r, caller));
 }
 
 /**

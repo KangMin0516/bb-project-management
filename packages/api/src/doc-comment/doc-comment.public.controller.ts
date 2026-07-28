@@ -63,9 +63,12 @@ const READ_LIMIT_PER_MINUTE = 240;
  *   intended, and the blast radius should be "some spam we can delete",
  *   not "unbounded writes".
  *
- * Identity is the `X-Doc-Author-Key` header: an opaque id the browser
- * mints once and keeps. It is not authentication — it only decides which
- * comments the caller may delete, and which come back flagged `mine`.
+ * Identity comes from one of two places. A guest sends the
+ * `X-Doc-Author-Key` header: an opaque id the browser mints once and
+ * keeps, which is not authentication — it only decides which comments
+ * the caller may delete, and which come back flagged `mine`. A member
+ * who unlocked with a BB PM credential carries `userId` inside the share
+ * JWT itself, and their comments are signed with that account.
  */
 @ApiTags('Public Share')
 @Controller('public/share/:token/doc-comments')
@@ -93,7 +96,7 @@ export class DocCommentPublicController {
     return this.listUseCase.execute({
       projectId: project.id,
       docKey: docKey ?? '/',
-      authorKey: normalizeAuthorKey(authorKey),
+      caller: callerOf(req, authorKey),
     });
   }
 
@@ -115,6 +118,7 @@ export class DocCommentPublicController {
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
     const { project, link } = await this.verify(token, req);
+    const caller = callerOf(req, authorKey);
     return this.createUseCase.execute({
       projectId: project.id,
       shareLinkId: link.id,
@@ -122,8 +126,9 @@ export class DocCommentPublicController {
       body: dto.body,
       anchor: dto.anchor ?? null,
       parentId: dto.parentId ?? null,
+      userId: caller.userId,
       guestName: dto.guestName ?? null,
-      authorKey: normalizeAuthorKey(authorKey),
+      authorKey: caller.authorKey,
     });
   }
 
@@ -142,7 +147,8 @@ export class DocCommentPublicController {
       commentId,
       resolved: dto.resolved,
       by: dto.by ?? null,
-      authorKey: normalizeAuthorKey(authorKey),
+      memberName: claimsOf(req)?.userName ?? null,
+      caller: callerOf(req, authorKey),
     });
   }
 
@@ -158,7 +164,7 @@ export class DocCommentPublicController {
     return this.deleteUseCase.execute({
       projectId: project.id,
       commentId,
-      authorKey: normalizeAuthorKey(authorKey),
+      caller: callerOf(req, authorKey),
     });
   }
 
@@ -169,6 +175,19 @@ export class DocCommentPublicController {
       scope: 'COMMENT',
     });
   }
+}
+
+/**
+ * Fold the two identity sources into the one shape the use cases take.
+ * `userId` comes off the verified share JWT and is therefore trusted;
+ * the header is client-supplied. Both may be present — a member's
+ * browser keeps sending the key it minted before they signed in.
+ */
+function callerOf(req: Request, authorKey: string | undefined) {
+  return {
+    authorKey: normalizeAuthorKey(authorKey),
+    userId: claimsOf(req)?.userId ?? null,
+  };
 }
 
 /**

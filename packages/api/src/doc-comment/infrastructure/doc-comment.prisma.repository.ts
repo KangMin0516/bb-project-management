@@ -34,6 +34,7 @@ const AUTH_SELECT = {
   docKey: true,
   parentId: true,
   authorKey: true,
+  userId: true,
   resolvedAt: true,
   resolvedBy: true,
 } as const;
@@ -110,6 +111,7 @@ export class DocCommentPrismaRepository implements DocCommentRepository {
         textOffset: input.textOffset,
         body: input.body,
         parentId: input.parentId,
+        userId: input.userId,
         guestName: input.guestName,
         authorKey: input.authorKey,
         shareLinkId: input.shareLinkId,

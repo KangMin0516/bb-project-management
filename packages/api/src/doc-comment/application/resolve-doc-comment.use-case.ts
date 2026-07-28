@@ -7,6 +7,7 @@ import {
 import {
   nextResolveState,
   normalizeDisplayName,
+  type DocCommentCaller,
 } from '../domain/doc-comment.entity.js';
 import {
   DOC_COMMENT_REPOSITORY,
@@ -18,9 +19,15 @@ export interface ResolveDocCommentCommand {
   projectId: string;
   commentId: string;
   resolved: boolean;
-  /** Display name to stamp on the resolve; anyone with the link may. */
+  /** Display name a guest asks us to stamp; anyone with the link may. */
   by: string | null;
-  authorKey: string | null;
+  /**
+   * The member's own name from their share JWT. Wins over `by`, which is
+   * whatever the browser sent — once we know who is asking, there is no
+   * reason to let them sign the resolve as somebody else.
+   */
+  memberName: string | null;
+  caller: DocCommentCaller;
 }
 
 @Injectable()
@@ -43,7 +50,7 @@ export class ResolveDocCommentUseCase {
     const next = nextResolveState(
       row,
       cmd.resolved,
-      normalizeDisplayName(cmd.by),
+      normalizeDisplayName(cmd.memberName ?? cmd.by),
       new Date(),
     );
     const updated = await this.repo.setResolved(
@@ -51,6 +58,6 @@ export class ResolveDocCommentUseCase {
       next.resolvedAt,
       next.resolvedBy,
     );
-    return toCommentView(updated, cmd.authorKey);
+    return toCommentView(updated, cmd.caller);
   }
 }

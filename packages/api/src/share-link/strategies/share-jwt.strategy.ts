@@ -9,6 +9,17 @@ export interface SharePayload {
   shareLinkId: string;
   projectId: string;
   scopes: ShareScopeLiteral[];
+  /**
+   * Present only on a *member* session, minted by
+   * `UnlockShareLinkAsMemberUseCase` after a BB PM credential proved
+   * both who the caller is and that they belong to the project. A
+   * passcode guest has neither field, and the difference is what
+   * decides whether a comment is signed with a real account or a typed
+   * display name.
+   */
+  userId?: string;
+  /** Snapshot display name, used to stamp `resolvedBy`. */
+  userName?: string;
 }
 
 /**
