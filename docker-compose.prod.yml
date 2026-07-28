@@ -49,7 +49,7 @@ services:
         max-file: "3"
 
   app:
-    image: ghcr.io/seo-burning/bbpm-api:${IMAGE_TAG:?IMAGE_TAG must be set}
+    image: ghcr.io/${GHCR_OWNER:-burningbrosdabi}/bbpm-api:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: bbpm-app
     environment:
       - NODE_ENV=production
@@ -101,7 +101,7 @@ services:
         max-file: "3"
 
   web:
-    image: ghcr.io/seo-burning/bbpm-web:${IMAGE_TAG:?IMAGE_TAG must be set}
+    image: ghcr.io/${GHCR_OWNER:-burningbrosdabi}/bbpm-web:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: bbpm-web
     ports:
       - "${APP_PORT:-3000}:3000"

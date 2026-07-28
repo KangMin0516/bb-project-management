@@ -28,14 +28,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR_OWNER follows the repo. It used to be hardcoded in the compose
+      # files, so transferring the repo to another org broke `Push images`
+      # with "permission_denied: The requested installation does not exist"
+      # — GITHUB_TOKEN is scoped to the *current* owner and cannot write
+      # packages under the old namespace.
       - name: Build images
         env:
           IMAGE_TAG: ${{ github.sha }}
+          GHCR_OWNER: ${{ github.repository_owner }}
         run: docker compose -f docker-compose.ci.yml build
 
       - name: Push images
         env:
           IMAGE_TAG: ${{ github.sha }}
+          GHCR_OWNER: ${{ github.repository_owner }}
         run: docker compose -f docker-compose.ci.yml push
 
       # Every merge pushes a new commit-sha-tagged image and nothing ever
@@ -101,13 +108,16 @@ jobs:
           APP_PORT: ${{ vars.APP_PORT }}
           DB_PORT: ${{ vars.DB_PORT }}
           DOMAIN: ${{ vars.DOMAIN }}
+          # Must match what `Push images` used, or the server pulls a tag
+          # from a namespace nothing was pushed to.
+          GHCR_OWNER: ${{ github.repository_owner }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           command_timeout: 15m
-          envs: GH_TOKEN,GHCR_ACTOR,GHCR_TOKEN,IMAGE_TAG,JWT_SECRET,JWT_SHARE_SECRET,SHARE_JWT_EXPIRES_IN,SHARE_LINK_PASSCODE_FAIL_THRESHOLD,SHARE_LINK_LOCKOUT_MINUTES,ADMIN_EMAIL,ADMIN_PASSWORD,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,CORS_ORIGINS,AWS_S3_BUCKET,AWS_S3_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,SLACK_CLIENT_ID,SLACK_CLIENT_SECRET,SLACK_REDIRECT_URI,ENCRYPTION_KEY,SLACK_SIGNING_SECRET,FRONTEND_URL,ANTHROPIC_API_KEY,APP_PORT,DB_PORT,DOMAIN
+          envs: GH_TOKEN,GHCR_ACTOR,GHCR_TOKEN,GHCR_OWNER,IMAGE_TAG,JWT_SECRET,JWT_SHARE_SECRET,SHARE_JWT_EXPIRES_IN,SHARE_LINK_PASSCODE_FAIL_THRESHOLD,SHARE_LINK_LOCKOUT_MINUTES,ADMIN_EMAIL,ADMIN_PASSWORD,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,CORS_ORIGINS,AWS_S3_BUCKET,AWS_S3_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,SLACK_CLIENT_ID,SLACK_CLIENT_SECRET,SLACK_REDIRECT_URI,ENCRYPTION_KEY,SLACK_SIGNING_SECRET,FRONTEND_URL,ANTHROPIC_API_KEY,APP_PORT,DB_PORT,DOMAIN
           script: |
             set -e
 
@@ -158,6 +168,7 @@ jobs:
             APP_PORT=${APP_PORT:-3000}
             DB_PORT=${DB_PORT:-5433}
             IMAGE_TAG=$IMAGE_TAG
+            GHCR_OWNER=${GHCR_OWNER:-burningbrosdabi}
             NODE_ENV=production
             ENVEOF
             sed -i 's/^            //' .env

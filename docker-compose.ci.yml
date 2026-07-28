@@ -30,7 +30,7 @@ services:
       context: .
       dockerfile: packages/api/Dockerfile
       target: production
-    image: ghcr.io/seo-burning/bbpm-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-burningbrosdabi}/bbpm-api:${IMAGE_TAG:-latest}
 
   web:
     build:
@@ -39,4 +39,4 @@ services:
       target: production
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-    image: ghcr.io/seo-burning/bbpm-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-burningbrosdabi}/bbpm-web:${IMAGE_TAG:-latest}
