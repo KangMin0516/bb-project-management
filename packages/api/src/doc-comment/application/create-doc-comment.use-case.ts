@@ -11,7 +11,9 @@ import {
   normalizeDisplayName,
   normalizeDocKey,
   type DocCommentAnchor,
+  type ProjectRoleLiteral,
 } from '../domain/doc-comment.entity.js';
+import { threadVisibleTo } from './visibility.js';
 import {
   DOC_COMMENT_REPOSITORY,
   type DocCommentRepository,
@@ -29,6 +31,8 @@ export interface CreateDocCommentCommand {
   parentId: string | null;
   /** Member session: the comment is signed with this BB PM account. */
   userId: string | null;
+  /** Project role behind that account; null for a passcode guest. */
+  role: ProjectRoleLiteral | null;
   guestName: string | null;
   authorKey: string | null;
 }
@@ -61,6 +65,19 @@ export class CreateDocCommentUseCase {
           'Replies must attach to the top comment of a thread',
         );
       }
+      // You may only answer a question you were allowed to read. Same 404
+      // as a missing thread on purpose — a distinct 403 would confirm that
+      // the id belongs to a conversation the caller can't see.
+      const caller = {
+        authorKey: cmd.authorKey,
+        userId: cmd.userId,
+        role: cmd.role,
+      };
+      const visible = await threadVisibleTo(parent!, caller, () =>
+        this.repo.findReplies(parent!.id),
+      );
+      if (!visible)
+        throw new NotFoundException('That comment thread no longer exists');
       parentId = parent!.id;
       // The head owns both the document and the anchor. Trusting the
       // client's docKey here would let a reply drift onto another page
@@ -91,6 +108,7 @@ export class CreateDocCommentUseCase {
     return toCommentView(row, {
       authorKey: cmd.authorKey,
       userId: cmd.userId,
+      role: cmd.role,
     });
   }
 }

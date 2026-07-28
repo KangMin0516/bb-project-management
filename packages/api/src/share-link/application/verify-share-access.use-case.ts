@@ -26,6 +26,13 @@ export interface VerifyShareAccessCommand {
 export interface VerifiedShareAccess {
   link: ShareLinkRow;
   project: { id: string; key: string; name: string };
+  /**
+   * The signed-in member behind this session, or null for a passcode
+   * guest. Read fresh on every call rather than trusted from the JWT: a
+   * role change, or a membership pulled entirely, has to bite now and not
+   * whenever a 12h token happens to lapse.
+   */
+  member: { id: string; role: 'ADMIN' | 'PM' | 'DEVELOPER' } | null;
 }
 
 /**
@@ -88,6 +95,27 @@ export class VerifyShareAccessUseCase {
     return {
       link,
       project: { id: project.id, key: project.key, name: project.name },
+      member: await this.resolveMember(claims.userId, project.id),
     };
+  }
+
+  /**
+   * A member session has to still be a membership. Losing the row after
+   * unlock is a 403, not a silent demotion to guest: the session was
+   * issued on the strength of that membership, and quietly continuing with
+   * fewer rights would hide the fact that access was withdrawn.
+   */
+  private async resolveMember(
+    userId: string | undefined,
+    projectId: string,
+  ): Promise<VerifiedShareAccess['member']> {
+    if (!userId) return null;
+    const membership = await this.prisma.projectMember.findUnique({
+      where: { userId_projectId: { userId, projectId } },
+      select: { role: true },
+    });
+    if (!membership)
+      throw new ForbiddenException('You are no longer a member of this project');
+    return { id: userId, role: membership.role };
   }
 }

@@ -28,9 +28,32 @@
   - `PATCH /api/public/share/:token/doc-comments/:commentId/resolve` — resolve/reopen a thread head (60/min)
   - `DELETE /api/public/share/:token/doc-comments/:commentId` — delete own comment (40/min)
 - **Identity, two sources.** A guest sends `X-Doc-Author-Key`, an opaque per-browser id — not authentication; it only decides which rows the caller may delete and which come back flagged `mine`. A member who unlocked via `POST /api/public/share/:token/unlock-member` (BB PM OAuth token or API key, plus a `ProjectMember` row on the project) carries `userId` inside the share JWT, and their comments are signed with that account. Account identity beats browser key wherever the two disagree.
+- **Visibility is role-scoped.** A thread is *internal* (a BB PM user started it) or *external* (a guest did). Guests see external, DEVELOPERs see internal plus threads they posted in, PM/ADMIN see both; PM/ADMIN may also delete anyone's comment. Role is re-read per request, not taken from the JWT. See the 2026-07-28 entry below for the full table and reasoning.
 - **No member-facing surface yet.** Comments are not visible inside the BB PM web UI — see *Open questions* below.
 
 ## Timeline
+
+### 2026-07-28 — Internal and client comments stop being the same pile
+
+**Added. Security.** Until member sign-in landed earlier today, every comment was a share-link guest's and everyone holding the link could read all of them — which was fine, because there was nothing to separate. The moment the team could comment as themselves, "internal" became a real category with nothing enforcing it: **a client holding the passcode could read the team's internal notes**, and role played no part anywhere — `ProjectRole` was never read on this surface.
+
+A thread is now **internal** when a BB PM user started it and **external** when a guest did, and that one axis decides visibility:
+
+| Caller | Sees | Deletes | Resolves |
+|---|---|---|---|
+| Passcode guest | external threads | own (browser key) | anything they can see |
+| DEVELOPER | internal threads, plus any thread they posted in | own (account) | anything they can see |
+| PM / ADMIN | everything | anything | anything |
+
+- **Classified by the head, never per comment.** A thread is one conversation; hiding half would leave a reply dangling under a question the reader can't see. The whole thread goes or none of it does.
+- **One softening, deliberate:** a member keeps seeing a thread they have posted in whatever its head is. Otherwise a role change — or any thread from before this rule — makes somebody's own words vanish, and a comment tool that eats your comment is worse than one that shows more than it strictly must.
+- **404, not 403, for a thread you may not see.** Delete, resolve and reply-to all check visibility first and answer with the same "no longer exists" as a genuinely missing row, so an id can't be probed for existence. A thread you *can* see but don't own still gets 403 — the distinction is deliberate.
+- **Role is re-read from the database on every call**, in `VerifyShareAccessUseCase`, not trusted from the 12h share JWT. A demotion or a revoked membership bites now; a member whose `ProjectMember` row is gone gets 403 rather than being quietly downgraded to guest, since the session was issued on the strength of that membership.
+- **`canDelete` is now a field on the view.** The client stopped inferring the delete button from `mine`, so the UI can't offer a moderator action the use case would refuse — or hide one it would allow.
+- **`/doc-comments/counts` counts the filtered set**, not a `GROUP BY` over the table: a badge reading "3" on a page where the caller can open nothing would leak that an internal conversation exists.
+- **Known consequence, worth stating plainly:** every comment that existed before member sign-in is guest-authored, so it is all *external*. DEVELOPERs therefore see very little until internal threads accumulate, and PM/ADMIN see the backlog as before.
+- Verified against a scratch Postgres over HTTP with four credentials (guest, DEVELOPER, a second DEVELOPER, PM) and three threads (external, internal, mixed): each role's read set is exactly the table above; guest→internal delete/resolve/reply all 404; a non-participant DEVELOPER replying to a client thread 404s; a DEVELOPER deleting a PM's comment 403s; a PM deletes a client thread that carries someone else's reply (200, moderator bypass of the usual 409); and deleting the `ProjectMember` row mid-session turns the next read into 403.
+- Source: `packages/api/src/doc-comment/domain/doc-comment.entity.ts` (+ spec), `packages/api/src/doc-comment/application/visibility.ts`, `list-doc-comments.use-case.ts` (+ spec), `create-doc-comment.use-case.ts`, `resolve-doc-comment.use-case.ts`, `delete-doc-comment.use-case.ts`, `doc-comment.view.ts`, `doc-comment.public.controller.ts`, `packages/api/src/share-link/application/verify-share-access.use-case.ts`.
 
 ### 2026-07-28 — A project-wide read, so the rail can list the whole review
 

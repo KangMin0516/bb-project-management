@@ -14,6 +14,7 @@ import {
   type DocCommentRepository,
 } from './ports/doc-comment.repository.js';
 import { toCommentView, type DocCommentView } from './doc-comment.view.js';
+import { threadVisibleTo } from './visibility.js';
 
 export interface ResolveDocCommentCommand {
   projectId: string;
@@ -46,6 +47,12 @@ export class ResolveDocCommentUseCase {
       throw new BadRequestException(
         'Only the top comment of a thread can be resolved',
       );
+    // Resolve stays open to anyone holding the link — but only for the
+    // threads that link lets them read.
+    const visible = await threadVisibleTo(row, cmd.caller, () =>
+      this.repo.findReplies(row.id),
+    );
+    if (!visible) throw new NotFoundException('Comment not found');
 
     const next = nextResolveState(
       row,

@@ -45,14 +45,62 @@ export interface DocCommentRow {
   resolvedBy: string | null;
 }
 
+/** Mirrors Prisma's `ProjectRole`. A passcode guest has no role. */
+export type ProjectRoleLiteral = 'ADMIN' | 'PM' | 'DEVELOPER';
+
 /**
  * Who is asking. A passcode guest has only `authorKey`, the opaque id
  * their browser minted. A member unlocked with a BB PM credential and
- * carries `userId` in their share JWT as well.
+ * carries `userId` plus their project role — re-read per request, so a
+ * change in role or a revoked membership bites now instead of when their
+ * token lapses.
  */
 export interface DocCommentCaller {
   authorKey: string | null;
   userId: string | null;
+  role: ProjectRoleLiteral | null;
+}
+
+/**
+ * PM and ADMIN are the roles that talk to the client, so they are the
+ * ones who see both sides of the review and can clear up whatever lands
+ * in it. Everyone else answers only for their own comments.
+ */
+export function canModerate(caller: DocCommentCaller): boolean {
+  return caller.role === 'ADMIN' || caller.role === 'PM';
+}
+
+/**
+ * A thread is *internal* when a BB PM user started it and *external* when
+ * a share-link guest did. That is the whole visibility axis:
+ *
+ * - A guest sees external threads. The team's internal notes are not for
+ *   the client — a gap that only opened once members could sign in and
+ *   comment as themselves, because before that every comment was a guest's.
+ * - A DEVELOPER sees internal threads. The client's questions are the PM's
+ *   conversation to run.
+ * - PM / ADMIN see both.
+ *
+ * Classified by the **head**, never per comment: a thread is one
+ * conversation, and hiding half would leave a reply dangling under a
+ * question the reader can't see.
+ *
+ * `participantUserIds` is the one softening. A member who has posted in a
+ * thread keeps seeing it whatever its head is — otherwise a role change,
+ * or a thread predating this rule, makes somebody's own words vanish, and
+ * a comment tool that eats your comment is worse than one that shows you
+ * more than it strictly must.
+ */
+export function canSeeThread(
+  head: { userId: string | null },
+  caller: DocCommentCaller,
+  participantUserIds: readonly (string | null)[] = [],
+): boolean {
+  if (canModerate(caller)) return true;
+  const internal = head.userId !== null;
+  if (caller.userId)
+    return internal || participantUserIds.includes(caller.userId);
+  return !internal;
 }
 
 export type ValidationFailure = { field: string; message: string };
@@ -184,9 +232,14 @@ export function checkReplyTarget(
 }
 
 /**
- * Only the row's own author may delete it.
+ * Who may delete a row.
  *
- * Two kinds of ownership, checked in that order:
+ * A moderator (PM / ADMIN) may delete anything — spam and comments filed
+ * against the wrong feature need somebody able to clear them, and the
+ * alternative is a hand-written DELETE against the database.
+ *
+ * Otherwise it is the row's own author, with two kinds of ownership
+ * checked in this order:
  *
  * 1. **Account.** When both the row and the caller carry a `userId`, that
  *    is the answer — a member who signed in on a second machine still
@@ -200,6 +253,7 @@ export function canDelete(
   row: DocCommentRow,
   caller: DocCommentCaller,
 ): boolean {
+  if (canModerate(caller)) return true;
   if (caller.userId && row.userId) return row.userId === caller.userId;
   if (!row.authorKey || !caller.authorKey) return false;
   return row.authorKey === caller.authorKey;
@@ -210,6 +264,9 @@ export function canDelete(
  * when somebody else has replied. The author can still delete a thread
  * that only they have posted in. Anyone may resolve instead — that is
  * the non-destructive way to close a thread.
+ *
+ * A moderator is exempt: taking a spam thread out includes the replies
+ * it attracted, and `canDelete` already granted them the head.
  */
 export function canDeleteHeadWithReplies(
   replies: DocCommentRow[],
