@@ -127,12 +127,23 @@ jobs:
 
             echo "=== Starting deployment ==="
 
-            # Clone or update repository
+            # Clone or update repository.
+            #
+            # Fetches the URL built above rather than whatever `origin`
+            # happens to point at. The server's clone predates the move to
+            # the burningbrosdabi org, so its `origin` still named the old
+            # owner and every deploy died on:
+            #
+            #   remote: Write access to repository not granted.
+            #   fatal: unable to access 'https://github.com/<old-org>/…': 403
+            #
+            # Fetching by URL also keeps the token out of the box's
+            # .git/config — `git remote set-url` would persist it on disk.
             if [ -d "$APP_DIR/.git" ]; then
               echo "Pulling latest changes..."
               cd $APP_DIR
-              git fetch origin main
-              git reset --hard origin/main
+              git fetch "$REPO_URL" main
+              git reset --hard FETCH_HEAD
             else
               echo "Cloning repository..."
               rm -rf $APP_DIR
