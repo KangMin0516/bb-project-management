@@ -14,6 +14,7 @@ import {
   DOC_COMMENT_REPOSITORY,
   type DocCommentRepository,
 } from './ports/doc-comment.repository.js';
+import { threadVisibleTo } from './visibility.js';
 
 export interface DeleteDocCommentCommand {
   projectId: string;
@@ -31,6 +32,19 @@ export class DeleteDocCommentUseCase {
   async execute(cmd: DeleteDocCommentCommand): Promise<{ id: string }> {
     const row = await this.repo.findAuthRow(cmd.commentId, cmd.projectId);
     if (!row) throw new NotFoundException('Comment not found');
+
+    // A reply's visibility is its head's, so resolve the head first. An
+    // invisible thread 404s rather than 403s: the caller shouldn't learn
+    // that the id exists.
+    const head =
+      row.parentId === null
+        ? row
+        : await this.repo.findAuthRow(row.parentId, cmd.projectId);
+    if (!head) throw new NotFoundException('Comment not found');
+    const visible = await threadVisibleTo(head, cmd.caller, () =>
+      this.repo.findReplies(head.id),
+    );
+    if (!visible) throw new NotFoundException('Comment not found');
 
     if (!canDelete(row, cmd.caller))
       throw new ForbiddenException('You can only delete your own comment');

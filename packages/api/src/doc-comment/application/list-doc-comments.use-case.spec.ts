@@ -46,7 +46,9 @@ function useCaseOver(rows: DocCommentRecord[]) {
   };
 }
 
-const CALLER = { authorKey: null, userId: null };
+const GUEST = { authorKey: 'k-1', userId: null, role: null };
+const DEV = { authorKey: null, userId: 'u-1', role: 'DEVELOPER' as const };
+const PM = { authorKey: null, userId: 'u-9', role: 'PM' as const };
 
 describe('ListAllDocCommentsUseCase', () => {
   it('returns threads from every document, each keeping its docKey', async () => {
@@ -54,7 +56,7 @@ describe('ListAllDocCommentsUseCase', () => {
       record({ id: 'a', docKey: '/f/js-auth' }),
       record({ id: 'b', docKey: '/m/crm/3' }),
     ]);
-    const result = await useCase.execute({ projectId: 'p-1', caller: CALLER });
+    const result = await useCase.execute({ projectId: 'p-1', caller: PM });
     expect(result.threads.map((t) => [t.id, t.docKey])).toEqual([
       ['a', '/f/js-auth'],
       ['b', '/m/crm/3'],
@@ -67,8 +69,80 @@ describe('ListAllDocCommentsUseCase', () => {
       record({ id: 'head', docKey: '/m/crm/3' }),
       record({ id: 'reply', docKey: '/m/crm/3', parentId: 'head' }),
     ]);
-    const result = await useCase.execute({ projectId: 'p-1', caller: CALLER });
+    const result = await useCase.execute({ projectId: 'p-1', caller: PM });
     expect(result.threads).toHaveLength(1);
+    expect(result.threads[0].replies.map((r) => r.id)).toEqual(['reply']);
+  });
+
+  it('hides internal threads from a guest and the client’s from a DEVELOPER', async () => {
+    const rows = [
+      record({ id: 'external', author: { user: null, guestName: 'Client' } }),
+      record({
+        id: 'internal',
+        author: {
+          user: { id: 'u-7', name: 'Thu', avatar: null },
+          guestName: null,
+        },
+      }),
+    ];
+
+    const asGuest = await useCaseOver(rows).useCase.execute({
+      projectId: 'p-1',
+      caller: GUEST,
+    });
+    expect(asGuest.threads.map((t) => t.id)).toEqual(['external']);
+
+    const asDev = await useCaseOver(rows).useCase.execute({
+      projectId: 'p-1',
+      caller: DEV,
+    });
+    expect(asDev.threads.map((t) => t.id)).toEqual(['internal']);
+
+    const asPm = await useCaseOver(rows).useCase.execute({
+      projectId: 'p-1',
+      caller: PM,
+    });
+    expect(asPm.threads.map((t) => t.id)).toEqual(['external', 'internal']);
+  });
+
+  it('drops a whole thread, not just its head, when it is not visible', async () => {
+    // A dangling reply would leak both that the question exists and what
+    // the answer to it was.
+    const rows = [
+      record({ id: 'head', author: { user: null, guestName: 'Client' } }),
+      record({
+        id: 'reply',
+        parentId: 'head',
+        author: {
+          user: { id: 'u-7', name: 'Thu', avatar: null },
+          guestName: null,
+        },
+      }),
+    ];
+    const result = await useCaseOver(rows).useCase.execute({
+      projectId: 'p-1',
+      caller: DEV,
+    });
+    expect(result.threads).toEqual([]);
+  });
+
+  it('keeps a thread the member posted in, whoever started it', async () => {
+    const rows = [
+      record({ id: 'head', author: { user: null, guestName: 'Client' } }),
+      record({
+        id: 'reply',
+        parentId: 'head',
+        author: {
+          user: { id: 'u-1', name: 'Dev', avatar: null },
+          guestName: null,
+        },
+      }),
+    ];
+    const result = await useCaseOver(rows).useCase.execute({
+      projectId: 'p-1',
+      caller: DEV,
+    });
+    expect(result.threads.map((t) => t.id)).toEqual(['head']);
     expect(result.threads[0].replies.map((r) => r.id)).toEqual(['reply']);
   });
 
@@ -78,7 +152,7 @@ describe('ListAllDocCommentsUseCase', () => {
       record({ id: `c-${i}` }),
     );
     const { useCase, findByProject } = useCaseOver(rows);
-    const result = await useCase.execute({ projectId: 'p-1', caller: CALLER });
+    const result = await useCase.execute({ projectId: 'p-1', caller: PM });
 
     expect(findByProject).toHaveBeenCalledWith('p-1', MAX_PROJECT_COMMENTS);
     expect(result.truncated).toBe(true);

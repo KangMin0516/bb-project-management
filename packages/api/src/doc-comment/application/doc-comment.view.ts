@@ -1,4 +1,7 @@
-import type { DocCommentCaller } from '../domain/doc-comment.entity.js';
+import {
+  canDelete,
+  type DocCommentCaller,
+} from '../domain/doc-comment.entity.js';
 import type { DocCommentRecord } from './ports/doc-comment.repository.js';
 
 /**
@@ -22,8 +25,15 @@ export interface DocCommentView {
     textOffset: number | null;
   };
   author: { name: string; avatar: string | null; isGuest: boolean };
-  /** True when the caller owns this row — enables their delete UI. */
+  /** True when the caller wrote this row. Drives "your comment" affordances. */
   mine: boolean;
+  /**
+   * Whether the delete button should exist at all — own row, or a
+   * moderator's licence over anyone's. Sent as a flag rather than left to
+   * the client to infer, so the UI can't offer an action the use case
+   * would then refuse.
+   */
+  canDelete: boolean;
   resolvedAt: string | null;
   resolvedBy: string | null;
   createdAt: string;
@@ -69,6 +79,17 @@ function toView(
       isGuest: row.author.user === null,
     },
     mine: isMine(row, caller),
+    canDelete: canDelete(
+      {
+        id: row.id,
+        parentId: row.parentId,
+        authorKey: row.authorKey,
+        userId: row.author.user?.id ?? null,
+        resolvedAt: row.resolvedAt,
+        resolvedBy: row.resolvedBy,
+      },
+      caller,
+    ),
     resolvedAt: row.resolvedAt?.toISOString() ?? null,
     resolvedBy: row.resolvedBy,
     createdAt: row.createdAt.toISOString(),

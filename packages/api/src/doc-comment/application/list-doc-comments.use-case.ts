@@ -12,6 +12,7 @@ import {
   toThreadViews,
   type DocCommentThreadView,
 } from './doc-comment.view.js';
+import { visibleRecords } from './visibility.js';
 
 export interface ListDocCommentsQuery {
   projectId: string;
@@ -39,7 +40,7 @@ export class ListDocCommentsUseCase {
     const rows = await this.repo.findByDoc(query.projectId, docKey.value);
     return {
       docKey: docKey.value,
-      threads: toThreadViews(rows, query.caller),
+      threads: toThreadViews(visibleRecords(rows, query.caller), query.caller),
     };
   }
 }
@@ -79,9 +80,15 @@ export class ListAllDocCommentsUseCase {
       query.projectId,
       MAX_PROJECT_COMMENTS,
     );
+    // The cap applies before the visibility filter, so it counts what the
+    // project holds rather than what this caller is allowed to read —
+    // truncation is a property of the data, not of who is asking.
     const truncated = rows.length > MAX_PROJECT_COMMENTS;
     const kept = truncated ? rows.slice(0, MAX_PROJECT_COMMENTS) : rows;
-    return { threads: toThreadViews(kept, query.caller), truncated };
+    return {
+      threads: toThreadViews(visibleRecords(kept, query.caller), query.caller),
+      truncated,
+    };
   }
 }
 
@@ -93,10 +100,32 @@ export class CountDocCommentsUseCase {
   ) {}
 
   /**
-   * Per-document tallies for the whole project, so the spec site can
-   * badge its nav in one request instead of one per page.
+   * Per-document tallies for the whole project, so a client can badge its
+   * nav in one request instead of one per page.
+   *
+   * Counted from the same visibility-filtered set the list routes return,
+   * not from a `GROUP BY` over the table: a badge reading "3" on a page
+   * where the caller can open nothing would leak that an internal
+   * conversation exists. Costs a row read instead of an aggregate, which
+   * is affordable for a route nothing polls — the spec site now counts
+   * from the list it already holds.
    */
-  execute(projectId: string): Promise<DocCommentCount[]> {
-    return this.repo.countByProject(projectId);
+  async execute(
+    projectId: string,
+    caller: DocCommentCaller,
+  ): Promise<DocCommentCount[]> {
+    const rows = await this.repo.findByProject(projectId, MAX_PROJECT_COMMENTS);
+    const byDoc = new Map<string, DocCommentCount>();
+    for (const row of visibleRecords(rows, caller)) {
+      // Heads only: a reply belongs to its head's thread, so counting
+      // replies would inflate every badge.
+      if (row.parentId !== null) continue;
+      const entry =
+        byDoc.get(row.docKey) ?? { docKey: row.docKey, open: 0, resolved: 0 };
+      if (row.resolvedAt === null) entry.open += 1;
+      else entry.resolved += 1;
+      byDoc.set(row.docKey, entry);
+    }
+    return [...byDoc.values()];
   }
 }

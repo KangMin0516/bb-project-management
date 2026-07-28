@@ -17,7 +17,10 @@ import type { Request } from 'express';
 import { Public } from '../common/decorators/index.js';
 import { ShareAuthGuard } from '../share-link/guards/share-auth.guard.js';
 import { claimsOf } from '../share-link/strategies/share-jwt.strategy.js';
-import { VerifyShareAccessUseCase } from '../share-link/application/verify-share-access.use-case.js';
+import {
+  VerifyShareAccessUseCase,
+  type VerifiedShareAccess,
+} from '../share-link/application/verify-share-access.use-case.js';
 import { CreateDocCommentUseCase } from './application/create-doc-comment.use-case.js';
 import { DeleteDocCommentUseCase } from './application/delete-doc-comment.use-case.js';
 import {
@@ -27,7 +30,10 @@ import {
 } from './application/list-doc-comments.use-case.js';
 import { ResolveDocCommentUseCase } from './application/resolve-doc-comment.use-case.js';
 import { CreateDocCommentDto, ResolveDocCommentDto } from './dto/index.js';
-import { MAX_AUTHOR_KEY_LENGTH } from './domain/doc-comment.entity.js';
+import {
+  MAX_AUTHOR_KEY_LENGTH,
+  type DocCommentCaller,
+} from './domain/doc-comment.entity.js';
 
 /**
  * Reads need their own generous ceiling, well above the app-wide default
@@ -94,11 +100,11 @@ export class DocCommentPublicController {
     @Req() req: Request,
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
-    const { project } = await this.verify(token, req);
+    const { project, member } = await this.verify(token, req);
     return this.listUseCase.execute({
       projectId: project.id,
       docKey: docKey ?? '/',
-      caller: callerOf(req, authorKey),
+      caller: callerOf(member, authorKey),
     });
   }
 
@@ -118,18 +124,22 @@ export class DocCommentPublicController {
     @Req() req: Request,
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
-    const { project } = await this.verify(token, req);
+    const { project, member } = await this.verify(token, req);
     return this.listAllUseCase.execute({
       projectId: project.id,
-      caller: callerOf(req, authorKey),
+      caller: callerOf(member, authorKey),
     });
   }
 
   @Get('counts')
   @Throttle({ default: { ttl: 60_000, limit: READ_LIMIT_PER_MINUTE } })
-  async counts(@Param('token') token: string, @Req() req: Request) {
-    const { project } = await this.verify(token, req);
-    return this.countUseCase.execute(project.id);
+  async counts(
+    @Param('token') token: string,
+    @Req() req: Request,
+    @Headers('x-doc-author-key') authorKey?: string,
+  ) {
+    const { project, member } = await this.verify(token, req);
+    return this.countUseCase.execute(project.id, callerOf(member, authorKey));
   }
 
   @Post()
@@ -142,8 +152,8 @@ export class DocCommentPublicController {
     @Req() req: Request,
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
-    const { project, link } = await this.verify(token, req);
-    const caller = callerOf(req, authorKey);
+    const { project, link, member } = await this.verify(token, req);
+    const caller = callerOf(member, authorKey);
     return this.createUseCase.execute({
       projectId: project.id,
       shareLinkId: link.id,
@@ -152,6 +162,7 @@ export class DocCommentPublicController {
       anchor: dto.anchor ?? null,
       parentId: dto.parentId ?? null,
       userId: caller.userId,
+      role: caller.role,
       guestName: dto.guestName ?? null,
       authorKey: caller.authorKey,
     });
@@ -166,14 +177,14 @@ export class DocCommentPublicController {
     @Req() req: Request,
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
-    const { project } = await this.verify(token, req);
+    const { project, member } = await this.verify(token, req);
     return this.resolveUseCase.execute({
       projectId: project.id,
       commentId,
       resolved: dto.resolved,
       by: dto.by ?? null,
       memberName: claimsOf(req)?.userName ?? null,
-      caller: callerOf(req, authorKey),
+      caller: callerOf(member, authorKey),
     });
   }
 
@@ -185,11 +196,11 @@ export class DocCommentPublicController {
     @Req() req: Request,
     @Headers('x-doc-author-key') authorKey?: string,
   ) {
-    const { project } = await this.verify(token, req);
+    const { project, member } = await this.verify(token, req);
     return this.deleteUseCase.execute({
       projectId: project.id,
       commentId,
-      caller: callerOf(req, authorKey),
+      caller: callerOf(member, authorKey),
     });
   }
 
@@ -203,15 +214,20 @@ export class DocCommentPublicController {
 }
 
 /**
- * Fold the two identity sources into the one shape the use cases take.
- * `userId` comes off the verified share JWT and is therefore trusted;
- * the header is client-supplied. Both may be present — a member's
- * browser keeps sending the key it minted before they signed in.
+ * Fold the identity sources into the one shape the use cases take.
+ * `member` was re-read from the database by `VerifyShareAccessUseCase`, so
+ * the id and role are trusted and current; the header is client-supplied.
+ * Both may be present — a member's browser keeps sending the key it
+ * minted before they signed in.
  */
-function callerOf(req: Request, authorKey: string | undefined) {
+function callerOf(
+  member: VerifiedShareAccess['member'],
+  authorKey: string | undefined,
+): DocCommentCaller {
   return {
     authorKey: normalizeAuthorKey(authorKey),
-    userId: claimsOf(req)?.userId ?? null,
+    userId: member?.id ?? null,
+    role: member?.role ?? null,
   };
 }
 
