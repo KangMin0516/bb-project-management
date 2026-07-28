@@ -41,7 +41,7 @@ export default function ShareLinksSection({ projectId }: ShareLinksSectionProps)
                 : `${activeCount} active link${activeCount === 1 ? '' : 's'}`}
             </div>
             <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-              Passcode-gated read-only Timeline links for external clients.
+              Passcode-gated links for external clients, scoped per link.
               Manage, rotate passcodes, or revoke from the dedicated page.
             </p>
           </div>

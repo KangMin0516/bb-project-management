@@ -6,7 +6,17 @@ import api from '@/shared/api/client'
  * a separate instance with the share JWT.
  */
 
-export type ShareScope = 'TIMELINE' | 'BOARD' | 'CALENDAR' | 'LISTS'
+/**
+ * Mirrors the `ShareScope` enum in `schema.prisma`. `COMMENT` is the only
+ * one that grants a *write* (posting doc comments), so it is never
+ * implied by another scope and has to be ticked deliberately.
+ */
+export type ShareScope =
+  | 'TIMELINE'
+  | 'BOARD'
+  | 'CALENDAR'
+  | 'LISTS'
+  | 'COMMENT'
 
 export interface ShareLinkAdminView {
   id: string

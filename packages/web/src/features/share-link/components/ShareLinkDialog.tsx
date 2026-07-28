@@ -11,7 +11,11 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Copy, RefreshCw, Check, KeyRound, Ban, Loader2 } from 'lucide-react'
-import { shareLinkApi, type ShareLinkAdminView } from '../api/shareLinkApi'
+import {
+  shareLinkApi,
+  type ShareLinkAdminView,
+  type ShareScope,
+} from '../api/shareLinkApi'
 import { useToastStore } from '@/shared/lib/toast'
 import { getErrorMessage } from '@/shared/lib/error'
 import { confirmDialog } from '@/shared/ui/confirm-dialog'
@@ -24,6 +28,34 @@ interface ShareLinkDialogProps {
 }
 
 type Tab = 'create' | 'manage'
+
+/**
+ * Scopes offerable in the UI. `BOARD` / `CALENDAR` / `LISTS` exist in the
+ * enum but have no public read surface behind them yet, so listing them
+ * would create links that 403 on use.
+ *
+ * `COMMENT` is called out as a write because it is the one scope that
+ * lets a link holder change something on our side — worth a beat of
+ * hesitation before ticking it.
+ */
+const SCOPE_OPTIONS: {
+  value: ShareScope
+  label: string
+  hint: string
+  write?: boolean
+}[] = [
+  {
+    value: 'TIMELINE',
+    label: 'Timeline',
+    hint: 'Read-only Gantt view of the project',
+  },
+  {
+    value: 'COMMENT',
+    label: 'Comments',
+    hint: 'Read and post inline comments on linked documents',
+    write: true,
+  },
+]
 
 /**
  * "Share" dialog from the Timeline toolbar. Two tabs:
@@ -56,10 +88,10 @@ export default function ShareLinkDialog({
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Share timeline</DialogTitle>
+          <DialogTitle>Share with external clients</DialogTitle>
           <DialogDescription>
-            Passcode-gated read-only links for external clients. The passcode
-            is bcrypt-hashed — once a dialog closes it can only be rotated,
+            Passcode-gated links, scoped per link. The passcode is
+            bcrypt-hashed — once this dialog closes it can only be rotated,
             not retrieved.
           </DialogDescription>
         </DialogHeader>
@@ -121,6 +153,7 @@ function CreateTab({
   const [passcode, setPasscode] = useState('')
   const [noExpiry, setNoExpiry] = useState(false)
   const [expiryDays, setExpiryDays] = useState(90)
+  const [scopes, setScopes] = useState<ShareScope[]>(['TIMELINE'])
   const [created, setCreated] = useState<{
     url: string
     passcode: string
@@ -132,7 +165,7 @@ function CreateTab({
     mutationFn: () =>
       shareLinkApi.create(projectId, {
         passcode,
-        scopes: ['TIMELINE'],
+        scopes,
         expiresAt: noExpiry
           ? null
           : new Date(Date.now() + expiryDays * 86_400_000).toISOString(),
@@ -271,13 +304,45 @@ function CreateTab({
           <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
             Scope
           </label>
-          <div className="mt-1 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-            <Checkbox checked disabled />
-            Timeline
-            <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-              (more coming in Phase 2)
-            </span>
+          <div className="mt-1.5 space-y-2">
+            {SCOPE_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-start gap-2"
+              >
+                <Checkbox
+                  checked={scopes.includes(option.value)}
+                  onCheckedChange={(checked) =>
+                    setScopes((prev) =>
+                      checked === true
+                        ? [...prev, option.value]
+                        : prev.filter((s) => s !== option.value),
+                    )
+                  }
+                  className="mt-0.5"
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-200">
+                    {option.label}
+                    {option.write && (
+                      <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        writes
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+                    {option.hint}
+                  </span>
+                </span>
+              </label>
+            ))}
           </div>
+          {scopes.length === 0 && (
+            <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+              Pick at least one scope — a link with none can&apos;t read
+              anything.
+            </p>
+          )}
         </div>
       </div>
 
@@ -287,7 +352,11 @@ function CreateTab({
         </Button>
         <Button
           onClick={() => createMutation.mutate()}
-          disabled={passcode.length < 6 || createMutation.isPending}
+          disabled={
+            passcode.length < 6 ||
+            scopes.length === 0 ||
+            createMutation.isPending
+          }
         >
           {createMutation.isPending ? 'Creating…' : 'Create link'}
         </Button>
@@ -424,11 +493,26 @@ function ShareLinkRow({
     <div className="space-y-2">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <code className="truncate text-[11px] text-gray-500 dark:text-gray-400">
               …{link.token.slice(-8)}
             </code>
             <StatusPill kind={status} />
+            {/* Scopes, so a project with several links tells you which is
+                which without opening each one. */}
+            {link.scopes.map((scope) => (
+              <span
+                key={scope}
+                className={cn(
+                  'rounded px-1.5 py-0.5 text-[10px] font-medium',
+                  scope === 'COMMENT'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+                )}
+              >
+                {scope.toLowerCase()}
+              </span>
+            ))}
           </div>
           <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
             Created {new Date(link.createdAt).toLocaleDateString()}
