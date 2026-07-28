@@ -44,6 +44,47 @@ export class ListDocCommentsUseCase {
   }
 }
 
+/**
+ * Ceiling on a project-wide read. High enough that no real review comes
+ * near it, low enough that one request can't ask for an unbounded
+ * payload. There is no cursor: the client polls this and wants a whole
+ * picture, so the honest failure mode is "we told you it was cut" rather
+ * than a half-set that reads as complete.
+ */
+export const MAX_PROJECT_COMMENTS = 1000;
+
+export interface ListAllDocCommentsResult {
+  threads: DocCommentThreadView[];
+  truncated: boolean;
+}
+
+@Injectable()
+export class ListAllDocCommentsUseCase {
+  constructor(
+    @Inject(DOC_COMMENT_REPOSITORY)
+    private readonly repo: DocCommentRepository,
+  ) {}
+
+  /**
+   * Every thread in the project. Cutting the tail of a
+   * chronologically-ordered list can never orphan a reply — a head is
+   * always older than its replies, so anything whose head fell outside
+   * the cap fell outside it too.
+   */
+  async execute(query: {
+    projectId: string;
+    caller: DocCommentCaller;
+  }): Promise<ListAllDocCommentsResult> {
+    const rows = await this.repo.findByProject(
+      query.projectId,
+      MAX_PROJECT_COMMENTS,
+    );
+    const truncated = rows.length > MAX_PROJECT_COMMENTS;
+    const kept = truncated ? rows.slice(0, MAX_PROJECT_COMMENTS) : rows;
+    return { threads: toThreadViews(kept, query.caller), truncated };
+  }
+}
+
 @Injectable()
 export class CountDocCommentsUseCase {
   constructor(

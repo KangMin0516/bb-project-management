@@ -74,6 +74,21 @@ export class DocCommentPrismaRepository implements DocCommentRepository {
     return rows.map((r) => this.toRecord(r));
   }
 
+  async findByProject(
+    projectId: string,
+    limit: number,
+  ): Promise<DocCommentRecord[]> {
+    // `take` is limit + 1 so the caller can tell "exactly full" from
+    // "more than we returned" without a second count query.
+    const rows = await this.prisma.docComment.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' },
+      take: limit + 1,
+      select: RECORD_SELECT,
+    });
+    return rows.map((r) => this.toRecord(r));
+  }
+
   async countByProject(projectId: string): Promise<DocCommentCount[]> {
     // Heads only — a reply is part of its head's thread, not a thread of
     // its own, so counting replies would inflate every badge.

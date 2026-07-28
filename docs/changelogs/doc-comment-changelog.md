@@ -22,7 +22,8 @@
 
 - **HTTP routes** — all under the public share surface, `@Public()` + `ShareAuthGuard` + the `COMMENT` scope, re-checked on every call by `VerifyShareAccessUseCase`:
   - `GET /api/public/share/:token/doc-comments?docKey=…` — every thread on one document
-  - `GET /api/public/share/:token/doc-comments/counts` — open/resolved head counts per document, for nav badges
+  - `GET /api/public/share/:token/doc-comments/all` — every thread in the project, each with its own `docKey`, plus `truncated`; capped at 1000. What the spec-site rail polls.
+  - `GET /api/public/share/:token/doc-comments/counts` — open/resolved head counts per document. Nothing calls it since the rail started counting from `/all`.
   - `POST /api/public/share/:token/doc-comments` — new thread, or a reply via `parentId` (40/min)
   - `PATCH /api/public/share/:token/doc-comments/:commentId/resolve` — resolve/reopen a thread head (60/min)
   - `DELETE /api/public/share/:token/doc-comments/:commentId` — delete own comment (40/min)
@@ -30,6 +31,18 @@
 - **No member-facing surface yet.** Comments are not visible inside the BB PM web UI — see *Open questions* below.
 
 ## Timeline
+
+### 2026-07-28 — A project-wide read, so the rail can list the whole review
+
+**Added.** The only read was per-document, which meant the publishing site could show you the comments on the page you were already looking at — and nothing else. The nav badge said "3", and finding out what those three said meant opening each feature in turn. Comments left on a page nobody thought to revisit simply went unread. `GET /doc-comments/all` returns every thread in the project, each carrying its own `docKey`, and the client now polls that instead of the per-document route and filters locally.
+
+- **Same request count.** This *replaces* the per-document poll rather than adding to it, and the client also stopped calling `/doc-comments/counts` — nav badges are now counted from the list it already holds, so a badge and the rail can no longer disagree. Both routes stay for compatibility; nothing calls `/counts` today.
+- **Bounded, and honest about it.** `MAX_PROJECT_COMMENTS = 1000` with no cursor: the repository fetches `limit + 1` as a probe and the response carries `truncated`, which the rail renders as a line telling the reader what it couldn't show. A half-set that reads as complete is the failure mode worth avoiding here.
+- **Truncation cannot orphan a reply.** Rows come back oldest-first, and a head is always older than its replies — so anything whose head fell outside the cap fell outside it too.
+- Read throttle is the same 240/min as the other reads; the payload is larger (every body, not one page's) which is the deliberate trade for one request per poll.
+- The write path is untouched: a reply still inherits its head's `docKey`, so nothing about posting depends on which page the rail was opened from.
+- Verified against a scratch Postgres with threads seeded across four pages: heads and replies fold correctly across documents, resolved threads are included for the client to filter, and the client-side jump navigates to the thread's page and scrolls to its quote (`scrollY` 1678 for a quote 1791px down).
+- Source: `packages/api/src/doc-comment/application/list-doc-comments.use-case.ts` (+ spec), `packages/api/src/doc-comment/application/ports/doc-comment.repository.ts`, `packages/api/src/doc-comment/infrastructure/doc-comment.prisma.repository.ts`, `packages/api/src/doc-comment/doc-comment.public.controller.ts`, `packages/api/src/doc-comment/doc-comment.module.ts`. Client half in the SARAMIN repo: `src/comments/CommentRail.tsx`, `CommentsProvider.tsx`, `docTitle.ts`.
 
 ### 2026-07-28 — BB PM members sign in instead of sharing a passcode
 

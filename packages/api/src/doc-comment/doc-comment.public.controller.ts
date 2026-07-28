@@ -22,6 +22,7 @@ import { CreateDocCommentUseCase } from './application/create-doc-comment.use-ca
 import { DeleteDocCommentUseCase } from './application/delete-doc-comment.use-case.js';
 import {
   CountDocCommentsUseCase,
+  ListAllDocCommentsUseCase,
   ListDocCommentsUseCase,
 } from './application/list-doc-comments.use-case.js';
 import { ResolveDocCommentUseCase } from './application/resolve-doc-comment.use-case.js';
@@ -78,6 +79,7 @@ export class DocCommentPublicController {
   constructor(
     private readonly verifyAccess: VerifyShareAccessUseCase,
     private readonly listUseCase: ListDocCommentsUseCase,
+    private readonly listAllUseCase: ListAllDocCommentsUseCase,
     private readonly countUseCase: CountDocCommentsUseCase,
     private readonly createUseCase: CreateDocCommentUseCase,
     private readonly resolveUseCase: ResolveDocCommentUseCase,
@@ -96,6 +98,29 @@ export class DocCommentPublicController {
     return this.listUseCase.execute({
       projectId: project.id,
       docKey: docKey ?? '/',
+      caller: callerOf(req, authorKey),
+    });
+  }
+
+  /**
+   * Every thread in the project, each carrying its own `docKey`.
+   *
+   * The per-document route above answers "what is on this page"; this one
+   * answers "what is open anywhere", which is what a reviewer actually
+   * wants — otherwise an unread question sits on a page nobody thinks to
+   * revisit. The client polls this instead of the per-document route and
+   * filters locally, so it stays one request per poll.
+   */
+  @Get('all')
+  @Throttle({ default: { ttl: 60_000, limit: READ_LIMIT_PER_MINUTE } })
+  async listAll(
+    @Param('token') token: string,
+    @Req() req: Request,
+    @Headers('x-doc-author-key') authorKey?: string,
+  ) {
+    const { project } = await this.verify(token, req);
+    return this.listAllUseCase.execute({
+      projectId: project.id,
       caller: callerOf(req, authorKey),
     });
   }
