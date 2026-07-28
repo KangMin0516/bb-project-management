@@ -76,6 +76,15 @@ export interface DocCommentRepository {
    */
   findByDoc(projectId: string, docKey: string): Promise<DocCommentRecord[]>;
 
+  /**
+   * Every comment in the project, oldest first, across all documents —
+   * what the publishing site's rail needs to list open questions without
+   * the reader opening each page to discover them. `limit` is a ceiling,
+   * not a page: there is no cursor, and the caller reports truncation
+   * rather than silently showing a partial set.
+   */
+  findByProject(projectId: string, limit: number): Promise<DocCommentRecord[]>;
+
   /** Open/resolved head counts for every document in the project. */
   countByProject(projectId: string): Promise<DocCommentCount[]>;
 

@@ -5,6 +5,7 @@ import { CreateDocCommentUseCase } from './application/create-doc-comment.use-ca
 import { DeleteDocCommentUseCase } from './application/delete-doc-comment.use-case.js';
 import {
   CountDocCommentsUseCase,
+  ListAllDocCommentsUseCase,
   ListDocCommentsUseCase,
 } from './application/list-doc-comments.use-case.js';
 import { ResolveDocCommentUseCase } from './application/resolve-doc-comment.use-case.js';
@@ -37,6 +38,7 @@ import { DocCommentPublicController } from './doc-comment.public.controller.js';
       useExisting: DocCommentPrismaRepository,
     },
     ListDocCommentsUseCase,
+    ListAllDocCommentsUseCase,
     CountDocCommentsUseCase,
     CreateDocCommentUseCase,
     ResolveDocCommentUseCase,
