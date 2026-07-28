@@ -83,9 +83,10 @@ export default function ShareLinksPage() {
             Public share links
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Passcode-gated read-only links to this project&apos;s Timeline.
-            Each link has its own passcode so you can revoke one client
-            without disturbing others.
+            Passcode-gated links to this project, scoped per link — the
+            Timeline, or posting inline comments on a linked document. Each
+            link has its own passcode so you can revoke one client without
+            disturbing others.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>

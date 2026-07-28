@@ -8,7 +8,7 @@
 - **Tables**: `doc_comments` (Prisma model `DocComment` in `packages/api/prisma/schema.prisma`)
 - **Migrations**: `packages/api/prisma/migrations/*_add_doc_comments`
 - **Enum**: the `COMMENT` member of `ShareScope` (the enum itself is owned by the share-link surface — see `project-changelog.md`)
-- **Frontend**: none in `packages/web`. The only client today lives in the separate `saramin-template/SARAMIN` repo (`src/comments/`).
+- **Frontend**: no *reading* surface in `packages/web` — the only client today lives in the separate `saramin-template/SARAMIN` repo (`src/comments/`). The `COMMENT` tickbox in `features/share-link/` belongs to the share-link feature; this domain only defines what the scope means.
 
 ### Not owned — three comment models, on purpose
 
@@ -31,7 +31,15 @@
 
 ## Timeline
 
-### 2026-07-28 — Doc comments over share links (unreleased)
+### 2026-07-28 — COMMENT scope selectable in the share-link dialog
+**Fixed.** The `COMMENT` scope shipped in the API and the enum but the create-link dialog still hardcoded `scopes: ['TIMELINE']` behind a disabled checkbox labelled "(more coming in Phase 2)" — so the scope existed and nothing could ever be granted it. The dialog now offers a real scope picker, `COMMENT` is flagged **writes** (it is the only scope that lets a link holder change anything on our side), and Create is blocked on an empty selection.
+
+- Manage rows now show each link's scopes, so a project with several links says which is which without opening each one.
+- Copy that promised "read-only" is now wrong for a `COMMENT` link and was corrected on the dialog, the Share links page, and the settings section.
+- `BOARD` / `CALENDAR` / `LISTS` are deliberately still not offered: they exist in the enum but have no public read surface, so a link granted one would 403 on use.
+- Source: `packages/web/src/features/share-link/components/ShareLinkDialog.tsx`, `packages/web/src/features/share-link/api/shareLinkApi.ts`, `packages/web/src/pages/ShareLinksPage.tsx`, `packages/web/src/features/project/components/settings/ShareLinksSection.tsx`.
+
+### 2026-07-28 — Doc comments over share links (deployed, `271455c`)
 **Added. Schema.** Reviewers of the Saramin VN spec site can select any text and leave a threaded comment, stored in BB PM instead of in a Notion page nobody keeps in sync. Anchoring follows the W3C annotation shape — a `quote` plus `prefix`/`suffix` context plus a `textOffset` tiebreaker — so a comment survives edits elsewhere on the page; when the quoted text really is gone the thread is flagged *orphaned* to the client rather than deleted.
 
 - **Threads are one level deep.** A head has `parentId = null`; replies point at a head and inherit its `docKey` and anchor (a reply's client-supplied `docKey` is ignored — trusting it would let a reply drift onto another page).
@@ -44,7 +52,7 @@
 - Verified against a scratch Postgres with a 28-case end-to-end suite: passcode rejection, scope gating, cross-link JWT replay (410), reply-depth limit, delete authorisation (403/409), resolve idempotency, `authorKey` non-disclosure, and `docKey` normalisation.
 - Source: `packages/api/prisma/schema.prisma`, `packages/api/src/doc-comment/**`, `packages/api/src/app.module.ts`.
 
-### 2026-07-28 — Share-access check extracted from the public controller (unreleased)
+### 2026-07-28 — Share-access check extracted from the public controller (`271455c`)
 **Changed.** `ShareLinkPublicController` carried `getValidatedClaims` + `requireFreshLink` as private methods. Doc comments need byte-identical rules, and a second copy is how a revoked link keeps working on one surface after being fixed on the other — so the check moved into `VerifyShareAccessUseCase` (claims present → JWT/token binding → `canUnlock` → project not archived → scope granted) and both controllers now call it. `ShareLinkModule` exports the use case; `claimsOf()` moved next to `SharePayload` in the strategy.
 
 - No behaviour change to the timeline surface: the same four checks run in the same order, and the scope check still reads `link.scopes`, not the JWT's snapshot.
