@@ -29,6 +29,25 @@ import { CreateDocCommentDto, ResolveDocCommentDto } from './dto/index.js';
 import { MAX_AUTHOR_KEY_LENGTH } from './domain/doc-comment.entity.js';
 
 /**
+ * Reads need their own generous ceiling, well above the app-wide default
+ * of 30/min (`ThrottlerModule.forRoot` in `app.module.ts`).
+ *
+ * The reason is the client polls: a spec-site reader re-reads the open
+ * document every 5s, which is 12 requests/min *per viewer* — and a whole
+ * office shares one NAT address, so the throttle counter is effectively
+ * per-company, not per-person. At the default 30/min, the third reviewer
+ * to open the site starts getting 429s, which is exactly the situation
+ * the feature exists for.
+ *
+ * 240/min leaves room for ~20 concurrent viewers behind one IP. Each
+ * request is a single indexed read on `(project_id, doc_key)`, so the
+ * cost of being wrong in this direction is small; the cost of being
+ * wrong in the other direction is a review session that breaks for
+ * everyone after the second person joins.
+ */
+const READ_LIMIT_PER_MINUTE = 240;
+
+/**
  * Inline doc comments over a share link. Mounted alongside the other
  * `/api/public/share/:token/...` routes and gated the same way: `@Public()`
  * so the global user-JWT guard stays out, `ShareAuthGuard` to validate
@@ -63,6 +82,7 @@ export class DocCommentPublicController {
   ) {}
 
   @Get()
+  @Throttle({ default: { ttl: 60_000, limit: READ_LIMIT_PER_MINUTE } })
   async list(
     @Param('token') token: string,
     @Query('docKey') docKey: string,
@@ -78,6 +98,7 @@ export class DocCommentPublicController {
   }
 
   @Get('counts')
+  @Throttle({ default: { ttl: 60_000, limit: READ_LIMIT_PER_MINUTE } })
   async counts(@Param('token') token: string, @Req() req: Request) {
     const { project } = await this.verify(token, req);
     return this.countUseCase.execute(project.id);
