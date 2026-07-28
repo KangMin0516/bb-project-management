@@ -9,7 +9,12 @@
 
 export const SHARE_LINK_REPOSITORY = Symbol('SHARE_LINK_REPOSITORY');
 
-export type ShareScopeLiteral = 'TIMELINE' | 'BOARD' | 'CALENDAR' | 'LISTS';
+export type ShareScopeLiteral =
+  | 'TIMELINE'
+  | 'BOARD'
+  | 'CALENDAR'
+  | 'LISTS'
+  | 'COMMENT';
 
 export interface ShareLinkRow {
   id: string;

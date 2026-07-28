@@ -1,0 +1,87 @@
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  checkReplyTarget,
+  normalizeAnchor,
+  normalizeBody,
+  normalizeDisplayName,
+  normalizeDocKey,
+  type DocCommentAnchor,
+} from '../domain/doc-comment.entity.js';
+import {
+  DOC_COMMENT_REPOSITORY,
+  type DocCommentRepository,
+} from './ports/doc-comment.repository.js';
+import { toCommentView, type DocCommentView } from './doc-comment.view.js';
+
+export interface CreateDocCommentCommand {
+  projectId: string;
+  shareLinkId: string | null;
+  docKey: string;
+  body: string;
+  /** Null for a page-level comment; ignored entirely for replies. */
+  anchor: Partial<DocCommentAnchor> | null;
+  /** Set to reply to an existing thread head. */
+  parentId: string | null;
+  guestName: string | null;
+  authorKey: string | null;
+}
+
+@Injectable()
+export class CreateDocCommentUseCase {
+  constructor(
+    @Inject(DOC_COMMENT_REPOSITORY)
+    private readonly repo: DocCommentRepository,
+  ) {}
+
+  async execute(cmd: CreateDocCommentCommand): Promise<DocCommentView> {
+    const body = normalizeBody(cmd.body);
+    if (!body.ok) throw new BadRequestException(body.failure.message);
+
+    const docKey = normalizeDocKey(cmd.docKey);
+    if (!docKey.ok) throw new BadRequestException(docKey.failure.message);
+
+    let parentId: string | null = null;
+    let effectiveDocKey = docKey.value;
+    let anchor: DocCommentAnchor = normalizeAnchor(cmd.anchor);
+
+    if (cmd.parentId) {
+      const parent = await this.repo.findAuthRow(cmd.parentId, cmd.projectId);
+      const check = checkReplyTarget(parent);
+      if (!check.ok) {
+        if (check.failure.reason === 'NOT_FOUND')
+          throw new NotFoundException('That comment thread no longer exists');
+        throw new BadRequestException(
+          'Replies must attach to the top comment of a thread',
+        );
+      }
+      parentId = parent!.id;
+      // The head owns both the document and the anchor. Trusting the
+      // client's docKey here would let a reply drift onto another page
+      // and vanish from the thread it belongs to.
+      effectiveDocKey = parent!.docKey;
+      anchor = normalizeAnchor(null);
+    }
+
+    const row = await this.repo.create({
+      projectId: cmd.projectId,
+      docKey: effectiveDocKey,
+      containerId: anchor.containerId,
+      quote: anchor.quote,
+      prefix: anchor.prefix,
+      suffix: anchor.suffix,
+      textOffset: anchor.textOffset,
+      body: body.value,
+      parentId,
+      guestName: normalizeDisplayName(cmd.guestName),
+      authorKey: cmd.authorKey,
+      shareLinkId: cmd.shareLinkId,
+    });
+
+    return toCommentView(row, cmd.authorKey);
+  }
+}

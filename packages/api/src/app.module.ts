@@ -25,6 +25,7 @@ import { SearchModule } from './search/search.module.js';
 import { NotificationModule } from './notification/notification.module.js';
 import { ShareModule } from './share/share.module.js';
 import { ShareLinkModule } from './share-link/share-link.module.js';
+import { DocCommentModule } from './doc-comment/doc-comment.module.js';
 import { IssueLinkModule } from './issue-link/issue-link.module.js';
 import { IssueSpecLinkModule } from './issue-spec-link/issue-spec-link.module.js';
 import { ComponentModule } from './component/component.module.js';
@@ -71,6 +72,7 @@ import { AppController } from './app.controller.js';
     NotificationModule,
     ShareModule,
     ShareLinkModule,
+    DocCommentModule,
     IssueLinkModule,
     IssueSpecLinkModule,
     ComponentModule,
