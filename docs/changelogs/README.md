@@ -16,6 +16,7 @@ Per-domain changelogs for the `bb-pm` (BB Project Management) monorepo. Each fil
 | [`project-changelog.md`](./project-changelog.md)             | **Projects**           | Project CRUD, members, roles (ADMIN/PM/DEVELOPER), seeded labels, join-request flow |
 | [`issue-changelog.md`](./issue-changelog.md)                 | **Issues**             | Issue lifecycle, hierarchy (EPIC/TASK/BUG/SUB_TASK), kanban order, dates (start/due/focus), `isRecheck`, auto-archive, dependencies, components, labels, comments, attachments, activities |
 | [`specification-changelog.md`](./specification-changelog.md) | **Specifications**     | Markdown specs, sections, threaded comments, issue↔spec links, ordering |
+| [`doc-comment-changelog.md`](./doc-comment-changelog.md)     | **Doc comments**       | Notion-style inline comments on documents hosted outside BB PM, anchored to a text quote, served over a `COMMENT`-scoped share link |
 | [`notification-changelog.md`](./notification-changelog.md)   | **Notifications**      | In-app notifications (assignment, comment, mention, join-request resolution) |
 | [`upload-changelog.md`](./upload-changelog.md)               | **Uploads**            | S3 attachments + avatars, file-type blocklist, avatar HTTP proxy |
 | [`slack-changelog.md`](./slack-changelog.md)                 | **Slack core**         | OAuth install, encrypted bot tokens, channel/user cache, signature verification |

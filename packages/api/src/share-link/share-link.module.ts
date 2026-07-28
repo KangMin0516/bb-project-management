@@ -7,6 +7,7 @@ import { GetPublicTimelineUseCase } from './application/get-public-timeline.use-
 import { RevokeShareLinkUseCase } from './application/revoke-share-link.use-case.js';
 import { RotatePasscodeUseCase } from './application/rotate-passcode.use-case.js';
 import { UnlockShareLinkUseCase } from './application/unlock-share-link.use-case.js';
+import { VerifyShareAccessUseCase } from './application/verify-share-access.use-case.js';
 import { SHARE_LINK_REPOSITORY } from './application/ports/share-link.repository.js';
 import { ShareLinkPrismaRepository } from './infrastructure/share-link.prisma.repository.js';
 import { ShareLinkController } from './share-link.controller.js';
@@ -38,7 +39,14 @@ import { ShareJwtStrategy } from './strategies/share-jwt.strategy.js';
     RotatePasscodeUseCase,
     UnlockShareLinkUseCase,
     GetPublicTimelineUseCase,
+    VerifyShareAccessUseCase,
     ShareJwtStrategy,
   ],
+  // DocCommentModule mounts its own routes under `/api/public/share/
+  // :token/...` and must gate them with the identical check, so the
+  // verification use case is part of this module's public contract.
+  // ShareJwtStrategy stays private — registering it here is enough for
+  // `AuthGuard('share-jwt')` to resolve anywhere in the app.
+  exports: [VerifyShareAccessUseCase],
 })
 export class ShareLinkModule {}

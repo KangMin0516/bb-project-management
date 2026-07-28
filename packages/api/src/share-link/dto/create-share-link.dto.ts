@@ -13,6 +13,9 @@ export enum ShareScopeDto {
   BOARD = 'BOARD',
   CALENDAR = 'CALENDAR',
   LISTS = 'LISTS',
+  // Write scope — see the ShareScope enum in schema.prisma. Grants
+  // read + post on DocComment for the link's project.
+  COMMENT = 'COMMENT',
 }
 
 export class CreateShareLinkDto {

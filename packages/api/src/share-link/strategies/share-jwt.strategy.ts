@@ -37,3 +37,13 @@ export class ShareJwtStrategy extends PassportStrategy(Strategy, 'share-jwt') {
     return payload;
   }
 }
+
+/**
+ * Read the claims this strategy parked on the request. Returns
+ * `undefined` when the route was wired without `ShareAuthGuard`;
+ * `VerifyShareAccessUseCase` is what turns that into a 403, so callers
+ * never have to decide.
+ */
+export function claimsOf(req: { user?: unknown }): SharePayload | undefined {
+  return req.user as SharePayload | undefined;
+}

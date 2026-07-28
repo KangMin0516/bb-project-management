@@ -54,6 +54,7 @@ model User {
   oauthRefreshTokens        OAuthRefreshToken[]
   createdShareLinks         ShareLink[]          @relation("CreatedShareLinks")
   archivedProjects          Project[]            @relation("ArchivedByUser")
+  docComments               DocComment[]         @relation("DocComments")
 
   @@map("users")
 }
@@ -81,6 +82,7 @@ model Project {
   githubIntegration GitHubIntegration?
   joinRequests      ProjectJoinRequest[]
   shareLinks        ShareLink[]
+  docComments       DocComment[]
 
   @@index([archivedAt])
   @@map("projects")
@@ -989,6 +991,10 @@ enum ShareScope {
   BOARD
   CALENDAR
   LISTS
+  // Read + post inline doc comments (DocComment) through the link.
+  // Unlike the other scopes this one grants writes, so it is never
+  // implied by another scope — a link must ask for it explicitly.
+  COMMENT
 }
 
 model ShareLink {
@@ -1013,7 +1019,94 @@ model ShareLink {
   createdById    String       @map("created_by_id")
   createdBy      User         @relation("CreatedShareLinks", fields: [createdById], references: [id], onDelete: Restrict)
 
+  docComments    DocComment[]
+
   @@index([projectId])
   @@map("share_links")
+}
+
+// ─── Doc Comment (inline comments on external documents) ────
+//
+// Notion-style comments anchored to a span of text inside a document
+// this API does not own — today the Saramin VN spec site, which is a
+// static Vite build with no database of its own.
+//
+// Deliberately NOT `SpecComment`: that one requires a `userId` and
+// anchors to a `SpecSection` row we host, so an external reader with
+// no BB PM account can't use it. Deliberately NOT `Comment`: that one
+// is bound to an Issue, and a spec page is commentable before anyone
+// has filed an issue for it.
+
+model DocComment {
+  id String @id @default(uuid())
+
+  // Which document, in the publishing site's own address space. For the
+  // spec site this is the router path, e.g. "/f/js-auth". Opaque here —
+  // we never dereference it.
+  docKey String @map("doc_key") @db.VarChar(300)
+
+  // Anchor to a span of text. `quote` is the exact selected text and
+  // `prefix`/`suffix` are the characters either side of it, used to
+  // re-locate the quote after the document is edited; `textOffset` is
+  // the plain-text offset inside `containerId` as a last-resort hint.
+  //
+  // All four are advisory. When the quote can no longer be found the
+  // client shows the thread as "orphaned" rather than dropping it —
+  // losing a reviewer's comment because a sentence was reworded is
+  // strictly worse than showing it detached.
+  //
+  // A thread head anchored to nothing (all null) is a page-level
+  // comment, which is legal and used by the "comment on this page"
+  // affordance.
+  containerId String? @map("container_id") @db.VarChar(200)
+  quote       String? @db.Text
+  prefix      String? @db.VarChar(120)
+  suffix      String? @db.VarChar(120)
+  textOffset  Int?    @map("text_offset")
+
+  body String @db.Text
+
+  // Single-level threading, same shape as SpecComment: a thread head
+  // has `parentId == null` and replies point at the head. Replies do
+  // not carry their own anchor — they inherit the head's.
+  parentId String?      @map("parent_id")
+  parent   DocComment?  @relation("DocCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  DocComment[] @relation("DocCommentReplies")
+
+  // Author is either a BB PM user (when posted from an authenticated
+  // surface) or a share-link guest who typed a display name. Exactly
+  // one of the two is set in practice; the schema allows neither so a
+  // deleted user doesn't take the comment with it.
+  userId    String? @map("user_id")
+  user      User?   @relation("DocComments", fields: [userId], references: [id], onDelete: SetNull)
+  guestName String? @map("guest_name") @db.VarChar(80)
+
+  // Opaque per-browser id minted by the client. Lets a guest delete
+  // their own comment without an account. Never returned to clients —
+  // it is a bearer capability for exactly one row.
+  authorKey String? @map("author_key") @db.VarChar(64)
+
+  // Which share link the guest came through. Audit trail, and it lets
+  // a revoke sweep find everything a leaked link produced.
+  shareLinkId String?    @map("share_link_id")
+  shareLink   ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+
+  // Resolve is a property of the thread head only. `resolvedBy` is a
+  // display name, not a FK — a guest can resolve, and guests have no
+  // user row to point at.
+  resolvedAt DateTime? @map("resolved_at")
+  resolvedBy String?   @map("resolved_by") @db.VarChar(80)
+
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // The list query is always "every comment on this doc" — one index
+  // serves it. `parentId` is indexed for the reply fan-out.
+  @@index([projectId, docKey])
+  @@index([parentId])
+  @@map("doc_comments")
 }
 
