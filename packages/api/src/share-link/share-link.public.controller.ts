@@ -11,10 +11,16 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { Public } from '../common/decorators/index.js';
+import {
+  CurrentUser,
+  Public,
+  type JwtPayload,
+} from '../common/decorators/index.js';
+import { ApiKeyGuard } from '../api-key/api-key.guard.js';
 import { ShareAuthGuard } from './guards/share-auth.guard.js';
 import { claimsOf } from './strategies/share-jwt.strategy.js';
 import { UnlockShareLinkUseCase } from './application/unlock-share-link.use-case.js';
+import { UnlockShareLinkAsMemberUseCase } from './application/unlock-share-link-as-member.use-case.js';
 import { GetPublicTimelineUseCase } from './application/get-public-timeline.use-case.js';
 import { VerifyShareAccessUseCase } from './application/verify-share-access.use-case.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -37,6 +43,7 @@ import { UnlockShareLinkDto } from './dto/unlock-share-link.dto.js';
 export class ShareLinkPublicController {
   constructor(
     private readonly unlockUseCase: UnlockShareLinkUseCase,
+    private readonly unlockAsMemberUseCase: UnlockShareLinkAsMemberUseCase,
     private readonly timelineUseCase: GetPublicTimelineUseCase,
     private readonly verifyAccess: VerifyShareAccessUseCase,
     private readonly prisma: PrismaService,
@@ -50,6 +57,28 @@ export class ShareLinkPublicController {
       // the slug matched our shape.
       throw new BadRequestException('Invalid passcode');
     return this.unlockUseCase.execute({ token, passcode: dto.passcode });
+  }
+
+  /**
+   * The same unlock for someone who already has a BB PM account: present
+   * an OAuth 2.1 access token (or a personal API key) instead of the
+   * passcode and the resulting session is signed with your identity.
+   *
+   * `ApiKeyGuard` rather than the user-JWT guard because the caller here
+   * is a browser on a *different origin* — the spec site — which has no
+   * BB PM cookie and no reason to hold one. It arrives with a token it
+   * got through the authorization-code flow, uses it once, and drops it.
+   */
+  @Post(':token/unlock-member')
+  @UseGuards(ApiKeyGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  unlockAsMember(
+    @Param('token') token: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!isLikelyToken(token))
+      throw new BadRequestException('Invalid share token');
+    return this.unlockAsMemberUseCase.execute({ token, userId: user.sub });
   }
 
   @Get(':token/project')

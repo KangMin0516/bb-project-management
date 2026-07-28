@@ -1,5 +1,8 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { normalizeDocKey } from '../domain/doc-comment.entity.js';
+import {
+  normalizeDocKey,
+  type DocCommentCaller,
+} from '../domain/doc-comment.entity.js';
 import {
   DOC_COMMENT_REPOSITORY,
   type DocCommentCount,
@@ -13,8 +16,8 @@ import {
 export interface ListDocCommentsQuery {
   projectId: string;
   docKey: string;
-  /** Caller's opaque author key, used only to compute `mine`. */
-  authorKey: string | null;
+  /** Used only to compute `mine` on each row. */
+  caller: DocCommentCaller;
 }
 
 export interface ListDocCommentsResult {
@@ -36,7 +39,7 @@ export class ListDocCommentsUseCase {
     const rows = await this.repo.findByDoc(query.projectId, docKey.value);
     return {
       docKey: docKey.value,
-      threads: toThreadViews(rows, query.authorKey),
+      threads: toThreadViews(rows, query.caller),
     };
   }
 }

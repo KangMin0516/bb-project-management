@@ -1,3 +1,4 @@
+import type { DocCommentCaller } from '../domain/doc-comment.entity.js';
 import type { DocCommentRecord } from './ports/doc-comment.repository.js';
 
 /**
@@ -21,7 +22,7 @@ export interface DocCommentView {
     textOffset: number | null;
   };
   author: { name: string; avatar: string | null; isGuest: boolean };
-  /** True when the caller's author key matches — enables their delete UI. */
+  /** True when the caller owns this row — enables their delete UI. */
   mine: boolean;
   resolvedAt: string | null;
   resolvedBy: string | null;
@@ -33,9 +34,23 @@ export interface DocCommentThreadView extends DocCommentView {
   replies: DocCommentView[];
 }
 
+/**
+ * Mirrors `canDelete` in the domain deliberately: `mine` is what draws
+ * the delete button, and a UI that offers an action the use case then
+ * refuses is worse than no button at all. Account ownership wins over
+ * the browser key for the same reason it does there.
+ */
+function isMine(row: DocCommentRecord, caller: DocCommentCaller): boolean {
+  if (caller.userId && row.author.user)
+    return row.author.user.id === caller.userId;
+  return Boolean(
+    caller.authorKey && row.authorKey && row.authorKey === caller.authorKey,
+  );
+}
+
 function toView(
   row: DocCommentRecord,
-  callerKey: string | null,
+  caller: DocCommentCaller,
 ): DocCommentView {
   return {
     id: row.id,
@@ -53,7 +68,7 @@ function toView(
       avatar: row.author.user?.avatar ?? null,
       isGuest: row.author.user === null,
     },
-    mine: Boolean(callerKey && row.authorKey && row.authorKey === callerKey),
+    mine: isMine(row, caller),
     resolvedAt: row.resolvedAt?.toISOString() ?? null,
     resolvedBy: row.resolvedBy,
     createdAt: row.createdAt.toISOString(),
@@ -63,9 +78,9 @@ function toView(
 
 export function toCommentView(
   row: DocCommentRecord,
-  callerKey: string | null,
+  caller: DocCommentCaller,
 ): DocCommentView {
-  return toView(row, callerKey);
+  return toView(row, caller);
 }
 
 /**
@@ -76,16 +91,16 @@ export function toCommentView(
  */
 export function toThreadViews(
   rows: DocCommentRecord[],
-  callerKey: string | null,
+  caller: DocCommentCaller,
 ): DocCommentThreadView[] {
   const threads = new Map<string, DocCommentThreadView>();
   for (const row of rows) {
     if (row.parentId === null)
-      threads.set(row.id, { ...toView(row, callerKey), replies: [] });
+      threads.set(row.id, { ...toView(row, caller), replies: [] });
   }
   for (const row of rows) {
     if (row.parentId === null) continue;
-    threads.get(row.parentId)?.replies.push(toView(row, callerKey));
+    threads.get(row.parentId)?.replies.push(toView(row, caller));
   }
   return [...threads.values()];
 }

@@ -8,6 +8,7 @@ import {
 import {
   canDelete,
   canDeleteHeadWithReplies,
+  type DocCommentCaller,
 } from '../domain/doc-comment.entity.js';
 import {
   DOC_COMMENT_REPOSITORY,
@@ -17,7 +18,7 @@ import {
 export interface DeleteDocCommentCommand {
   projectId: string;
   commentId: string;
-  authorKey: string | null;
+  caller: DocCommentCaller;
 }
 
 @Injectable()
@@ -31,14 +32,14 @@ export class DeleteDocCommentUseCase {
     const row = await this.repo.findAuthRow(cmd.commentId, cmd.projectId);
     if (!row) throw new NotFoundException('Comment not found');
 
-    if (!canDelete(row, cmd.authorKey))
+    if (!canDelete(row, cmd.caller))
       throw new ForbiddenException('You can only delete your own comment');
 
     if (row.parentId === null) {
       // Deleting a head cascades to its replies, so refuse when anyone
       // else has answered. Resolve is the non-destructive close.
       const replies = await this.repo.findReplies(row.id);
-      if (!canDeleteHeadWithReplies(replies, cmd.authorKey))
+      if (!canDeleteHeadWithReplies(replies, cmd.caller))
         throw new ConflictException(
           'This thread has replies from other people — resolve it instead of deleting',
         );

@@ -16,6 +16,7 @@ import {
   type ShareScopeLiteral,
 } from './ports/share-link.repository.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import type { SharePayload } from '../strategies/share-jwt.strategy.js';
 
 export interface UnlockShareLinkCommand {
   token: string;
@@ -29,13 +30,6 @@ export interface UnlockShareLinkResult {
   sharedByName: string;
   scopes: ShareScopeLiteral[];
   expiresAt: Date | null;
-}
-
-export interface SharePayload {
-  kind: 'share';
-  shareLinkId: string;
-  projectId: string;
-  scopes: ShareScopeLiteral[];
 }
 
 /**

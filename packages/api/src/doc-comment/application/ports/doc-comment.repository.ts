@@ -41,6 +41,8 @@ export interface CreateDocCommentInput {
   textOffset: number | null;
   body: string;
   parentId: string | null;
+  /** Set for a member session; mutually exclusive with `guestName`. */
+  userId: string | null;
   guestName: string | null;
   authorKey: string | null;
   shareLinkId: string | null;
@@ -60,6 +62,7 @@ export interface DocCommentAuthRow {
   docKey: string;
   parentId: string | null;
   authorKey: string | null;
+  userId: string | null;
   resolvedAt: Date | null;
   resolvedBy: string | null;
 }
