@@ -31,6 +31,14 @@
 
 ## Timeline
 
+### 2026-07-28 — Read routes get their own throttle ceiling
+**Fixed.** The two GET routes inherited the app-wide default of 30 req/min/IP (`ThrottlerModule.forRoot` in `app.module.ts`), but the spec-site client polls the open document every 5s — 12 requests/min *per viewer*. An office shares one NAT address, so the counter is effectively per-company: the third reviewer to open the site started getting 429s, in the exact scenario the feature is for. Found while smoke-testing the deployed site, not in review.
+
+- `GET /doc-comments` and `GET /doc-comments/counts` now allow 240/min, leaving room for ~20 concurrent viewers behind one address. Each is a single indexed read on `(project_id, doc_key)`.
+- Writes keep their tighter limits (40/min create + delete, 60/min resolve) — the ceiling that matters for abuse is unchanged.
+- The client half (429 → transient, exponential backoff, no error banner) lives in the SARAMIN repo; without it a throttled reader saw the raw `ThrottlerException` text in the comment rail.
+- Source: `packages/api/src/doc-comment/doc-comment.public.controller.ts`.
+
 ### 2026-07-28 — COMMENT scope selectable in the share-link dialog
 **Fixed.** The `COMMENT` scope shipped in the API and the enum but the create-link dialog still hardcoded `scopes: ['TIMELINE']` behind a disabled checkbox labelled "(more coming in Phase 2)" — so the scope existed and nothing could ever be granted it. The dialog now offers a real scope picker, `COMMENT` is flagged **writes** (it is the only scope that lets a link holder change anything on our side), and Create is blocked on an empty selection.
 
