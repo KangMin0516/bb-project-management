@@ -23,6 +23,13 @@
 
 ## Timeline
 
+### 2026-08-05 — Saving an existing standup config no longer 400s on `slackIntegrationId`
+**Fixed.** Editing any existing config on `/standup` and pressing **Save Changes** failed with `property slackIntegrationId should not exist`. `main.ts` runs the global `ValidationPipe` with `whitelist: true, forbidNonWhitelisted: true`, and `StandupSettingsPage` reuses one `buildPayload` for both create and update — so the `slackIntegrationId` that `CreateConfigDto` requires was also sent on `PATCH /api/standup/configs/:id`, where `UpdateConfigDto` had no such property and the pipe rejected the whole request. Creating a config always worked, which is why the bug only showed on edit.
+
+`UpdateConfigDto` now declares `slackIntegrationId` as an optional string, matching how the sibling `UpdateReportConfigDto` already handles it. The value is accepted and ignored: `updateConfig` builds its Prisma `data` from an explicit per-field whitelist, so a config can never be re-pointed at a different Slack workspace through this route.
+
+- Source: `packages/api/src/standup/dto/update-config.dto.ts`.
+
 ### 2026-05-20 — Issue-list failure no longer kills the first question (fae09bb)
 **Fixed.** Reported the same evening: Văn Thương Đào (and other heavy users) got the night-standup greeting but never saw Q1 "What have you completed since yesterday?". Root cause: `sendIssueListBlock` builds a single Slack `section.text.text` payload from the user's active + done-today issues. With ~38 issues and project/status grouping, the body exceeded Slack's 3000-char limit on a section's mrkdwn text. `chat.postMessage` threw `invalid_blocks`, `startReportForUser` propagated the throw to the `triggerStandup` loop's catch, and the per-user flow ended after the greeting — Q1 was never posted. The report row was already ACTIVE with `currentQuestionOrder=0`, so when the user replied from habit, `processMessage` correctly saved the Q1 answer and sent Q2, masking the bug from the DB side.
 

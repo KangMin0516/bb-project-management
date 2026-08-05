@@ -49,6 +49,11 @@ export class UpdateConfigDto {
   @IsBoolean()
   enabled?: boolean;
 
+  // Accepted but not applied — the web form reuses its create payload on save.
+  @IsOptional()
+  @IsString()
+  slackIntegrationId?: string;
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
